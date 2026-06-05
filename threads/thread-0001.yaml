@@ -1,0 +1,95 @@
+schema: clista.thread.v0
+id: thread-0001
+title: Build ClisTa Protocol
+status: accepted
+
+question: How should ClisTa be architected?
+
+decision:
+  id: decision-0001
+  status: accepted
+  summary: Build ClisTa as a protocol-first append-only reasoning engine.
+  rationale:
+    - A messy reasoning conversation should become durable structured state.
+    - The event log should be the source of truth.
+    - Projected state should be derived.
+    - UI, agents, graph databases, governance portals, reputation, and network features should wait until the protocol spine is proven.
+
+supporting_evidence:
+  - id: evidence-context-windows-not-memory
+    finding: Context windows are not durable memory.
+  - id: evidence-structured-state-survives
+    finding: Structured state survives model changes, session loss, and tool changes.
+  - id: evidence-git-coordination-pattern
+    finding: Git demonstrates scalable coordination through immutable state transitions, review, merge, and audit.
+  - id: evidence-protocols-scale
+    finding: Protocols scale because they convert conversations into structured artifacts.
+
+assumptions:
+  - id: assumption-future-models-improve
+    text: Future models will improve.
+  - id: assumption-memory-should-not-depend-on-models
+    text: Durable reasoning should not depend on model memory.
+  - id: assumption-coordination-bottleneck
+    text: Coordination is a more durable bottleneck than generation.
+  - id: assumption-projected-state-is-minimum-memory
+    text: The minimum useful memory is projected reasoning state, not raw conversation.
+
+claims:
+  - id: claim-conversations-not-asset
+    text: Conversations are not the asset.
+  - id: claim-reasoning-state-asset
+    text: Reasoning state is the asset.
+  - id: claim-conversation-input-state-output
+    text: Conversation is input; reasoning state is output.
+  - id: claim-protocol-first
+    text: ClisTa should begin as a protocol engine before UI, agents, graph DB, or governance portal.
+  - id: claim-assumptions-first-class
+    text: Assumptions should be first-class because many disagreements are assumption disagreements.
+
+positions:
+  - participant: Troy
+    role: decision_owner
+    stance: support
+  - participant: Codex
+    role: implementation_participant
+    stance: support
+  - participant: ChatGPT
+    role: reasoning_participant
+    stance: support
+
+objections:
+  - id: objection-future-models
+    text: Future models may make governance unnecessary.
+    status: resolved
+    resolution: Protocol separates memory and accountability from model capability.
+  - id: objection-object-model-too-broad
+    text: The initial object model may be broader than the first thread requires.
+    status: preserved
+    resolution: Milestone 0 must prove which objects are necessary by reconstructing state from the append-only log.
+
+minority_reports:
+  - id: minority-object-model-scope
+    text: Preserve concern that the object model should shrink if Milestone 0 proves fewer objects are sufficient.
+
+next_action:
+  - Implement and prove Milestone 0: Protocol Spine Proven.
+
+audit_summary:
+  source: Manual projection of the first ClisTa design conversation.
+  retained:
+    - question
+    - decision
+    - rationale
+    - evidence
+    - assumptions
+    - claims
+    - positions
+    - objections
+    - minority reports
+    - next action
+  discarded:
+    - conversational filler
+    - repeated phrasing
+    - transient wording
+
