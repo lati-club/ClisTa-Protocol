@@ -1,0 +1,16 @@
+{
+  "name": "clista-protocol",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Protocol-first ClisTa reasoning engine.",
+  "bin": {
+    "clista": "src/cli.js"
+  },
+  "scripts": {
+    "clista": "node src/cli.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
