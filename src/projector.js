@@ -6,6 +6,7 @@ function emptyProjection() {
     projectedAt: nowIso(),
     participants: {},
     threads: {},
+    forks: {},
     evidence: {},
     assumptions: {},
     claims: {},
@@ -37,6 +38,9 @@ function projectEvents(events) {
       case "ThreadCreated":
         upsert(projection.threads, payload.thread);
         break;
+      case "ThreadForked":
+        applyThreadFork(projection, payload.threadFork, eventTimestamp(event));
+        break;
       case "EvidenceCommitted":
         upsert(projection.evidence, payload.evidence);
         touchThread(projection, payload.evidence?.threadId, eventTimestamp(event));
@@ -60,7 +64,12 @@ function projectEvents(events) {
         touchThread(projection, payload.objection?.threadId, eventTimestamp(event));
         break;
       case "ObjectionResolved":
-        resolveObjection(projection, payload.objectionId || payload.objection?.id, payload.resolution || payload.objection?.resolution);
+        resolveObjection(
+          projection,
+          payload.objectionId || payload.objection?.id,
+          payload.resolution || payload.objection?.resolution,
+          eventThreadId(event)
+        );
         break;
       case "AlignmentCalculated":
         upsert(projection.alignmentSnapshots, payload.alignmentSnapshot);
@@ -112,18 +121,18 @@ function selectThreadState(projection, requestedThreadId) {
     };
   }
 
-  const evidence = valuesForThread(projection.evidence, threadId);
-  const assumptions = valuesForThread(projection.assumptions, threadId);
-  const claims = valuesForThread(projection.claims, threadId);
-  const positions = latestPositions(valuesForThread(projection.positions, threadId));
-  const objections = valuesForThread(projection.objections, threadId);
-  const decisionRequests = valuesForThread(projection.decisionRequests, threadId);
-  const reviews = valuesForThread(projection.reviews, threadId);
-  const decisionRecords = valuesForThread(projection.decisionRecords, threadId);
-  const minorityReports = valuesForThread(projection.minorityReports, threadId);
-  const expectedOutcomes = valuesForThread(projection.expectedOutcomes, threadId);
-  const outcomeAudits = valuesForThread(projection.outcomeAudits, threadId);
-  const decisionScores = valuesForThread(projection.decisionScores, threadId);
+  const evidence = valuesForThreadScope(projection, threadId, "evidence");
+  const assumptions = valuesForThreadScope(projection, threadId, "assumptions");
+  const claims = valuesForThreadScope(projection, threadId, "claims");
+  const positions = latestPositions(valuesForThreadScope(projection, threadId, "positions"));
+  const objections = valuesForThreadScope(projection, threadId, "objections");
+  const decisionRequests = valuesForThreadScope(projection, threadId, "decisionRequests");
+  const reviews = valuesForThreadScope(projection, threadId, "reviews");
+  const decisionRecords = valuesForThreadScope(projection, threadId, "decisionRecords");
+  const minorityReports = valuesForThreadScope(projection, threadId, "minorityReports");
+  const expectedOutcomes = valuesForThreadScope(projection, threadId, "expectedOutcomes");
+  const outcomeAudits = valuesForThreadScope(projection, threadId, "outcomeAudits");
+  const decisionScores = valuesForThreadScope(projection, threadId, "decisionScores");
   const currentProposal = latestBy(decisionRequests, "openedAt");
   const decisionRecord = latestBy(decisionRecords, "decidedAt");
   const supportingEvidence = selectSupportingEvidence(evidence, claims, currentProposal, decisionRecord);
@@ -150,6 +159,9 @@ function selectThreadState(projection, requestedThreadId) {
   }));
   const unresolvedObjectionsWithParticipants = objectionsWithParticipants
     .filter((objection) => objection.status === "open" || objection.status === "preserved");
+  const forkLineage = selectForkLineage(projection, threadId);
+  const changedAssumptions = selectChangedObjects(assumptionsWithParticipants, forkLineage?.changedAssumptionIds);
+  const divergentClaims = forkLineage ? selectDivergentClaims(claims, forkLineage.changedClaimIds) : [];
   const reasoningState = buildReasoningState({
     thread,
     evidence: supportingEvidence,
@@ -160,6 +172,9 @@ function selectThreadState(projection, requestedThreadId) {
     decisionRecord,
     minorityReports,
     outcomeState,
+    forkLineage,
+    changedAssumptions,
+    divergentClaims,
     events: projection.events
   });
 
@@ -187,7 +202,10 @@ function selectThreadState(projection, requestedThreadId) {
       outcomeState
     },
     outcomeState,
-    auditTrail: auditTrail(projection.events, threadId)
+    forkLineage,
+    changedAssumptions,
+    divergentClaims,
+    auditTrail: auditTrailForThread(projection, threadId)
   };
 }
 
@@ -201,6 +219,9 @@ function buildReasoningState({
   decisionRecord,
   minorityReports,
   outcomeState,
+  forkLineage,
+  changedAssumptions,
+  divergentClaims,
   events
 }) {
   return {
@@ -225,6 +246,9 @@ function buildReasoningState({
     outcome_status: outcomeState.status,
     failed_assumptions: outcomeState.failedAssumptions,
     failed_evidence: outcomeState.failedEvidence,
+    fork_lineage: forkLineage,
+    changed_assumptions: changedAssumptions,
+    divergent_claims: divergentClaims,
     next_action: decisionRecord?.nextAction || null,
     audit_summary: {
       source: "append_only_event_log",
@@ -259,6 +283,7 @@ function exportProtocol(projection) {
     schema: "clista.protocol.v0",
     exportedAt: projection.projectedAt,
     threads: Object.values(projection.threads),
+    forks: Object.values(projection.forks),
     participants: Object.values(projection.participants),
     evidence: Object.values(projection.evidence),
     assumptions: Object.values(projection.assumptions),
@@ -283,6 +308,35 @@ function upsert(collection, object) {
   }
 }
 
+function applyThreadFork(projection, threadFork, at) {
+  if (!threadFork?.forkThreadId) {
+    return;
+  }
+  const fork = {
+    id: threadFork.id || threadFork.forkThreadId,
+    object: "threadFork",
+    ...threadFork
+  };
+  projection.forks[fork.forkThreadId] = fork;
+
+  const parent = projection.threads[fork.parentThreadId];
+  projection.threads[fork.forkThreadId] = {
+    id: fork.forkThreadId,
+    object: "thread",
+    title: fork.forkTitle,
+    question: parent?.question || fork.forkTitle,
+    status: "active",
+    participantIds: unique([
+      ...(parent?.participantIds || []),
+      fork.forkedBy
+    ]),
+    parentThreadId: fork.parentThreadId,
+    fork,
+    createdAt: fork.forkedAt || at,
+    updatedAt: fork.forkedAt || at
+  };
+}
+
 function touchThread(projection, threadId, at) {
   if (projection.threads[threadId]) {
     projection.threads[threadId] = {
@@ -303,26 +357,28 @@ function setThreadStatus(projection, threadId, status, at) {
 }
 
 function markClaimContested(projection, objection) {
-  if (objection?.targetObjectType === "claim" && projection.claims[objection.targetObjectId]) {
+  const claim = projection.claims[objection?.targetObjectId];
+  if (objection?.targetObjectType === "claim" && claim?.threadId === objection.threadId) {
     projection.claims[objection.targetObjectId] = {
-      ...projection.claims[objection.targetObjectId],
+      ...claim,
       status: "contested"
     };
   }
 }
 
 function markAssumptionContested(projection, objection) {
-  if (objection?.targetObjectType === "assumption" && projection.assumptions[objection.targetObjectId]) {
+  const assumption = projection.assumptions[objection?.targetObjectId];
+  if (objection?.targetObjectType === "assumption" && assumption?.threadId === objection.threadId) {
     projection.assumptions[objection.targetObjectId] = {
-      ...projection.assumptions[objection.targetObjectId],
+      ...assumption,
       status: "contested"
     };
   }
 }
 
-function resolveObjection(projection, objectionId, resolution) {
+function resolveObjection(projection, objectionId, resolution, threadId) {
   const objection = projection.objections[objectionId];
-  if (!objection) {
+  if (!objection || objection.threadId !== threadId) {
     return;
   }
   projection.objections[objectionId] = {
@@ -334,7 +390,7 @@ function resolveObjection(projection, objectionId, resolution) {
 
 function applyReviewStatus(projection, review) {
   const request = projection.decisionRequests[review?.decisionRequestId];
-  if (!request) {
+  if (!request || request.threadId !== review?.threadId) {
     return;
   }
   if (review.status === "request_changes") {
@@ -347,11 +403,11 @@ function applyDecisionRecord(projection, decisionRecord, at) {
     return;
   }
   const request = projection.decisionRequests[decisionRecord.decisionRequestId];
-  if (request) {
+  if (request?.threadId === decisionRecord.threadId) {
     request.status = decisionRecord.status === "approved" ? "merged" : "rejected";
   }
   for (const objectionId of decisionRecord.preservedObjectionIds || []) {
-    if (projection.objections[objectionId]) {
+    if (projection.objections[objectionId]?.threadId === decisionRecord.threadId) {
       projection.objections[objectionId] = {
         ...projection.objections[objectionId],
         status: "preserved"
@@ -371,6 +427,83 @@ function attachMinorityReport(projection, minorityReport) {
     ids.add(minorityReport.id);
     record.minorityReportIds = Array.from(ids);
   }
+}
+
+function valuesForThreadScope(projection, threadId, collectionName, visited = new Set()) {
+  const thread = projection.threads[threadId];
+  const collection = projection[collectionName] || {};
+  const directValues = valuesForThread(collection, threadId);
+
+  if (!thread?.fork || visited.has(threadId)) {
+    return directValues;
+  }
+
+  visited.add(threadId);
+  const fork = thread.fork;
+  const parentProjection = projectEvents(eventsThroughBoundary(projection.events, fork.inheritedThroughEventId));
+  const inheritedValues = valuesForThreadScope(parentProjection, fork.parentThreadId, collectionName, visited)
+    .map((object) => ({
+      ...object,
+      inheritedFromThreadId: object.inheritedFromThreadId || fork.parentThreadId
+    }));
+  return [...inheritedValues, ...directValues];
+}
+
+function eventsThroughBoundary(events, inheritedThroughEventId) {
+  const boundaryIndex = events.findIndex((event) => eventId(event) === inheritedThroughEventId);
+  if (boundaryIndex === -1) {
+    return [];
+  }
+  return events.slice(0, boundaryIndex + 1);
+}
+
+function selectChangedObjects(objects, ids = []) {
+  const wanted = new Set(ids || []);
+  return objects.filter((object) => wanted.has(object.id));
+}
+
+function selectDivergentClaims(claims, changedClaimIds = []) {
+  const wanted = new Set(changedClaimIds || []);
+  return claims.filter((claim) => wanted.has(claim.id) || !claim.inheritedFromThreadId);
+}
+
+function selectForkLineage(projection, threadId) {
+  const thread = projection.threads[threadId];
+  if (!thread?.fork) {
+    return null;
+  }
+  const fork = thread.fork;
+  const inheritedEvent = projection.events.find((event) => eventId(event) === fork.inheritedThroughEventId);
+  return {
+    parentThreadId: fork.parentThreadId,
+    forkThreadId: fork.forkThreadId,
+    forkTitle: fork.forkTitle,
+    forkedBy: fork.forkedBy,
+    forkedAt: fork.forkedAt,
+    inheritedThroughEventId: fork.inheritedThroughEventId,
+    inheritedThroughTimestamp: eventTimestamp(inheritedEvent) || null,
+    forkReason: fork.forkReason,
+    changedAssumptionIds: fork.changedAssumptionIds || [],
+    changedClaimIds: fork.changedClaimIds || [],
+    ancestors: forkAncestors(projection, fork.parentThreadId)
+  };
+}
+
+function forkAncestors(projection, threadId) {
+  const ancestors = [];
+  const seen = new Set();
+  let thread = projection.threads[threadId];
+  while (thread?.fork && !seen.has(thread.id)) {
+    seen.add(thread.id);
+    ancestors.push({
+      parentThreadId: thread.fork.parentThreadId,
+      forkThreadId: thread.fork.forkThreadId,
+      inheritedThroughEventId: thread.fork.inheritedThroughEventId,
+      forkReason: thread.fork.forkReason
+    });
+    thread = projection.threads[thread.fork.parentThreadId];
+  }
+  return ancestors;
 }
 
 function buildOutcomeState({ expectedOutcomes, outcomeAudits, decisionScores, assumptions, evidence }) {
@@ -488,6 +621,23 @@ function auditTrail(events, threadId) {
     }));
 }
 
+function auditTrailForThread(projection, threadId) {
+  const thread = projection.threads[threadId];
+  if (!thread?.fork) {
+    return auditTrail(projection.events, threadId);
+  }
+
+  const parentProjection = projectEvents(eventsThroughBoundary(projection.events, thread.fork.inheritedThroughEventId));
+  return [
+    ...auditTrailForThread(parentProjection, thread.fork.parentThreadId).map((entry) => ({
+      ...entry,
+      inherited: true,
+      inheritedFromThreadId: entry.thread_id
+    })),
+    ...auditTrail(projection.events, threadId)
+  ];
+}
+
 function eventId(event) {
   return event.event_id || event.id;
 }
@@ -511,6 +661,7 @@ function eventThreadId(event) {
 function primaryObject(event) {
   const payload = event.payload || {};
   return payload.thread
+    || payload.threadFork
     || payload.participant
     || payload.evidence
     || payload.assumption
@@ -550,5 +701,6 @@ module.exports = {
   exportProtocol,
   projectEvents,
   selectAudit,
+  selectForkLineage,
   selectThreadState
 };

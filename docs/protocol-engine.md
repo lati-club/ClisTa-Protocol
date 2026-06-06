@@ -55,6 +55,7 @@ Supported events:
 
 - `AssumptionDeclared`
 - `EvidenceCommitted`
+- `ThreadForked`
 - `ClaimCreated`
 - `PositionTaken`
 - `ObjectionRaised`
@@ -77,6 +78,7 @@ The local store lives at:
 ```text
 npm run clista -- init
 npm run clista -- thread create --title "ClisTa MVP protocol shape" --question "Should ClisTa MVP begin as a local-first JSON protocol before UI?"
+npm run clista -- thread fork --parent thd_example --fork thd_example_alt --title "Alternative protocol shape" --reason "Test an alternate assumption." --through evt_example
 npm run clista -- evidence commit --thread thd_example --source "Research" --finding "Protocol-first state can be reloaded."
 npm run clista -- claim create --thread thd_example --text "ClisTa should start protocol-first." --evidence evd_example
 npm run clista -- position take --thread thd_example --participant "Troy" --stance support
@@ -90,6 +92,7 @@ npm run clista -- outcome audit --thread thd_example --expected exo_example --ac
 npm run clista -- decision score --thread thd_example --decision dcr_example --score 0.4 --status failed --rationale "The expected outcome was not met." --audits out_example
 npm run clista -- state show --thread thd_example
 npm run clista -- audit show --thread thd_example
+npm run clista -- fork lineage --thread thd_example_alt
 ```
 
 ## First Test Thread

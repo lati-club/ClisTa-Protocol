@@ -6,6 +6,10 @@ ClisTa preserves reasoning transitions as structured objects.
 
 The container for a reasoning question.
 
+## Thread Fork
+
+A divergent reasoning thread that inherits parent thread state through a declared event boundary.
+
 ## Participant
 
 A human, agent, tool, or system actor with a declared role.

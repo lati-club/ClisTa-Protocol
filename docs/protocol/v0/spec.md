@@ -34,6 +34,7 @@ Projected state is derived.
 ## Core Events
 
 - `ThreadCreated`
+- `ThreadForked`
 - `ParticipantAdded`
 - `EvidenceCommitted`
 - `AssumptionDeclared`
@@ -63,6 +64,7 @@ Projected state is derived.
 - alignment snapshot
 - decision status
 - audit trail
+- fork lineage
 
 ## Required Validation
 

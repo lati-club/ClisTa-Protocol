@@ -25,7 +25,7 @@ const OUTCOME_STATUSES = new Set([
 ]);
 
 function validateEvents(events) {
-  const state = emptyValidationState();
+  const state = emptyValidationState(events);
 
   events.forEach((event, index) => {
     validateEnvelope(event, index, state);
@@ -36,6 +36,7 @@ function validateEvents(events) {
     }
 
     validateActor(event, state);
+    validateForkEvent(event, state);
 
     switch (event.event_type) {
       case "ParticipantAdded":
@@ -43,6 +44,9 @@ function validateEvents(events) {
         break;
       case "ThreadCreated":
         validateThreadCreated(event, state);
+        break;
+      case "ThreadForked":
+        validateThreadForked(event, index, state);
         break;
       case "EvidenceCommitted":
         validateEvidenceCommitted(event, state);
@@ -91,6 +95,9 @@ function validateEvents(events) {
     }
 
     state.events.push(event);
+    if (event.event_id) {
+      state.processedEventsById.set(event.event_id, event);
+    }
   });
 
   validateFinalDecisionIntegrity(state);
@@ -109,12 +116,16 @@ function assertValidEvents(events) {
   return result;
 }
 
-function emptyValidationState() {
+function emptyValidationState(events = []) {
   return {
     errors: [],
     eventIds: new Set(),
+    allEventIndexById: new Map(events.map((event, index) => [event?.event_id, index]).filter(([id]) => id)),
+    processedEventsById: new Map(),
     participants: new Map(),
     threads: new Map(),
+    forks: new Map(),
+    forkInheritedObjectIds: new Map(),
     evidence: new Map(),
     assumptions: new Map(),
     claims: new Map(),
@@ -220,6 +231,84 @@ function validateThreadCreated(event, state) {
     }
   }
   state.threads.set(thread.id, thread);
+}
+
+function validateThreadForked(event, index, state) {
+  const fork = event.payload.threadFork;
+  if (!fork?.forkThreadId) {
+    addError(state, event, "ThreadForked payload missing threadFork.forkThreadId");
+    return;
+  }
+  if (fork.forkThreadId !== event.thread_id) {
+    addError(state, event, "forkThreadId must match event thread_id");
+  }
+  if (state.threads.has(fork.forkThreadId) || state.forks.has(fork.forkThreadId)) {
+    addError(state, event, `forkThreadId is not unique: ${fork.forkThreadId}`);
+  }
+  const parent = state.threads.get(fork.parentThreadId);
+  if (!parent) {
+    addError(state, event, `fork references unknown parent thread ${fork.parentThreadId}`);
+  }
+  if (!state.participants.has(fork.forkedBy)) {
+    addError(state, event, `fork references unknown participant ${fork.forkedBy}`);
+  }
+
+  const boundaryIndex = state.allEventIndexById.get(fork.inheritedThroughEventId);
+  const inheritedEvent = state.processedEventsById.get(fork.inheritedThroughEventId);
+  if (boundaryIndex === undefined) {
+    addError(state, event, `fork inheritedThroughEventId does not exist: ${fork.inheritedThroughEventId}`);
+  } else if (boundaryIndex >= index) {
+    addError(state, event, `fork cannot inherit from future event ${fork.inheritedThroughEventId}`);
+  } else if (!inheritedEvent) {
+    addError(state, event, `fork inheritedThroughEventId was not processed: ${fork.inheritedThroughEventId}`);
+  } else if (!eventBelongsToThread(inheritedEvent, fork.parentThreadId)) {
+    addError(state, event, `fork inheritedThroughEventId is not in parent thread ${fork.parentThreadId}`);
+  }
+
+  validateIdsBelongToThread(event, state, fork.changedAssumptionIds, state.assumptions, "assumption", fork.parentThreadId);
+  validateIdsBelongToThread(event, state, fork.changedClaimIds, state.claims, "claim", fork.parentThreadId);
+  const inheritedObjectIds = collectInheritedObjectIdsThroughBoundary(
+    state.events,
+    fork.parentThreadId,
+    fork.inheritedThroughEventId
+  );
+  validateIdsInheritedThroughBoundary(
+    event,
+    state,
+    fork.changedAssumptionIds,
+    state.assumptions,
+    inheritedObjectIds,
+    "assumption",
+    fork.inheritedThroughEventId
+  );
+  validateIdsInheritedThroughBoundary(
+    event,
+    state,
+    fork.changedClaimIds,
+    state.claims,
+    inheritedObjectIds,
+    "claim",
+    fork.inheritedThroughEventId
+  );
+
+  const thread = {
+    id: fork.forkThreadId,
+    object: "thread",
+    title: fork.forkTitle,
+    question: parent?.question || fork.forkTitle,
+    status: "active",
+    participantIds: unique([
+      ...(parent?.participantIds || []),
+      fork.forkedBy
+    ]),
+    parentThreadId: fork.parentThreadId,
+    fork,
+    createdAt: fork.forkedAt || event.timestamp,
+    updatedAt: fork.forkedAt || event.timestamp
+  };
+  state.forks.set(fork.forkThreadId, fork);
+  state.threads.set(fork.forkThreadId, thread);
+  state.forkInheritedObjectIds.set(fork.forkThreadId, inheritedObjectIds);
 }
 
 function validateEvidenceCommitted(event, state) {
@@ -582,6 +671,103 @@ function validateIdsExist(event, state, ids, collection, label) {
       addError(state, event, `${label} reference does not exist: ${id}`);
     }
   }
+}
+
+function validateIdsBelongToThread(event, state, ids, collection, label, threadId) {
+  for (const id of ids || []) {
+    const object = collection.get(id);
+    if (!object) {
+      addError(state, event, `${label} reference does not exist: ${id}`);
+    } else if (object.threadId !== threadId) {
+      addError(state, event, `${label} ${id} does not belong to parent thread ${threadId}`);
+    }
+  }
+}
+
+function validateForkEvent(event, state) {
+  const fork = state.forks.get(event.thread_id);
+  if (!fork || event.event_type === "ThreadForked") {
+    return;
+  }
+  const object = primaryObject(event);
+  const inheritedObjectIds = state.forkInheritedObjectIds.get(fork.forkThreadId) || new Set();
+  if (object?.id && inheritedObjectIds.has(object.id)) {
+    addError(state, event, `fork cannot mutate parent object directly: ${object.id}`);
+  }
+  for (const targetId of forkMutationTargetIds(event)) {
+    if (targetId && inheritedObjectIds.has(targetId)) {
+      addError(state, event, `fork cannot mutate parent object directly: ${targetId}`);
+    }
+  }
+}
+
+function collectInheritedObjectIdsThroughBoundary(events, parentThreadId, inheritedThroughEventId) {
+  const ids = new Set();
+  for (const event of events) {
+    const object = primaryObject(event);
+    if (object?.id && object.threadId === parentThreadId) {
+      ids.add(object.id);
+    }
+    if (event.event_id === inheritedThroughEventId) {
+      break;
+    }
+  }
+  return ids;
+}
+
+function validateIdsInheritedThroughBoundary(event, state, ids, collection, inheritedObjectIds, label, inheritedThroughEventId) {
+  for (const id of ids || []) {
+    if (collection.has(id) && !inheritedObjectIds.has(id)) {
+      addError(state, event, `${label} ${id} is not inherited through ${inheritedThroughEventId}`);
+    }
+  }
+}
+
+function forkMutationTargetIds(event) {
+  const payload = event.payload || {};
+  switch (event.event_type) {
+    case "ObjectionResolved":
+      return [payload.objectionId || payload.objection?.id];
+    case "ReviewSubmitted":
+      return [payload.review?.decisionRequestId];
+    case "DecisionMerged":
+      return [
+        payload.decisionRecord?.decisionRequestId,
+        ...(payload.decisionRecord?.preservedObjectionIds || [])
+      ];
+    case "MinorityReportFiled":
+      return [payload.minorityReport?.decisionRecordId];
+    default:
+      return [];
+  }
+}
+
+function eventBelongsToThread(event, threadId) {
+  return event?.thread_id === threadId
+    || event?.threadId === threadId
+    || event?.payload?.thread?.id === threadId
+    || event?.payload?.threadFork?.forkThreadId === threadId;
+}
+
+function primaryObject(event) {
+  const payload = event?.payload || {};
+  return payload.thread
+    || payload.threadFork
+    || payload.participant
+    || payload.evidence
+    || payload.assumption
+    || payload.claim
+    || payload.position
+    || payload.objection
+    || payload.alignmentSnapshot
+    || payload.decisionRequest
+    || payload.review
+    || payload.decisionRecord
+    || payload.minorityReport
+    || payload.expectedOutcome
+    || payload.outcomeAudit
+    || payload.decisionScore
+    || null;
 }
 
 function isValidDateString(value) {

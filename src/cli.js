@@ -14,7 +14,7 @@ const {
   readEvents,
   readEventsAt
 } = require("./events");
-const { exportProtocol, projectEvents, selectAudit, selectThreadState } = require("./projector");
+const { exportProtocol, projectEvents, selectAudit, selectForkLineage, selectThreadState } = require("./projector");
 const { evaluateDecisionEligibility } = require("./governance");
 const { assertValidEvents, validateEvents } = require("./validator");
 
@@ -27,6 +27,8 @@ function main(argv = process.argv.slice(2), cwd = process.cwd()) {
         return print(initStore(cwd));
       case "thread create":
         return threadCreate(options, cwd);
+      case "thread fork":
+        return threadFork(options, cwd);
       case "evidence commit":
         return evidenceCommit(options, cwd);
       case "assumption declare":
@@ -59,6 +61,8 @@ function main(argv = process.argv.slice(2), cwd = process.cwd()) {
         return stateShow(options, cwd);
       case "audit show":
         return auditShow(options, cwd);
+      case "fork lineage":
+        return forkLineage(options, cwd);
       case "export":
         return exportShow(options, cwd);
       case "help":
@@ -105,6 +109,50 @@ function threadCreate(options, cwd) {
   });
   appendEvent(event, cwd);
   return print({ thread, event });
+}
+
+function threadFork(options, cwd) {
+  requireOption(options, "parent");
+  requireOption(options, "fork");
+  requireOption(options, "title");
+  requireOption(options, "reason");
+  requireOption(options, "through");
+  const actor = participantFrom(options.forkedBy || options.actor || "Author", options.role);
+  appendParticipant(actor, cwd, options.parent);
+  const at = nowIso();
+  const threadFork = {
+    id: options.fork,
+    object: "threadFork",
+    parentThreadId: options.parent,
+    forkThreadId: options.fork,
+    forkTitle: options.title,
+    forkedBy: actor.id,
+    forkedAt: at,
+    inheritedThroughEventId: options.through,
+    forkReason: options.reason,
+    changedAssumptionIds: parseList(options.changedAssumptions || options.changedAssumptionIds),
+    changedClaimIds: parseList(options.changedClaims || options.changedClaimIds),
+    contentHash: contentHash({
+      parentThreadId: options.parent,
+      forkThreadId: options.fork,
+      forkTitle: options.title,
+      forkedBy: actor.id,
+      forkedAt: at,
+      inheritedThroughEventId: options.through,
+      forkReason: options.reason,
+      changedAssumptionIds: parseList(options.changedAssumptions || options.changedAssumptionIds),
+      changedClaimIds: parseList(options.changedClaims || options.changedClaimIds)
+    })
+  };
+  const event = createEvent({
+    type: "ThreadForked",
+    threadId: threadFork.forkThreadId,
+    actorId: actor.id,
+    at,
+    payload: { threadFork }
+  });
+  appendEvent(event, cwd);
+  return print({ threadFork, event });
 }
 
 function evidenceCommit(options, cwd) {
@@ -611,6 +659,23 @@ function auditShow(options, cwd) {
   return print(selectAudit(projection, options.thread));
 }
 
+function forkLineage(options, cwd) {
+  requireOption(options, "thread");
+  const projection = projectEvents(readValidEventsForOptions(options, cwd));
+  const lineage = selectForkLineage(projection, options.thread);
+  if (!lineage) {
+    return print({
+      schema: "clista.forkLineage.v0",
+      threadId: options.thread,
+      error: "Thread is not a fork"
+    });
+  }
+  return print({
+    schema: "clista.forkLineage.v0",
+    ...lineage
+  });
+}
+
 function assumptionsList(options, cwd) {
   const projection = projectEvents(readValidEventsForOptions(options, cwd));
   const state = selectThreadState(projection, options.thread);
@@ -820,6 +885,7 @@ function usage() {
   return `Usage:
   clista init
   clista thread create --title <title> --question <question>
+  clista thread fork --parent <threadId> --fork <forkThreadId> --title <title> --reason <reason> --through <eventId>
   clista evidence commit --thread <threadId> --source <source> --finding <finding>
   clista assumption declare --thread <threadId> --text <assumption>
   clista assumptions list [--thread <threadId>] [--events <path>]
@@ -836,6 +902,7 @@ function usage() {
   clista validate [--events <path>]
   clista state show [--thread <threadId>] [--events <path>]
   clista audit show [--thread <threadId>] [--events <path>]
+  clista fork lineage --thread <forkThreadId> [--events <path>]
   clista export [--events <path>]`;
 }
 

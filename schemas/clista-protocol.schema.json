@@ -8,6 +8,7 @@
     "schema",
     "exportedAt",
     "threads",
+    "forks",
     "participants",
     "evidence",
     "assumptions",
@@ -36,6 +37,12 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/thread"
+      }
+    },
+    "forks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/threadFork"
       }
     },
     "participants": {
@@ -217,6 +224,12 @@
           },
           "uniqueItems": true
         },
+        "parentThreadId": {
+          "$ref": "#/$defs/id"
+        },
+        "fork": {
+          "$ref": "#/$defs/threadFork"
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time"
@@ -224,6 +237,74 @@
         "updatedAt": {
           "type": "string",
           "format": "date-time"
+        },
+        "metadata": {
+          "$ref": "#/$defs/metadata"
+        }
+      }
+    },
+    "threadFork": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "object",
+        "parentThreadId",
+        "forkThreadId",
+        "forkTitle",
+        "forkedBy",
+        "forkedAt",
+        "inheritedThroughEventId",
+        "forkReason"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "object": {
+          "const": "threadFork"
+        },
+        "parentThreadId": {
+          "$ref": "#/$defs/id"
+        },
+        "forkThreadId": {
+          "$ref": "#/$defs/id"
+        },
+        "forkTitle": {
+          "type": "string",
+          "minLength": 1
+        },
+        "forkedBy": {
+          "$ref": "#/$defs/id"
+        },
+        "forkedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "inheritedThroughEventId": {
+          "$ref": "#/$defs/id"
+        },
+        "forkReason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "changedAssumptionIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "changedClaimIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "contentHash": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
         },
         "metadata": {
           "$ref": "#/$defs/metadata"
@@ -1175,6 +1256,7 @@
         "event_type": {
           "enum": [
             "ThreadCreated",
+            "ThreadForked",
             "ParticipantAdded",
             "AssumptionDeclared",
             "EvidenceCommitted",
