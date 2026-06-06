@@ -135,6 +135,7 @@ Validation checks:
 - amendment references, approval authority, non-implicit-mutation, and non-retroactive boundaries
 - compatibility capability support, verification-layer support, active-amendment support, and fail-closed boundaries
 - interoperability semantic preservation, event-type preservation, object-meaning preservation, and explicit-degradation boundaries
+- federation packet verification, independent-context references, non-authority-import, and non-centralization boundaries
 
 ## Required Integrity
 
@@ -183,7 +184,7 @@ A Continuity Packet must be integrity-gated and must preserve:
 - projection hash
 - state hash
 - resume status: `verified`, `degraded`, or `rejected`
-- verification status for integrity, attribution, provenance, learning, adaptation, amendments, compatibility, and interoperability
+- verification status for integrity, attribution, provenance, learning, adaptation, amendments, compatibility, interoperability, and federation
 - current question
 - current decision
 - assumptions
@@ -200,6 +201,7 @@ A Continuity Packet must be integrity-gated and must preserve:
 - amendment state
 - compatibility state
 - interoperability state
+- federation state
 - next action
 
 Continuity must reject packets that trust transcript replay, trust model memory, skip failed verification, create authority, approve amendments, mutate governance, mutate imported state, or bypass validation.
@@ -272,6 +274,44 @@ Interoperability must verify:
 - compatibility failures prevent interoperability acceptance
 
 Interoperability must reject packets that silently remap event meanings, flatten authority into metadata, flatten provenance into notes, treat learning signals as scores, treat adaptation recommendations as amendments, treat continuity packets as transcript summaries, accept unknown required semantics, or accept semantically degraded state as fully valid.
+
+## Required Federation
+
+```text
+clista federation record
+clista federation check
+clista federation list
+clista federation show <federationId>
+clista federation verify
+```
+
+must verify external ClisTa state references without merging authority domains.
+
+The theorem is:
+
+```text
+protocol_federation = align(independent_reasoning_states, shared_protocol_rules)
+```
+
+The hard law is:
+
+```text
+shared_state != shared_authority
+```
+
+Federation must verify:
+
+- external packets pass continuity verification
+- external packets pass compatibility verification
+- external packets pass interoperability verification
+- federated state references include packet hash, event-log hash, projection hash, state hash, and remote thread id
+- federation status is `accepted`, `degraded`, `rejected`, or `pending`
+- remote verification may inform local reasoning
+- remote authority does not become local authority without explicit local governance
+- remote amendments do not become local amendments automatically
+- remote state does not mutate local governance or projected local state
+
+Federation must reject records that create shared authority by default, import remote authority automatically, merge remote governance automatically, import amendments automatically, create automatic consensus, mutate local state from remote state, or treat federation as network consensus.
 
 ## Required Identity
 

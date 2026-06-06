@@ -18,6 +18,11 @@ const {
   buildCompatibilityState,
   projectCompatibility
 } = require("./compatibility");
+const {
+  buildFederationState,
+  projectFederation,
+  selectFederationForThread
+} = require("./federation");
 const { buildIdentityState, projectIdentity } = require("./identity");
 const { PROTOCOL_VERSION, verifyEventIntegrity } = require("./integrity");
 const {
@@ -206,7 +211,7 @@ function emptyProjection() {
       schema: "clista.compatibility.v0",
       theorem: "protocol_compatibility = verify(capability_set, amendment_state, validation_requirements)",
       hardLaw: "unsupported_state != valid_state",
-      compatibilityProtocolVersion: "0.16.0",
+      compatibilityProtocolVersion: "0.17.0",
       localProtocolVersion: PROTOCOL_VERSION,
       localCapabilitySet: [],
       supportedContinuityProtocolVersions: [],
@@ -239,7 +244,7 @@ function emptyProjection() {
       schema: "clista.interoperability.v0",
       theorem: "protocol_interoperability = preserve(meaning, across_compatible_contexts)",
       hardLaw: "translation != reinterpretation",
-      interoperabilityProtocolVersion: "0.16.0",
+      interoperabilityProtocolVersion: "0.17.0",
       localProtocolVersion: PROTOCOL_VERSION,
       supportedExchangeFormats: [],
       supportedSemantics: [],
@@ -271,6 +276,45 @@ function emptyProjection() {
         learningSignalsAsScores: false,
         adaptationRecommendationsAsAmendments: false,
         continuityAsTranscriptSummary: false
+      }
+    },
+    federation: {
+      schema: "clista.federation.v0",
+      theorem: "protocol_federation = align(independent_reasoning_states, shared_protocol_rules)",
+      hardLaw: "shared_state != shared_authority",
+      federationProtocolVersion: "0.17.0",
+      localProtocolVersion: PROTOCOL_VERSION,
+      statuses: ["accepted", "degraded", "rejected", "pending"],
+      contexts: [],
+      peers: [],
+      references: [],
+      verifications: [],
+      rejections: [],
+      boundaries: [],
+      byContext: {},
+      byPeer: {},
+      byReference: {},
+      byVerification: {},
+      byRejection: {},
+      boundariesByReference: {},
+      federationValidationStatus: {
+        valid: true,
+        contextCount: 0,
+        peerCount: 0,
+        referenceCount: 0,
+        verificationCount: 0,
+        rejectionCount: 0,
+        boundaryCount: 0,
+        sharedAuthority: false,
+        remoteAuthorityImported: false,
+        automaticAuthorityImport: false,
+        localGovernanceMutation: false,
+        remoteGovernanceMerged: false,
+        automaticAmendmentImport: false,
+        remoteAmendmentsImported: false,
+        automaticConsensus: false,
+        remoteStateMutation: false,
+        networkConsensus: false
       }
     },
     events: []
@@ -325,6 +369,12 @@ function projectEvents(events) {
       case "SemanticDegradationRecorded":
       case "InteroperabilityFailureRecorded":
       case "InteroperabilityAcceptanceRecorded":
+      case "FederationContextDeclared":
+      case "FederationPeerRecorded":
+      case "FederatedStateReferenceRecorded":
+      case "FederatedPacketVerified":
+      case "FederatedPacketRejected":
+      case "FederationBoundaryRecorded":
         break;
       case "ThreadCreated":
         upsert(projection.threads, payload.thread);
@@ -429,6 +479,7 @@ function projectEvents(events) {
   projection.amendments = projectAmendments(buildAmendmentState(projection.events));
   projection.compatibility = projectCompatibility(buildCompatibilityState(projection));
   projection.interoperability = projectInteroperability(buildInteroperabilityState(projection));
+  projection.federation = projectFederation(buildFederationState(projection));
 
   return projection;
 }
@@ -497,6 +548,7 @@ function selectThreadState(projection, requestedThreadId) {
   const amendmentState = selectAmendmentsForThread(projection.amendments, threadId);
   const compatibilityState = projection.compatibility;
   const interoperabilityState = projection.interoperability;
+  const federationState = selectFederationForThread(projection.federation, threadId);
   const reasoningState = buildReasoningState({
     thread,
     evidence: supportingEvidence,
@@ -518,6 +570,7 @@ function selectThreadState(projection, requestedThreadId) {
     amendmentState,
     compatibilityState,
     interoperabilityState,
+    federationState,
     events: projection.events
   });
 
@@ -557,6 +610,7 @@ function selectThreadState(projection, requestedThreadId) {
     amendmentState,
     compatibilityState,
     interoperabilityState,
+    federationState,
     auditTrail: auditTrailForThread(projection, threadId)
   };
 }
@@ -582,6 +636,7 @@ function buildReasoningState({
   amendmentState,
   compatibilityState,
   interoperabilityState,
+  federationState,
   events
 }) {
   return {
@@ -618,6 +673,7 @@ function buildReasoningState({
     amendments: amendmentState,
     compatibility: compatibilityState,
     interoperability: interoperabilityState,
+    federation: federationState,
     next_action: decisionRecord?.nextAction || null,
     audit_summary: {
       source: "append_only_event_log",
@@ -698,6 +754,7 @@ function exportProtocol(projection) {
     amendmentHistory: projection.amendments.historyByAmendment,
     compatibility: projection.compatibility,
     interoperability: projection.interoperability,
+    federation: projection.federation,
     events: projection.events
   };
 }

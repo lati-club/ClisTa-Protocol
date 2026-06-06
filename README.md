@@ -73,6 +73,14 @@ clista interoperability verify --packet continuity.json
 
 If it verifies declared semantics, event meanings, and object meanings, portable reasoning can preserve protocol meaning instead of merely matching packet structure.
 
+The federation command is:
+
+```text
+clista federation verify
+```
+
+If it verifies external state references without importing remote authority, independent ClisTa contexts can align without centralizing governance.
+
 The identity command is:
 
 ```text
@@ -142,6 +150,8 @@ Continuity is not transcript replay. A resumed thread is trusted because project
 Compatibility is not best effort acceptance. Unsupported state is not valid state.
 
 Interoperability is not semantic loss. Translation is not reinterpretation.
+
+Federation is not centralization. Shared state is not shared authority.
 
 ## Repository Boundary
 

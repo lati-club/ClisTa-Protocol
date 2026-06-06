@@ -44,7 +44,7 @@ An interoperability profile must declare:
 - semantic profile hash
 - semantic-loss guard fields
 
-The profile must preserve meaning for claims, assumptions, evidence, decisions, authority, attribution, provenance, learning signals, adaptation recommendations, amendments, continuity, compatibility, and interoperability.
+The profile must preserve meaning for claims, assumptions, evidence, decisions, authority, attribution, provenance, learning signals, adaptation recommendations, amendments, continuity, compatibility, interoperability, and federation.
 
 ## Required Status
 
@@ -128,7 +128,7 @@ continuity packet failed verification
 
 Interoperability is not semantic loss.
 
-Interoperability does not flatten authority, provenance, learning, adaptation, amendments, continuity, or compatibility into generic notes or metadata.
+Interoperability does not flatten authority, provenance, learning, adaptation, amendments, continuity, compatibility, or federation into generic notes or metadata.
 
 Milestone 16 does not add UI, agents, network sync, graph databases, search, reputation, OAuth/login, signatures, distributed consensus, or automatic protocol translation.
 

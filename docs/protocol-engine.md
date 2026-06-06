@@ -148,6 +148,8 @@ npm run clista -- compatibility verify --packet continuity.json
 npm run clista -- compatibility show --packet continuity.json
 npm run clista -- interoperability verify --packet continuity.json
 npm run clista -- interoperability show --packet continuity.json
+npm run clista -- federation check --packet continuity.json
+npm run clista -- federation verify
 npm run clista -- identity show --participant par_troy
 npm run clista -- attribution list --thread thd_example
 npm run clista -- attribution show clm_example

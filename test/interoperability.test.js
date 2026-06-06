@@ -27,7 +27,8 @@ test("interoperability verify accepts current continuity packets as explicitly d
   assert.equal(result.theorem, "protocol_interoperability = preserve(meaning, across_compatible_contexts)");
   assert.equal(result.hardLaw, "translation != reinterpretation");
   assert.ok(result.packetContext.requiredSemantics.includes("authority_context"));
-  assert.equal(result.localProfile.interoperabilityProtocolVersion, "0.16.0");
+  assert.equal(result.localProfile.interoperabilityProtocolVersion, "0.17.0");
+  assert.ok(result.packetContext.requiredSemantics.includes("federation_status"));
   assert.equal(result.localProfile.objectSemantics.authority, "event_time_governance_permission");
   assert.equal(summary.valid, true);
   assert.equal(summary.status, "degraded");

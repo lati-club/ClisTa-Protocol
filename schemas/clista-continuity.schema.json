@@ -36,7 +36,7 @@
       "const": "continuity"
     },
     "protocol_version": {
-      "const": "0.16.0"
+      "const": "0.17.0"
     },
     "schema_version": {
       "const": "clista.continuity.packet.v0"
@@ -79,6 +79,11 @@
         {
           "contains": {
             "const": "interoperability"
+          }
+        },
+        {
+          "contains": {
+            "const": "federation"
           }
         }
       ]
@@ -193,7 +198,7 @@
           "const": "translation != reinterpretation"
         },
         "interoperabilityProtocolVersion": {
-          "const": "0.16.0"
+          "const": "0.17.0"
         },
         "localProtocolVersion": {
           "const": "clista.protocol.v0"
@@ -243,7 +248,8 @@
             "amendment",
             "continuity",
             "compatibility",
-            "interoperability"
+            "interoperability",
+            "federation"
           ]
         },
         "semanticLossAccepted": {
@@ -305,6 +311,7 @@
         "amendment_state",
         "compatibility_state",
         "interoperability_state",
+        "federation_state",
         "verification_status",
         "integrity_state",
         "status",
@@ -415,6 +422,10 @@
           "additionalProperties": true
         },
         "interoperability_state": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "federation_state": {
           "type": "object",
           "additionalProperties": true
         },
@@ -535,6 +546,7 @@
         "amendmentValidationStatus",
         "compatibilityValidationStatus",
         "interoperabilityValidationStatus",
+        "federationValidationStatus",
         "transcriptReplay",
         "memoryTrust",
         "authorityCreated",
@@ -560,7 +572,7 @@
           ]
         },
         "continuityProtocolVersion": {
-          "const": "0.16.0"
+          "const": "0.17.0"
         },
         "verificationMode": {
           "enum": [

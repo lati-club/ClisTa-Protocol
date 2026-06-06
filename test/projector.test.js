@@ -159,6 +159,7 @@ test("thread-0001 reasoning state is reconstructed from .clista/events.ndjson on
 	    "amendments",
 	    "compatibility",
 	    "interoperability",
+	    "federation",
 	    "next_action",
 	    "audit_summary"
 	  ]);
@@ -189,6 +190,7 @@ test("thread-0001 reasoning state is reconstructed from .clista/events.ndjson on
 	  assert.equal(reasoning.amendments.hardLaw, "recommendation != amendment");
 	  assert.equal(reasoning.compatibility.hardLaw, "unsupported_state != valid_state");
 	  assert.equal(reasoning.interoperability.hardLaw, "translation != reinterpretation");
+	  assert.equal(reasoning.federation.hardLaw, "shared_state != shared_authority");
 	  assert.equal(reasoning.next_action, "Implement and prove Milestone 0: Protocol Spine Proven.");
   assert.equal(reasoning.audit_summary.source, "append_only_event_log");
   assert.equal(reasoning.audit_summary.external_state_used, false);

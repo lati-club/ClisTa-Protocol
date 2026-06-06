@@ -23,6 +23,11 @@ const {
   amendmentForId
 } = require("./amendments");
 const {
+  buildFederatedStateReference,
+  federationForId,
+  verifyProtocolFederation
+} = require("./federation");
+const {
   summarizeProtocolCompatibility,
   verifyProtocolCompatibility
 } = require("./compatibility");
@@ -188,6 +193,16 @@ function main(argv = process.argv.slice(2), cwd = process.cwd()) {
         return interoperabilityShow(options, cwd);
       case "interoperability verify":
         return interoperabilityVerify(options, cwd);
+      case "federation record":
+        return federationRecord(options, cwd);
+      case "federation check":
+        return federationCheck(options, cwd);
+      case "federation list":
+        return federationList(options, cwd);
+      case "federation show":
+        return federationShow(options, cwd);
+      case "federation verify":
+        return federationVerify(options, cwd);
       case "state show":
         return stateShow(options, cwd);
       case "audit show":
@@ -1728,6 +1743,104 @@ function interoperabilityVerify(options, cwd) {
   return interoperabilityCheck(options, cwd);
 }
 
+function federationRecord(options, cwd) {
+  requireOption(options, "thread");
+  const packet = readContinuityPacketForOptions(options, cwd);
+  const result = federationResultFromCli(packet, options);
+  if (!result.valid) {
+    print(result);
+    process.exitCode = 1;
+    return;
+  }
+  const actor = participantFrom(options.actor || options.participant || "Author", options.role);
+  appendParticipant(actor, cwd, options.thread);
+  const at = nowIso();
+  const reference = buildFederatedStateReference(packet, result, {
+    id: options.id,
+    threadId: options.thread,
+    peerId: options.peer || options.peerId,
+    remoteContextId: options.context || options.contextId || options.remoteContext,
+    summary: options.summary,
+    recordedBy: actor.id,
+    recordedAt: at,
+    verifiedAt: at
+  });
+  const event = createEvent({
+    type: "FederatedStateReferenceRecorded",
+    threadId: options.thread,
+    actorId: actor.id,
+    at,
+    payload: { federatedStateReference: reference }
+  });
+  appendEvent(event, cwd);
+  return print({
+    schema: "clista.federation.record.v0",
+    recorded: true,
+    federatedStateReference: reference,
+    federation: result,
+    event
+  });
+}
+
+function federationCheck(options, cwd) {
+  const packet = readContinuityPacketForOptions(options, cwd);
+  const result = federationResultFromCli(packet, options);
+  print(result);
+  if (!result.valid) {
+    process.exitCode = 1;
+  }
+}
+
+function federationList(options, cwd) {
+  const projection = projectEvents(readValidEventsForOptions(options, cwd));
+  let references = projection.federation.references;
+  if (options.thread) {
+    references = references.filter((reference) => reference.threadId === options.thread);
+  }
+  if (options.status) {
+    references = references.filter((reference) => reference.status === options.status);
+  }
+  return print({
+    schema: "clista.federation.list.v0",
+    theorem: projection.federation.theorem,
+    hardLaw: projection.federation.hardLaw,
+    threadId: options.thread || null,
+    status: options.status || null,
+    count: references.length,
+    references
+  });
+}
+
+function federationShow(options, cwd) {
+  const federationId = options.federation || options.federationId || options.id;
+  if (!federationId) {
+    throw new Error("Missing required option --federation");
+  }
+  const projection = projectEvents(readValidEventsForOptions(options, cwd));
+  return print(federationForId(projection.federation, federationId));
+}
+
+function federationVerify(options, cwd) {
+  const events = readEventsForOptions(options, cwd);
+  const result = validateEvents(events);
+  if (!result.valid) {
+    print({
+      schema: "clista.federation.verify.v0",
+      valid: false,
+      errors: result.errors
+    });
+    process.exitCode = 1;
+    return;
+  }
+  const projection = projectEvents(events);
+  return print({
+    schema: "clista.federation.verify.v0",
+    valid: true,
+    errors: [],
+    federationValidationStatus: projection.federation.federationValidationStatus
+  });
+}
+
 function compatibilityOptionsFromCli(options, continuityVerification) {
   const result = { continuityVerification };
   const supportedAmendmentIds = parseList(options.supportAmendment || options.supportedAmendment || options.supportedAmendments);
@@ -1765,6 +1878,33 @@ function interoperabilityOptionsFromCli(options, compatibilityResult) {
     result.supportedExchangeFormats = supportedExchangeFormats;
   }
   return result;
+}
+
+function federationResultFromCli(packet, options) {
+  const continuityVerification = verifyContinuityPacket(packet);
+  const compatibilityResult = verifyProtocolCompatibility(packet, compatibilityOptionsFromCli(options, continuityVerification));
+  const interoperabilityResult = verifyProtocolInteroperability(packet, interoperabilityOptionsFromCli(options, compatibilityResult));
+  return verifyProtocolFederation(packet, federationOptionsFromCli(options, {
+    continuityVerification,
+    compatibilityResult,
+    interoperabilityResult
+  }));
+}
+
+function federationOptionsFromCli(options, results) {
+  return {
+    ...results,
+    sharedAuthority: booleanOption(options.sharedAuthority, false),
+    remoteAuthorityImported: booleanOption(options.remoteAuthorityImported, false),
+    automaticAuthorityImport: booleanOption(options.automaticAuthorityImport, false),
+    localGovernanceMutation: booleanOption(options.localGovernanceMutation, false),
+    remoteGovernanceMerged: booleanOption(options.remoteGovernanceMerged, false),
+    automaticAmendmentImport: booleanOption(options.automaticAmendmentImport, false),
+    remoteAmendmentsImported: booleanOption(options.remoteAmendmentsImported, false),
+    automaticConsensus: booleanOption(options.automaticConsensus, false),
+    remoteStateMutation: booleanOption(options.remoteStateMutation, false),
+    networkConsensus: booleanOption(options.networkConsensus, false)
+  };
 }
 
 function validateCommand(options, cwd) {
@@ -1955,6 +2095,26 @@ function normalizeCommand(command, options) {
         }
       };
     }
+  }
+  for (const federationCommand of ["federation check"]) {
+    if (command.startsWith(`${federationCommand} `)) {
+      return {
+        command: federationCommand,
+        options: {
+          ...options,
+          packet: options.packet || command.slice(`${federationCommand} `.length).trim()
+        }
+      };
+    }
+  }
+  if (command.startsWith("federation show ")) {
+    return {
+      command: "federation show",
+      options: {
+        ...options,
+        federation: options.federation || command.slice("federation show ".length).trim()
+      }
+    };
   }
   return { command, options };
 }
@@ -2202,6 +2362,11 @@ function usage() {
   clista interoperability check [--packet <path>]
   clista interoperability show [--packet <path>]
   clista interoperability verify [--packet <path>]
+  clista federation record --thread <threadId> --packet <path> [--peer <peerId>] [--context <contextId>]
+  clista federation check [--packet <path>]
+  clista federation list [--thread <threadId>] [--status <status>]
+  clista federation show <federationId>
+  clista federation verify [--events <path>]
   clista state show [--thread <threadId>] [--events <path>]
   clista audit show [--thread <threadId>] [--events <path>]
   clista fork lineage --thread <forkThreadId> [--events <path>]

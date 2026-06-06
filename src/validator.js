@@ -21,6 +21,14 @@ const {
   validateCompatibilityFailure
 } = require("./compatibility");
 const {
+  validateFederatedPacketRejection,
+  validateFederatedPacketVerification,
+  validateFederatedStateReference,
+  validateFederationBoundary,
+  validateFederationContext,
+  validateFederationPeer
+} = require("./federation");
+const {
   validateAttributionCorrection,
   validateAttributionDispute,
   validateAttributionRevocation,
@@ -219,6 +227,24 @@ function validateEvents(events) {
         break;
       case "InteroperabilityAcceptanceRecorded":
         validateInteroperabilityAcceptanceRecordedEvent(event, state);
+        break;
+      case "FederationContextDeclared":
+        validateFederationContextDeclaredEvent(event, state);
+        break;
+      case "FederationPeerRecorded":
+        validateFederationPeerRecordedEvent(event, state);
+        break;
+      case "FederatedStateReferenceRecorded":
+        validateFederatedStateReferenceRecordedEvent(event, state);
+        break;
+      case "FederatedPacketVerified":
+        validateFederatedPacketVerifiedEvent(event, state);
+        break;
+      case "FederatedPacketRejected":
+        validateFederatedPacketRejectedEvent(event, state);
+        break;
+      case "FederationBoundaryRecorded":
+        validateFederationBoundaryRecordedEvent(event, state);
         break;
       case "ThreadCreated":
         validateThreadCreated(event, state);
@@ -863,6 +889,72 @@ function validateInteroperabilityAcceptanceRecordedEvent(event, state) {
     return;
   }
   for (const reason of validateInteroperabilityAcceptance(acceptance, state.events)) {
+    addError(state, event, reason);
+  }
+}
+
+function validateFederationContextDeclaredEvent(event, state) {
+  const context = event.payload.federationContext;
+  if (!context) {
+    addError(state, event, "FederationContextDeclared payload missing federationContext");
+    return;
+  }
+  for (const reason of validateFederationContext(context, state.events)) {
+    addError(state, event, reason);
+  }
+}
+
+function validateFederationPeerRecordedEvent(event, state) {
+  const peer = event.payload.federationPeer;
+  if (!peer) {
+    addError(state, event, "FederationPeerRecorded payload missing federationPeer");
+    return;
+  }
+  for (const reason of validateFederationPeer(peer, state.events)) {
+    addError(state, event, reason);
+  }
+}
+
+function validateFederatedStateReferenceRecordedEvent(event, state) {
+  const reference = event.payload.federatedStateReference;
+  if (!reference) {
+    addError(state, event, "FederatedStateReferenceRecorded payload missing federatedStateReference");
+    return;
+  }
+  for (const reason of validateFederatedStateReference(reference, state.events)) {
+    addError(state, event, reason);
+  }
+}
+
+function validateFederatedPacketVerifiedEvent(event, state) {
+  const verification = event.payload.federatedPacketVerification;
+  if (!verification) {
+    addError(state, event, "FederatedPacketVerified payload missing federatedPacketVerification");
+    return;
+  }
+  for (const reason of validateFederatedPacketVerification(verification, state.events)) {
+    addError(state, event, reason);
+  }
+}
+
+function validateFederatedPacketRejectedEvent(event, state) {
+  const rejection = event.payload.federatedPacketRejection;
+  if (!rejection) {
+    addError(state, event, "FederatedPacketRejected payload missing federatedPacketRejection");
+    return;
+  }
+  for (const reason of validateFederatedPacketRejection(rejection, state.events)) {
+    addError(state, event, reason);
+  }
+}
+
+function validateFederationBoundaryRecordedEvent(event, state) {
+  const boundary = event.payload.federationBoundary;
+  if (!boundary) {
+    addError(state, event, "FederationBoundaryRecorded payload missing federationBoundary");
+    return;
+  }
+  for (const reason of validateFederationBoundary(boundary, state.events)) {
     addError(state, event, reason);
   }
 }

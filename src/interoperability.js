@@ -2,7 +2,7 @@ const { PROTOCOL_VERSION, contentHash } = require("./integrity");
 
 const INTEROPERABILITY_SCHEMA = "clista.interoperability.v0";
 const INTEROPERABILITY_VERIFY_SCHEMA = "clista.interoperability.verify.v0";
-const INTEROPERABILITY_PROTOCOL_VERSION = "0.16.0";
+const INTEROPERABILITY_PROTOCOL_VERSION = "0.17.0";
 const INTEROPERABILITY_THEOREM = "protocol_interoperability = preserve(meaning, across_compatible_contexts)";
 const INTEROPERABILITY_HARD_LAW = "translation != reinterpretation";
 
@@ -27,7 +27,8 @@ const REQUIRED_SEMANTICS = [
   "protocol_amendments",
   "continuity_status",
   "compatibility_status",
-  "interoperability_status"
+  "interoperability_status",
+  "federation_status"
 ];
 
 const SUPPORTED_SEMANTICS = REQUIRED_SEMANTICS;
@@ -70,6 +71,12 @@ const SUPPORTED_EVENT_TYPES = [
   "SemanticDegradationRecorded",
   "InteroperabilityFailureRecorded",
   "InteroperabilityAcceptanceRecorded",
+  "FederationContextDeclared",
+  "FederationPeerRecorded",
+  "FederatedStateReferenceRecorded",
+  "FederatedPacketVerified",
+  "FederatedPacketRejected",
+  "FederationBoundaryRecorded",
   "AssumptionDeclared",
   "EvidenceCommitted",
   "ClaimCreated",
@@ -104,7 +111,8 @@ const OBJECT_SEMANTICS = {
   amendment: "explicit_authorized_protocol_change",
   continuity: "verified_resume_state_not_transcript_memory",
   compatibility: "receiver_support_verification_not_acceptance_by_best_effort",
-  interoperability: "meaning_preservation_status_not_structural_acceptance"
+  interoperability: "meaning_preservation_status_not_structural_acceptance",
+  federation: "independent_context_alignment_not_shared_authority"
 };
 
 const INTEROPERABILITY_EVENT_TYPES = new Set([

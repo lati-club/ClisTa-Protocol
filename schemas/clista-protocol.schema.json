@@ -53,6 +53,7 @@
     "amendmentHistory",
     "compatibility",
     "interoperability",
+    "federation",
     "events"
   ],
   "properties": {
@@ -307,6 +308,9 @@
     "interoperability": {
       "$ref": "#/$defs/interoperabilityProjection"
     },
+    "federation": {
+      "$ref": "#/$defs/federationProjection"
+    },
     "events": {
       "type": "array",
       "items": {
@@ -401,7 +405,7 @@
           "const": "unsupported_state != valid_state"
         },
         "compatibilityProtocolVersion": {
-          "const": "0.16.0"
+          "const": "0.17.0"
         },
         "localProtocolVersion": {
           "const": "clista.protocol.v0"
@@ -419,6 +423,11 @@
               "contains": {
                 "const": "interoperability"
               }
+            },
+            {
+              "contains": {
+                "const": "federation"
+              }
             }
           ]
         },
@@ -434,6 +443,11 @@
             {
               "contains": {
                 "const": "interoperability"
+              }
+            },
+            {
+              "contains": {
+                "const": "federation"
               }
             }
           ]
@@ -516,7 +530,7 @@
           "const": "translation != reinterpretation"
         },
         "interoperabilityProtocolVersion": {
-          "const": "0.16.0"
+          "const": "0.17.0"
         },
         "localProtocolVersion": {
           "const": "clista.protocol.v0"
@@ -566,7 +580,8 @@
             "amendment",
             "continuity",
             "compatibility",
-            "interoperability"
+            "interoperability",
+            "federation"
           ]
         },
         "profiles": {
@@ -659,6 +674,177 @@
               "const": false
             },
             "continuityAsTranscriptSummary": {
+              "const": false
+            }
+          }
+        }
+      }
+    },
+    "federationProjection": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "schema",
+        "theorem",
+        "hardLaw",
+        "federationProtocolVersion",
+        "localProtocolVersion",
+        "statuses",
+        "contexts",
+        "peers",
+        "references",
+        "verifications",
+        "rejections",
+        "boundaries",
+        "byContext",
+        "byPeer",
+        "byReference",
+        "byVerification",
+        "byRejection",
+        "boundariesByReference",
+        "federationValidationStatus"
+      ],
+      "properties": {
+        "schema": {
+          "const": "clista.federation.v0"
+        },
+        "theorem": {
+          "const": "protocol_federation = align(independent_reasoning_states, shared_protocol_rules)"
+        },
+        "hardLaw": {
+          "const": "shared_state != shared_authority"
+        },
+        "federationProtocolVersion": {
+          "const": "0.17.0"
+        },
+        "localProtocolVersion": {
+          "const": "clista.protocol.v0"
+        },
+        "statuses": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "accepted",
+              "degraded",
+              "rejected",
+              "pending"
+            ]
+          }
+        },
+        "contexts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "peers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "references": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "verifications": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "rejections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "boundaries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "byContext": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "byPeer": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "byReference": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "byVerification": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "byRejection": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "boundariesByReference": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "federationValidationStatus": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "valid",
+            "sharedAuthority",
+            "remoteAuthorityImported",
+            "automaticAuthorityImport",
+            "localGovernanceMutation",
+            "remoteGovernanceMerged",
+            "automaticAmendmentImport",
+            "remoteAmendmentsImported",
+            "automaticConsensus",
+            "remoteStateMutation",
+            "networkConsensus"
+          ],
+          "properties": {
+            "valid": {
+              "const": true
+            },
+            "sharedAuthority": {
+              "const": false
+            },
+            "remoteAuthorityImported": {
+              "const": false
+            },
+            "automaticAuthorityImport": {
+              "const": false
+            },
+            "localGovernanceMutation": {
+              "const": false
+            },
+            "remoteGovernanceMerged": {
+              "const": false
+            },
+            "automaticAmendmentImport": {
+              "const": false
+            },
+            "remoteAmendmentsImported": {
+              "const": false
+            },
+            "automaticConsensus": {
+              "const": false
+            },
+            "remoteStateMutation": {
+              "const": false
+            },
+            "networkConsensus": {
               "const": false
             }
           }
@@ -3746,6 +3932,12 @@
             "SemanticDegradationRecorded",
             "InteroperabilityFailureRecorded",
             "InteroperabilityAcceptanceRecorded",
+            "FederationContextDeclared",
+            "FederationPeerRecorded",
+            "FederatedStateReferenceRecorded",
+            "FederatedPacketVerified",
+            "FederatedPacketRejected",
+            "FederationBoundaryRecorded",
             "AssumptionDeclared",
             "EvidenceCommitted",
             "ClaimCreated",

@@ -72,6 +72,7 @@ Verification state must preserve:
 - amendment verification status
 - compatibility verification status
 - interoperability verification status
+- federation verification status
 - transcript replay disabled
 - memory trust disabled
 - authority creation disabled

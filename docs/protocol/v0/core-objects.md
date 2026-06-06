@@ -174,6 +174,7 @@ A deterministic record of whether transferred reasoning state is `verified`, `de
 
 It records required verification layers for integrity, attribution, provenance, learning, adaptation, amendments, and compatibility.
 M16 adds interoperability verification status so a resumed packet records whether protocol meaning can survive exchange.
+M17 adds federation verification status so exchanged state can be referenced without importing remote authority.
 
 ## Compatibility Context
 
@@ -204,3 +205,25 @@ Translation must preserve meaning. A semantic mapping cannot reinterpret authori
 A verification result that classifies a continuity packet as `interoperable`, `degraded`, `incompatible`, or `rejected` for a specific semantic profile.
 
 Unknown required semantics, unsupported event meanings, or changed protocol object meanings fail closed. Optional unsupported semantics may degrade only when the degradation is explicit.
+
+## Federation Context
+
+A declared independent ClisTa context that may exchange verified reasoning state under shared protocol rules.
+
+It is not a shared authority domain.
+
+## Federation Peer
+
+A recorded external context identity used for audit references.
+
+Peer identity does not make remote participants, roles, authorities, amendments, or governance rules local.
+
+## Federated State Reference
+
+A local append-only reference to a verified external continuity/interoperability packet.
+
+It records packet hash, event-log hash, projection hash, state hash, remote thread id, compatibility status, interoperability status, and federation status.
+
+## Federation Boundary
+
+An explicit record that remote state may inform local reasoning but cannot mutate local governance, import authority, import amendments, or create consensus automatically.
