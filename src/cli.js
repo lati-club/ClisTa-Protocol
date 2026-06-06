@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const fs = require("node:fs");
 const path = require("node:path");
 const {
   appendEvent,
@@ -12,8 +13,14 @@ const {
   parseList,
   participantIdFor,
   readEvents,
-  readEventsAt
+  readEventsAt,
+  writeEvents
 } = require("./events");
+const {
+  PROTOCOL_VERSION,
+  formatIntegrityReasons,
+  verifyEventIntegrity
+} = require("./integrity");
 const {
   exportProtocol,
   projectEvents,
@@ -65,6 +72,8 @@ function main(argv = process.argv.slice(2), cwd = process.cwd()) {
         return decisionScore(options, cwd);
       case "validate":
         return validateCommand(options, cwd);
+      case "integrity verify":
+        return integrityVerify(options, cwd);
       case "state show":
         return stateShow(options, cwd);
       case "audit show":
@@ -85,6 +94,8 @@ function main(argv = process.argv.slice(2), cwd = process.cwd()) {
         return mergeComplete(options, cwd);
       case "export":
         return exportShow(options, cwd);
+      case "import":
+        return importCommand(options, cwd);
       case "help":
       case "":
         return help();
@@ -998,6 +1009,44 @@ function exportShow(options, cwd) {
   return print(exportProtocol(projection));
 }
 
+function importCommand(options, cwd) {
+  requireOption(options, "events");
+  const sourcePath = path.resolve(cwd, options.events);
+  const existingEvents = readEvents(cwd);
+  if (existingEvents.length && !booleanOption(options.replace, false)) {
+    throw new Error("Refusing to import into a non-empty ClisTa store; pass --replace true to overwrite .clista/events.ndjson");
+  }
+
+  const events = readImportEventsAt(sourcePath);
+  const integrity = verifyEventIntegrity(events);
+  if (!integrity.valid) {
+    throw new Error(formatIntegrityReasons(integrity.reasons));
+  }
+  assertValidEvents(events);
+
+  const importedEvents = writeEvents(events, cwd);
+  const strictIntegrity = verifyEventIntegrity(importedEvents, { strict: true });
+  if (!strictIntegrity.valid) {
+    throw new Error(formatIntegrityReasons(strictIntegrity.reasons));
+  }
+  return print({
+    schema: "clista.import.v0",
+    source: sourcePath,
+    valid: strictIntegrity.valid,
+    importedEvents: importedEvents.length,
+    integrity: strictIntegrity
+  });
+}
+
+function integrityVerify(options, cwd) {
+  const events = readEventsForOptions(options, cwd);
+  const result = verifyEventIntegrity(events, { strict: booleanOption(options.strict, false) });
+  print(result);
+  if (!result.valid) {
+    process.exitCode = 1;
+  }
+}
+
 function validateCommand(options, cwd) {
   const events = readEventsForOptions(options, cwd);
   const result = validateEvents(events);
@@ -1026,6 +1075,31 @@ function readEventsForOptions(options, cwd) {
     return readEventsAt(path.resolve(cwd, options.events));
   }
   return readEvents(cwd);
+}
+
+function readImportEventsAt(sourcePath) {
+  if (!fs.existsSync(sourcePath)) {
+    throw new Error(`Import source not found: ${sourcePath}`);
+  }
+  const raw = fs.readFileSync(sourcePath, "utf8").trim();
+  if (!raw) {
+    return [];
+  }
+  if (!raw.startsWith("{")) {
+    return readEventsAt(sourcePath);
+  }
+
+  const exported = JSON.parse(raw);
+  if (exported.schema !== PROTOCOL_VERSION) {
+    throw new Error(`Unsupported import schema ${exported.schema}`);
+  }
+  if (exported.protocolVersion && exported.protocolVersion !== PROTOCOL_VERSION) {
+    throw new Error(`Unsupported import protocolVersion ${exported.protocolVersion}`);
+  }
+  if (!Array.isArray(exported.events)) {
+    throw new Error("Protocol export missing events array");
+  }
+  return exported.events;
 }
 
 function readValidEventsForOptions(options, cwd) {
@@ -1208,19 +1282,21 @@ function usage() {
   clista review submit --thread <threadId> --request <requestId> --reviewer <name|id> --status <status>
   clista decision merge --thread <threadId> --request <requestId> --decider <name|id>
   clista outcome expect --thread <threadId> --decision <decisionRecordId> --metric <metric> --operator <operator> --target <target> --review-date <YYYY-MM-DD>
-	  clista outcome audit --thread <threadId> --expected <expectedOutcomeId> --actual <actual> --result <result> --summary <summary> --auditor <name|id>
-	  clista decision score --thread <threadId> --decision <decisionRecordId> --score <score> --status <status> --rationale <text> --audits <outcomeAuditIds>
-	  clista merge open --source <forkThreadId> --target <threadId> --summary <summary>
-	  clista merge review --request <mergeRequestId> --status <approve|request_changes|reject> --summary <summary>
-	  clista merge conflict declare --request <mergeRequestId> --type <assumption|claim|evidence|objection|decision|outcome> --parent <objectId> --fork <objectId> --summary <summary>
-	  clista merge conflict resolve --request <mergeRequestId> --conflict <conflictId> --resolution <accept_parent|accept_fork|preserve_both|supersede|reject_fork> --rationale <rationale>
-	  clista merge eligibility --request <mergeRequestId> [--events <path>]
-	  clista merge complete --request <mergeRequestId>
-	  clista validate [--events <path>]
+  clista outcome audit --thread <threadId> --expected <expectedOutcomeId> --actual <actual> --result <result> --summary <summary> --auditor <name|id>
+  clista decision score --thread <threadId> --decision <decisionRecordId> --score <score> --status <status> --rationale <text> --audits <outcomeAuditIds>
+  clista merge open --source <forkThreadId> --target <threadId> --summary <summary>
+  clista merge review --request <mergeRequestId> --status <approve|request_changes|reject> --summary <summary>
+  clista merge conflict declare --request <mergeRequestId> --type <assumption|claim|evidence|objection|decision|outcome> --parent <objectId> --fork <objectId> --summary <summary>
+  clista merge conflict resolve --request <mergeRequestId> --conflict <conflictId> --resolution <accept_parent|accept_fork|preserve_both|supersede|reject_fork> --rationale <rationale>
+  clista merge eligibility --request <mergeRequestId> [--events <path>]
+  clista merge complete --request <mergeRequestId>
+  clista validate [--events <path>]
+  clista integrity verify [--events <path>] [--strict]
   clista state show [--thread <threadId>] [--events <path>]
   clista audit show [--thread <threadId>] [--events <path>]
   clista fork lineage --thread <forkThreadId> [--events <path>]
-  clista export [--events <path>]`;
+  clista export [--events <path>]
+  clista import --events <path> [--replace true]`;
 }
 
 if (require.main === module) {

@@ -1,5 +1,11 @@
 const { evaluateDecisionEligibility, isBlockingObjection, isDecisionOwnerRole } = require("./governance");
 const {
+  EVENT_HASH_VERSION,
+  HASH_PATTERN,
+  PROTOCOL_VERSION,
+  computeEventHash
+} = require("./integrity");
+const {
   MERGE_CONFLICT_RESOLUTIONS,
   buildMergeState,
   evaluateMergeEligibility,
@@ -222,6 +228,32 @@ function validateEnvelope(event, index, state) {
 }
 
 function validateAuditIntegrity(event, index, state) {
+  if (!event || typeof event !== "object" || Array.isArray(event)) {
+    return;
+  }
+
+  if (event.protocol_version && event.protocol_version !== PROTOCOL_VERSION) {
+    addError(state, event, `unsupported protocol_version ${event.protocol_version}`);
+  }
+  if (event.hash_version && event.hash_version !== EVENT_HASH_VERSION) {
+    addError(state, event, `unsupported hash_version ${event.hash_version}`);
+  }
+  if (event.content_hash && !HASH_PATTERN.test(event.content_hash)) {
+    addError(state, event, `malformed content_hash ${event.content_hash}`);
+  }
+  if (event.previous_hash && !HASH_PATTERN.test(event.previous_hash)) {
+    addError(state, event, `malformed previous_hash ${event.previous_hash}`);
+  }
+  if (event.hash_version && !event.content_hash) {
+    addError(state, event, "hash_version requires content_hash");
+  }
+  if (event.content_hash && (!event.hash_version || event.hash_version === EVENT_HASH_VERSION)) {
+    const expectedHash = computeEventHash(event);
+    if (event.content_hash !== expectedHash) {
+      addError(state, event, "content_hash does not match canonical event serialization");
+    }
+  }
+
   if (event.previous_hash && event.previous_hash !== state.lastContentHash) {
     addError(state, event, "invalid previous_hash chain");
   }

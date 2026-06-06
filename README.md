@@ -38,6 +38,16 @@ clista validate
 
 If it rejects invalid event logs with clear event-level errors, the protocol can govern reasoning state instead of merely projecting it.
 
+The integrity command is:
+
+```text
+clista integrity verify
+```
+
+If it verifies canonical hashes, the event log can be trusted as history rather than just read as data.
+
+For v0.6 chained logs, add `--strict` to require protocol versions, hash versions, and previous-hash links.
+
 ## Repository Boundary
 
 This repository is `clista-protocol`.

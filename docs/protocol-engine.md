@@ -11,11 +11,13 @@ that another human or agent can reload later.
 
 ## Layers
 
-1. JSON Schema Protocol Core
-2. Append-only NDJSON event log
-3. Deterministic state projection
-4. CLI-first workflow
-5. First test thread
+1. Append-only NDJSON event log
+2. Deterministic state projection
+3. Validation and rejection
+4. Governance and legitimacy
+5. Outcomes and learning
+6. Forks and merges
+7. Local event-log integrity
 
 ## Protocol Objects
 
@@ -33,8 +35,11 @@ The protocol core defines:
 - `mergeRequest`
 - `mergeReview`
 - `mergeConflict`
+- `mergeConflictResolution`
 - `mergeCompletion`
+- `expectedOutcome`
 - `outcomeAudit`
+- `decisionScore`
 
 See `schemas/clista-protocol.schema.json`.
 
@@ -54,6 +59,15 @@ payload
 ```
 
 `payload` carries the protocol object for that action. The envelope stays stable as the object model grows.
+
+Integrity-aware events may also include:
+
+```text
+protocol_version
+hash_version
+previous_hash
+content_hash
+```
 
 Supported events:
 
@@ -102,9 +116,13 @@ npm run clista -- decision score --thread thd_example --decision dcr_example --s
 npm run clista -- merge open --source thd_example_alt --target thd_example --summary "Integrate useful fork reasoning."
 npm run clista -- merge eligibility --request mrg_example
 npm run clista -- merge complete --request mrg_example --merged-by "Troy"
+npm run clista -- validate
+npm run clista -- integrity verify
 npm run clista -- state show --thread thd_example
 npm run clista -- audit show --thread thd_example
 npm run clista -- fork lineage --thread thd_example_alt
+npm run clista -- export
+npm run clista -- import --events clista-export.json
 ```
 
 ## First Test Thread

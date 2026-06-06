@@ -1,4 +1,5 @@
 const { nowIso } = require("./events");
+const { PROTOCOL_VERSION, verifyEventIntegrity } = require("./integrity");
 const { evaluateMergeEligibility } = require("./merges");
 
 function emptyProjection() {
@@ -34,8 +35,8 @@ function projectEvents(events) {
   const projection = emptyProjection();
 
   for (const event of events) {
-    projection.events.push(event);
-    const payload = event.payload || {};
+    projection.events.push(clone(event));
+    const payload = clone(event.payload || {});
 
     switch (eventType(event)) {
       case "ParticipantAdded":
@@ -132,6 +133,10 @@ function projectEvents(events) {
   }
 
   return projection;
+}
+
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
 }
 
 function selectThreadState(projection, requestedThreadId) {
@@ -311,8 +316,10 @@ function selectAudit(projection, requestedThreadId) {
 
 function exportProtocol(projection) {
   return {
-    schema: "clista.protocol.v0",
+    schema: PROTOCOL_VERSION,
+    protocolVersion: PROTOCOL_VERSION,
     exportedAt: projection.projectedAt,
+    integrity: verifyEventIntegrity(projection.events),
     threads: Object.values(projection.threads),
     forks: Object.values(projection.forks),
     participants: Object.values(projection.participants),

@@ -7,6 +7,7 @@ const test = require("node:test");
 
 const { readEventsAt } = require("../src/events");
 const { evaluateDecisionEligibility } = require("../src/governance");
+const { computeEventHash } = require("../src/integrity");
 const { projectEvents, selectThreadState } = require("../src/projector");
 const { validateEvents } = require("../src/validator");
 
@@ -184,8 +185,12 @@ test("CLI decision merge records review ids and authority trail", () => {
 test("non-blocking objections do not block merge and remain visible in projected state", () => {
   const events = cloneCanonicalEvents()
     .filter((event) => event.event_type !== "MinorityReportFiled");
-  eventWithObject(events, "ObjectionRaised", "obj_object_model_too_broad").payload.objection.blocking = false;
-  eventOf(events, "DecisionMerged").payload.decisionRecord.preservedObjectionIds = [];
+  const objectionEvent = eventWithObject(events, "ObjectionRaised", "obj_object_model_too_broad");
+  objectionEvent.payload.objection.blocking = false;
+  objectionEvent.content_hash = computeEventHash(objectionEvent);
+  const decisionEvent = eventOf(events, "DecisionMerged");
+  decisionEvent.payload.decisionRecord.preservedObjectionIds = [];
+  decisionEvent.content_hash = computeEventHash(decisionEvent);
 
   assert.equal(validateEvents(events).valid, true);
 

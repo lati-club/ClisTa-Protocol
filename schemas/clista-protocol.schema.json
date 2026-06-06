@@ -6,7 +6,9 @@
   "additionalProperties": false,
   "required": [
     "schema",
+    "protocolVersion",
     "exportedAt",
+    "integrity",
     "threads",
     "forks",
     "participants",
@@ -34,9 +36,15 @@
     "schema": {
       "const": "clista.protocol.v0"
     },
+    "protocolVersion": {
+      "const": "clista.protocol.v0"
+    },
     "exportedAt": {
       "type": "string",
       "format": "date-time"
+    },
+    "integrity": {
+      "$ref": "#/$defs/integrityReport"
     },
     "threads": {
       "type": "array",
@@ -179,6 +187,59 @@
     "metadata": {
       "type": "object",
       "additionalProperties": true
+    },
+    "integrityReport": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "schema",
+        "protocolVersion",
+        "hashVersion",
+        "strict",
+        "valid",
+        "eventCount",
+        "headHash",
+        "reasons"
+      ],
+      "properties": {
+        "schema": {
+          "const": "clista.integrity.v0"
+        },
+        "protocolVersion": {
+          "const": "clista.protocol.v0"
+        },
+        "hashVersion": {
+          "const": "clista.event_hash.v1"
+        },
+        "strict": {
+          "type": "boolean"
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "eventCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "headHash": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
     },
     "participant": {
       "type": "object",
@@ -1708,6 +1769,16 @@
         "payload": {
           "type": "object",
           "additionalProperties": true
+        },
+        "protocol_version": {
+          "const": "clista.protocol.v0"
+        },
+        "hash_version": {
+          "const": "clista.event_hash.v1"
+        },
+        "previous_hash": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
         },
         "content_hash": {
           "type": "string",

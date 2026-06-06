@@ -1,6 +1,14 @@
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
+const {
+  EVENT_HASH_VERSION,
+  PROTOCOL_VERSION,
+  contentHash,
+  prepareEventForAppend,
+  serializeEventsNdjson,
+  stableStringify
+} = require("./integrity");
 
 const STORE_DIR = ".clista";
 const EVENTS_FILE = "events.ndjson";
@@ -44,29 +52,6 @@ function participantIdFor(value) {
   return `par_${slugify(text) || "participant"}`;
 }
 
-function stableStringify(value) {
-  return JSON.stringify(sortKeys(value));
-}
-
-function sortKeys(value) {
-  if (Array.isArray(value)) {
-    return value.map(sortKeys);
-  }
-  if (value && typeof value === "object") {
-    return Object.keys(value)
-      .sort()
-      .reduce((sorted, key) => {
-        sorted[key] = sortKeys(value[key]);
-        return sorted;
-      }, {});
-  }
-  return value;
-}
-
-function contentHash(value) {
-  return `sha256:${crypto.createHash("sha256").update(stableStringify(value)).digest("hex")}`;
-}
-
 function initStore(cwd = process.cwd()) {
   fs.mkdirSync(storeDir(cwd), { recursive: true });
   const eventsPath = eventLogPath(cwd);
@@ -107,8 +92,24 @@ function readEvents(cwd = process.cwd()) {
 
 function appendEvent(event, cwd = process.cwd()) {
   initStore(cwd);
-  fs.appendFileSync(eventLogPath(cwd), `${JSON.stringify(event)}\n`, "utf8");
+  const events = readEvents(cwd);
+  const prepared = prepareEventForAppend(event, events.at(-1)?.content_hash);
+  replaceObject(event, prepared);
+  fs.appendFileSync(eventLogPath(cwd), serializeEventsNdjson([event]), "utf8");
   return event;
+}
+
+function writeEvents(events, cwd = process.cwd()) {
+  initStore(cwd);
+  const preparedEvents = [];
+  let previousHash;
+  for (const event of events) {
+    const prepared = prepareEventForAppend(event, previousHash);
+    previousHash = prepared.content_hash;
+    preparedEvents.push(prepared);
+  }
+  fs.writeFileSync(eventLogPath(cwd), serializeEventsNdjson(preparedEvents), "utf8");
+  return preparedEvents;
 }
 
 function createEvent({ type, threadId, actorId, payload, at = nowIso(), id, metadata }) {
@@ -118,20 +119,22 @@ function createEvent({ type, threadId, actorId, payload, at = nowIso(), id, meta
     thread_id: threadId || null,
     actor_id: actorId || null,
     timestamp: at,
-    payload
+    payload,
+    protocol_version: PROTOCOL_VERSION,
+    hash_version: EVENT_HASH_VERSION
   };
   if (metadata && Object.keys(metadata).length) {
     base.metadata = metadata;
   }
-  base.content_hash = contentHash({
-    event_type: base.event_type,
-    thread_id: base.thread_id,
-    actor_id: base.actor_id,
-    timestamp: base.timestamp,
-    payload: base.payload,
-    metadata: base.metadata
-  });
+  base.content_hash = prepareEventForAppend(base).content_hash;
   return base;
+}
+
+function replaceObject(target, source) {
+  for (const key of Object.keys(target)) {
+    delete target[key];
+  }
+  Object.assign(target, source);
 }
 
 function createParticipant(value, role, kind = "human") {
@@ -176,5 +179,6 @@ module.exports = {
   readEventsAt,
   slugify,
   stableStringify,
-  storeDir
+  storeDir,
+  writeEvents
 };
