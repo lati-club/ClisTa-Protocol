@@ -7,6 +7,11 @@ const {
 const { buildIdentityState, projectIdentity } = require("./identity");
 const { PROTOCOL_VERSION, verifyEventIntegrity } = require("./integrity");
 const { evaluateMergeEligibility } = require("./merges");
+const {
+  buildProvenanceState,
+  projectProvenance,
+  selectProvenanceForThread
+} = require("./provenance");
 
 function emptyProjection() {
   return {
@@ -59,6 +64,26 @@ function emptyProjection() {
       attributionValidationStatus: {
         valid: true,
         attributionCount: 0,
+        correctedCount: 0,
+        disputedCount: 0,
+        revokedCount: 0
+      }
+    },
+    provenance: {
+      schema: "clista.provenance.v0",
+      theorem: "trusted_contribution = verify(attribution + source_provenance)",
+      provenance: [],
+      byContribution: {},
+      bySource: {},
+      byEvent: {},
+      corrections: [],
+      disputes: [],
+      revocations: [],
+      provenanceValidationStatus: {
+        valid: true,
+        provenanceCount: 0,
+        sourceTypes: [],
+        transformations: [],
         correctedCount: 0,
         disputedCount: 0,
         revokedCount: 0
@@ -188,6 +213,7 @@ function projectEvents(events) {
     return participants;
   }, {});
   projection.attribution = projectAttribution(buildAttributionState(projection.events), identityState);
+  projection.provenance = projectProvenance(buildProvenanceState(projection.events));
 
   return projection;
 }
@@ -250,6 +276,7 @@ function selectThreadState(projection, requestedThreadId) {
   const divergentClaims = forkLineage ? selectDivergentClaims(claims, forkLineage.changedClaimIds) : [];
   const mergeState = selectMergeState(projection, threadId);
   const attributionState = selectAttributionForThread(projection.attribution, threadId);
+  const provenanceState = selectProvenanceForThread(projection.provenance, threadId);
   const reasoningState = buildReasoningState({
     thread,
     evidence: supportingEvidence,
@@ -265,6 +292,7 @@ function selectThreadState(projection, requestedThreadId) {
     divergentClaims,
     mergeState,
     attributionState,
+    provenanceState,
     events: projection.events
   });
 
@@ -298,6 +326,7 @@ function selectThreadState(projection, requestedThreadId) {
     mergeState,
     identityState: projection.identity,
     attributionState,
+    provenanceState,
     auditTrail: auditTrailForThread(projection, threadId)
   };
 }
@@ -317,6 +346,7 @@ function buildReasoningState({
   divergentClaims,
   mergeState,
   attributionState,
+  provenanceState,
   events
 }) {
   return {
@@ -347,6 +377,7 @@ function buildReasoningState({
     merge_requests: mergeState.requests,
     merge_completions: mergeState.completed,
     attribution: attributionState,
+    provenance: provenanceState,
     next_action: decisionRecord?.nextAction || null,
     audit_summary: {
       source: "append_only_event_log",
@@ -414,6 +445,8 @@ function exportProtocol(projection) {
     attributionCorrections: projection.attribution.corrections,
     attributionDisputes: projection.attribution.disputes,
     attributionRevocations: projection.attribution.revocations,
+    provenance: projection.provenance,
+    contributionProvenance: projection.provenance.provenance,
     events: projection.events
   };
 }

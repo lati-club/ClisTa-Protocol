@@ -21,6 +21,10 @@ const {
   attributionsForParticipant
 } = require("./attribution");
 const {
+  provenanceForContribution,
+  traceProvenance
+} = require("./provenance");
+const {
   buildIdentityState,
   identityForParticipant
 } = require("./identity");
@@ -78,6 +82,14 @@ function main(argv = process.argv.slice(2), cwd = process.cwd()) {
         return attributionByParticipant(options, cwd);
       case "attribution verify":
         return attributionVerify(options, cwd);
+      case "provenance list":
+        return provenanceList(options, cwd);
+      case "provenance show":
+        return provenanceShow(options, cwd);
+      case "provenance trace":
+        return provenanceTrace(options, cwd);
+      case "provenance verify":
+        return provenanceVerify(options, cwd);
       case "thread fork":
         return threadFork(options, cwd);
       case "evidence commit":
@@ -355,6 +367,58 @@ function attributionVerify(options, cwd) {
     valid: true,
     errors: [],
     attributionValidationStatus: projection.attribution.attributionValidationStatus
+  });
+}
+
+function provenanceList(options, cwd) {
+  const projection = projectEvents(readValidEventsForOptions(options, cwd));
+  const provenance = options.thread
+    ? projection.provenance.provenance.filter((record) => record.threadId === options.thread)
+    : projection.provenance.provenance;
+  return print({
+    schema: "clista.provenance.list.v0",
+    threadId: options.thread || null,
+    count: provenance.length,
+    provenance
+  });
+}
+
+function provenanceShow(options, cwd) {
+  const contributionId = options.contribution || options.contributionId || options.id;
+  if (!contributionId) {
+    throw new Error("Missing required option --contribution");
+  }
+  const projection = projectEvents(readValidEventsForOptions(options, cwd));
+  return print(provenanceForContribution(projection.provenance, contributionId));
+}
+
+function provenanceTrace(options, cwd) {
+  const contributionId = options.contribution || options.contributionId || options.id;
+  if (!contributionId) {
+    throw new Error("Missing required option --contribution");
+  }
+  const projection = projectEvents(readValidEventsForOptions(options, cwd));
+  return print(traceProvenance(projection.provenance, contributionId));
+}
+
+function provenanceVerify(options, cwd) {
+  const events = readEventsForOptions(options, cwd);
+  const result = validateEvents(events);
+  if (!result.valid) {
+    print({
+      schema: "clista.provenance.verify.v0",
+      valid: false,
+      errors: result.errors
+    });
+    process.exitCode = 1;
+    return;
+  }
+  const projection = projectEvents(events);
+  return print({
+    schema: "clista.provenance.verify.v0",
+    valid: true,
+    errors: [],
+    provenanceValidationStatus: projection.provenance.provenanceValidationStatus
   });
 }
 
@@ -1432,6 +1496,24 @@ function normalizeCommand(command, options) {
       }
     };
   }
+  if (command.startsWith("provenance show ")) {
+    return {
+      command: "provenance show",
+      options: {
+        ...options,
+        contribution: options.contribution || command.slice("provenance show ".length).trim()
+      }
+    };
+  }
+  if (command.startsWith("provenance trace ")) {
+    return {
+      command: "provenance trace",
+      options: {
+        ...options,
+        contribution: options.contribution || command.slice("provenance trace ".length).trim()
+      }
+    };
+  }
   return { command, options };
 }
 
@@ -1586,6 +1668,10 @@ function usage() {
   clista attribution show <contributionId> [--events <path>]
   clista attribution by-participant <participantId> [--events <path>]
   clista attribution verify [--events <path>]
+  clista provenance list [--thread <threadId>] [--events <path>]
+  clista provenance show <contributionId> [--events <path>]
+  clista provenance trace <contributionId> [--events <path>]
+  clista provenance verify [--events <path>]
   clista thread fork --parent <threadId> --fork <forkThreadId> --title <title> --reason <reason> --through <eventId>
   clista evidence commit --thread <threadId> --source <source> --finding <finding>
   clista assumption declare --thread <threadId> --text <assumption>

@@ -83,3 +83,15 @@ A later comparison between the decision and reality.
 ## Decision Score
 
 An empirical quality score derived from outcome audits.
+
+## Contribution Attribution
+
+A derived or explicit record that binds a reasoning contribution to participant identity, role context, authority context, and source event.
+
+## Contribution Provenance
+
+A derived source-lineage record for a reasoning contribution.
+
+It records source type, source id, introducing event, transformation, source hash where available, and whether the source was available at contribution event time.
+
+Provenance does not score truth. It keeps the audit trail neutral.

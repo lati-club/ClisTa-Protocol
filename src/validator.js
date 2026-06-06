@@ -6,6 +6,9 @@ const {
   validateContributionAttribution
 } = require("./attribution");
 const {
+  validateContributionProvenance
+} = require("./provenance");
+const {
   EVENT_HASH_VERSION,
   HASH_PATTERN,
   PROTOCOL_VERSION,
@@ -414,6 +417,9 @@ function validateContributionAttributed(event, index, state) {
   }
   validateAttributionSourceBoundary(event, state, attribution.sourceEventId || attribution.eventId, index);
   for (const reason of validateContributionAttribution(attribution, state.events)) {
+    addError(state, event, reason);
+  }
+  for (const reason of validateContributionProvenance(attribution, state.events)) {
     addError(state, event, reason);
   }
 }

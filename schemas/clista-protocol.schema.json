@@ -40,6 +40,8 @@
     "attributionCorrections",
     "attributionDisputes",
     "attributionRevocations",
+    "provenance",
+    "contributionProvenance",
     "events"
   ],
   "properties": {
@@ -234,6 +236,15 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/attributionRevocation"
+      }
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenanceProjection"
+    },
+    "contributionProvenance": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/contributionProvenance"
       }
     },
     "events": {
@@ -737,6 +748,280 @@
           }
         },
         "attributionValidationStatus": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "provenanceSourceType": {
+      "enum": [
+        "event",
+        "evidence",
+        "import",
+        "continuity_packet",
+        "fork",
+        "merge",
+        "projection",
+        "external_reference"
+      ]
+    },
+    "provenanceTransformation": {
+      "enum": [
+        "asserted",
+        "observed",
+        "imported",
+        "summarized",
+        "inferred",
+        "corrected",
+        "disputed",
+        "revoked",
+        "merged"
+      ]
+    },
+    "provenanceSourceRef": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "sourceType",
+        "transformation"
+      ],
+      "properties": {
+        "sourceType": {
+          "$ref": "#/$defs/provenanceSourceType"
+        },
+        "sourceId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sourceEventId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sourceEventType": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "objectType": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "objectId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "transformation": {
+          "$ref": "#/$defs/provenanceTransformation"
+        },
+        "sourceHash": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "expectedSourceHash": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "sourceIntegrityVerified": {
+          "type": "boolean"
+        },
+        "availableAtContributionTime": {
+          "type": "boolean"
+        }
+      }
+    },
+    "contributionProvenance": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "object",
+        "contributionId",
+        "contributionType",
+        "attributionId",
+        "threadId",
+        "participantId",
+        "sourceType",
+        "sourceId",
+        "introducedByEventId",
+        "transformation",
+        "sourceRefs",
+        "provenanceHash"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "object": {
+          "const": "contributionProvenance"
+        },
+        "contributionId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contributionType": {
+          "$ref": "#/$defs/contributionType"
+        },
+        "attributionId": {
+          "$ref": "#/$defs/id"
+        },
+        "attributionStatus": {
+          "enum": [
+            "active",
+            "corrected",
+            "disputed",
+            "revoked"
+          ]
+        },
+        "threadId": {
+          "$ref": "#/$defs/id"
+        },
+        "participantId": {
+          "$ref": "#/$defs/id"
+        },
+        "authorityContext": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "sourceType": {
+          "$ref": "#/$defs/provenanceSourceType"
+        },
+        "sourceId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sourceEventId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "introducedByEventId": {
+          "$ref": "#/$defs/id"
+        },
+        "transformation": {
+          "$ref": "#/$defs/provenanceTransformation"
+        },
+        "transformations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/provenanceTransformation"
+          }
+        },
+        "sourceHash": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "sourceIntegrityVerified": {
+          "type": "boolean"
+        },
+        "sourceAvailableAtContributionTime": {
+          "type": "boolean"
+        },
+        "sourceRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/provenanceSourceRef"
+          }
+        },
+        "originalSourceHashes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$"
+          }
+        },
+        "auditTrail": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "provenanceHash": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        }
+      }
+    },
+    "provenanceProjection": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "schema",
+        "theorem",
+        "provenance",
+        "byContribution",
+        "bySource",
+        "byEvent",
+        "corrections",
+        "disputes",
+        "revocations",
+        "provenanceValidationStatus"
+      ],
+      "properties": {
+        "schema": {
+          "const": "clista.provenance.v0"
+        },
+        "theorem": {
+          "const": "trusted_contribution = verify(attribution + source_provenance)"
+        },
+        "provenance": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/contributionProvenance"
+          }
+        },
+        "byContribution": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "bySource": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "byEvent": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "corrections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attributionCorrection"
+          }
+        },
+        "disputes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attributionDispute"
+          }
+        },
+        "revocations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attributionRevocation"
+          }
+        },
+        "provenanceValidationStatus": {
           "type": "object",
           "additionalProperties": true
         }

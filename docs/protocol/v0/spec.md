@@ -95,6 +95,7 @@ Projected state is derived.
 - merge state
 - active and revoked authorities
 - attribution by contribution, participant, and source event
+- provenance by contribution, source, and introducing event
 
 ## Required Validation
 
@@ -111,6 +112,7 @@ Validation checks:
 - event hash chain integrity
 - protocol and hash schema versions
 - attribution source, participant, role, authority, and event-time provenance
+- provenance source existence, source timing, transformation, and source hash consistency
 
 ## Required Integrity
 
@@ -183,3 +185,53 @@ clista attribution verify
 must trace reasoning contributions to participant, role, source event, provenance, and authority context at contribution event time.
 
 Attribution is not reputation. It records who contributed a reasoning element; it does not score participant trustworthiness.
+
+## Required Provenance
+
+```text
+clista provenance list
+clista provenance show <contributionId>
+clista provenance trace <contributionId>
+clista provenance verify
+```
+
+must trace reasoning contributions to source lineage:
+
+- source type
+- source id
+- introducing event
+- transformation
+- source hash when available
+- source integrity status
+- availability at contribution event time
+
+The theorem is:
+
+```text
+trusted_contribution = verify(attribution + source_provenance)
+```
+
+Supported source types are:
+
+- `event`
+- `evidence`
+- `import`
+- `continuity_packet`
+- `fork`
+- `merge`
+- `projection`
+- `external_reference`
+
+Supported transformations are:
+
+- `asserted`
+- `observed`
+- `imported`
+- `summarized`
+- `inferred`
+- `corrected`
+- `disputed`
+- `revoked`
+- `merged`
+
+Provenance is not truth ranking. It records where a contribution came from and how it entered state; it does not score sources, participants, agents, or models.
