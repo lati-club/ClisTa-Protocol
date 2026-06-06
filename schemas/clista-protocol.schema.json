@@ -57,6 +57,7 @@
     "negotiation",
     "delegation",
     "execution",
+    "outcome",
     "events"
   ],
   "properties": {
@@ -322,6 +323,9 @@
     },
     "execution": {
       "$ref": "#/$defs/executionProjection"
+    },
+    "outcome": {
+      "$ref": "#/$defs/outcomeProjection"
     },
     "events": {
       "type": "array",
@@ -1026,6 +1030,341 @@
         }
       }
     },
+    "outcomeStatus": {
+      "enum": [
+        "pending",
+        "observed",
+        "evaluated",
+        "disputed",
+        "violated"
+      ]
+    },
+    "outcomeEvaluationResult": {
+      "enum": [
+        "success",
+        "partial_success",
+        "failure",
+        "inconclusive"
+      ]
+    },
+    "outcomeEvidence": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "outcomeRecord": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "object",
+        "executionId",
+        "threadId",
+        "actorId",
+        "expectedEffect",
+        "evidence",
+        "status",
+        "attribution",
+        "completionAsSuccess",
+        "successByAssertion",
+        "outcomeAsConsensus",
+        "consensusCreated",
+        "governanceApproval",
+        "amendmentApproval",
+        "authorityCreated",
+        "retroactiveExpectedEffect",
+        "unmeasuredImpactAchieved",
+        "silentUnintendedConsequence"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "object": {
+          "const": "outcomeRecord"
+        },
+        "executionId": {
+          "$ref": "#/$defs/id"
+        },
+        "threadId": {
+          "$ref": "#/$defs/id"
+        },
+        "actorId": {
+          "$ref": "#/$defs/id"
+        },
+        "expectedEffect": {
+          "type": "string",
+          "minLength": 1
+        },
+        "observedEffect": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/outcomeEvidence"
+          }
+        },
+        "evaluationResult": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/outcomeEvaluationResult"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "comparison": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "confidence": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "evaluatedByParticipantId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "$ref": "#/$defs/outcomeStatus"
+        },
+        "createdAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "observedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "evaluatedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "attribution": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "actorId",
+            "executionId"
+          ]
+        },
+        "disputes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/outcomeDispute"
+          }
+        },
+        "violations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/outcomeViolation"
+          }
+        },
+        "completionAsSuccess": {
+          "const": false
+        },
+        "successByAssertion": {
+          "const": false
+        },
+        "outcomeAsConsensus": {
+          "const": false
+        },
+        "consensusCreated": {
+          "const": false
+        },
+        "governanceApproval": {
+          "const": false
+        },
+        "amendmentApproval": {
+          "const": false
+        },
+        "authorityCreated": {
+          "const": false
+        },
+        "retroactiveExpectedEffect": {
+          "const": false
+        },
+        "unmeasuredImpactAchieved": {
+          "const": false
+        },
+        "silentUnintendedConsequence": {
+          "const": false
+        }
+      }
+    },
+    "outcomeDispute": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "object",
+        "outcomeId",
+        "executionId",
+        "threadId",
+        "reason",
+        "disputedByParticipantId",
+        "completionAsSuccess",
+        "outcomeAsConsensus",
+        "consensusCreated",
+        "governanceApproval",
+        "amendmentApproval",
+        "authorityCreated"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "object": {
+          "const": "outcomeDispute"
+        },
+        "outcomeId": {
+          "$ref": "#/$defs/id"
+        },
+        "executionId": {
+          "$ref": "#/$defs/id"
+        },
+        "threadId": {
+          "$ref": "#/$defs/id"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "disputedByParticipantId": {
+          "$ref": "#/$defs/id"
+        },
+        "disputedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "completionAsSuccess": {
+          "const": false
+        },
+        "outcomeAsConsensus": {
+          "const": false
+        },
+        "consensusCreated": {
+          "const": false
+        },
+        "governanceApproval": {
+          "const": false
+        },
+        "amendmentApproval": {
+          "const": false
+        },
+        "authorityCreated": {
+          "const": false
+        }
+      }
+    },
+    "outcomeViolation": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "object",
+        "outcomeId",
+        "executionId",
+        "threadId",
+        "violationType",
+        "reason",
+        "detectedByParticipantId",
+        "completionAsSuccess",
+        "successByAssertion",
+        "outcomeAsConsensus",
+        "consensusCreated",
+        "governanceApproval",
+        "amendmentApproval",
+        "authorityCreated",
+        "retroactiveExpectedEffect",
+        "unmeasuredImpactAchieved",
+        "silentUnintendedConsequence"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "object": {
+          "const": "outcomeViolation"
+        },
+        "outcomeId": {
+          "$ref": "#/$defs/id"
+        },
+        "executionId": {
+          "$ref": "#/$defs/id"
+        },
+        "threadId": {
+          "$ref": "#/$defs/id"
+        },
+        "violationType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "detectedByParticipantId": {
+          "$ref": "#/$defs/id"
+        },
+        "detectedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "completionAsSuccess": {
+          "const": false
+        },
+        "successByAssertion": {
+          "const": false
+        },
+        "outcomeAsConsensus": {
+          "const": false
+        },
+        "consensusCreated": {
+          "const": false
+        },
+        "governanceApproval": {
+          "const": false
+        },
+        "amendmentApproval": {
+          "const": false
+        },
+        "authorityCreated": {
+          "const": false
+        },
+        "retroactiveExpectedEffect": {
+          "const": false
+        },
+        "unmeasuredImpactAchieved": {
+          "const": false
+        },
+        "silentUnintendedConsequence": {
+          "const": false
+        }
+      }
+    },
     "integrityReport": {
       "type": "object",
       "additionalProperties": true,
@@ -1104,7 +1443,7 @@
           "const": "unsupported_state != valid_state"
         },
         "compatibilityProtocolVersion": {
-          "const": "0.19.0"
+          "const": "0.21.0"
         },
         "localProtocolVersion": {
           "const": "clista.protocol.v0"
@@ -1132,6 +1471,21 @@
               "contains": {
                 "const": "negotiation"
               }
+            },
+            {
+              "contains": {
+                "const": "delegation"
+              }
+            },
+            {
+              "contains": {
+                "const": "execution"
+              }
+            },
+            {
+              "contains": {
+                "const": "outcome"
+              }
             }
           ]
         },
@@ -1157,6 +1511,21 @@
             {
               "contains": {
                 "const": "negotiation"
+              }
+            },
+            {
+              "contains": {
+                "const": "delegation"
+              }
+            },
+            {
+              "contains": {
+                "const": "execution"
+              }
+            },
+            {
+              "contains": {
+                "const": "outcome"
               }
             }
           ]
@@ -1239,7 +1608,7 @@
           "const": "translation != reinterpretation"
         },
         "interoperabilityProtocolVersion": {
-          "const": "0.19.0"
+          "const": "0.21.0"
         },
         "localProtocolVersion": {
           "const": "clista.protocol.v0"
@@ -1260,7 +1629,19 @@
           },
           "contains": {
             "const": "authority_context"
-          }
+          },
+          "allOf": [
+            {
+              "contains": {
+                "const": "execution_status"
+              }
+            },
+            {
+              "contains": {
+                "const": "protocol_outcome_status"
+              }
+            }
+          ]
         },
         "supportedEventTypes": {
           "type": "array",
@@ -1269,7 +1650,19 @@
           },
           "contains": {
             "const": "InteroperabilityProfileDeclared"
-          }
+          },
+          "allOf": [
+            {
+              "contains": {
+                "const": "ExecutionStarted"
+              }
+            },
+            {
+              "contains": {
+                "const": "OutcomeExpected"
+              }
+            }
+          ]
         },
         "objectSemantics": {
           "type": "object",
@@ -1291,7 +1684,10 @@
             "compatibility",
             "interoperability",
             "federation",
-            "negotiation"
+            "negotiation",
+            "delegation",
+            "execution",
+            "protocol_outcome"
           ]
         },
         "profiles": {
@@ -2224,6 +2620,268 @@
               "const": false
             },
             "silentRollback": {
+              "const": false
+            }
+          }
+        }
+      }
+    },
+    "outcomeProjection": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "schema",
+        "theorem",
+        "hardLaw",
+        "outcomeProtocolVersion",
+        "localProtocolVersion",
+        "statuses",
+        "evaluationResults",
+        "records",
+        "expected",
+        "pending",
+        "observed",
+        "evaluated",
+        "disputed",
+        "violated",
+        "observations",
+        "evaluations",
+        "disputes",
+        "violations",
+        "byOutcome",
+        "byExpected",
+        "byObservation",
+        "byEvaluation",
+        "byDispute",
+        "byViolation",
+        "observationsByOutcome",
+        "evaluationsByOutcome",
+        "disputesByOutcome",
+        "violationsByOutcome",
+        "outcomeValidationStatus"
+      ],
+      "properties": {
+        "schema": {
+          "const": "clista.outcome.v0"
+        },
+        "theorem": {
+          "const": "protocol_outcome = evaluate(execution_result, against_intended_effect)"
+        },
+        "hardLaw": {
+          "const": "completion != success"
+        },
+        "outcomeProtocolVersion": {
+          "const": "0.21.0"
+        },
+        "localProtocolVersion": {
+          "const": "clista.protocol.v0"
+        },
+        "statuses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/outcomeStatus"
+          }
+        },
+        "evaluationResults": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/outcomeEvaluationResult"
+          }
+        },
+        "records": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/outcomeRecord"
+          }
+        },
+        "expected": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/outcomeRecord"
+          }
+        },
+        "pending": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/outcomeRecord"
+          }
+        },
+        "observed": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/outcomeRecord"
+          }
+        },
+        "evaluated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/outcomeRecord"
+          }
+        },
+        "disputed": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/outcomeRecord"
+          }
+        },
+        "violated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/outcomeRecord"
+          }
+        },
+        "observations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/outcomeRecord"
+          }
+        },
+        "evaluations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/outcomeRecord"
+          }
+        },
+        "disputes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/outcomeDispute"
+          }
+        },
+        "violations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/outcomeViolation"
+          }
+        },
+        "byOutcome": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/outcomeRecord"
+          }
+        },
+        "byExpected": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/outcomeRecord"
+          }
+        },
+        "byObservation": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/outcomeRecord"
+          }
+        },
+        "byEvaluation": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/outcomeRecord"
+          }
+        },
+        "byDispute": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/outcomeDispute"
+          }
+        },
+        "byViolation": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/outcomeViolation"
+          }
+        },
+        "observationsByOutcome": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/outcomeRecord"
+            }
+          }
+        },
+        "evaluationsByOutcome": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/outcomeRecord"
+            }
+          }
+        },
+        "disputesByOutcome": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/outcomeDispute"
+            }
+          }
+        },
+        "violationsByOutcome": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/outcomeViolation"
+            }
+          }
+        },
+        "outcomeValidationStatus": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "valid",
+            "completionAsSuccess",
+            "successByAssertion",
+            "outcomeAsConsensus",
+            "consensusCreated",
+            "governanceApproval",
+            "amendmentApproval",
+            "authorityCreated",
+            "retroactiveExpectedEffect",
+            "unmeasuredImpactAchieved",
+            "silentUnintendedConsequence",
+            "governanceMutation",
+            "stateMutation"
+          ],
+          "properties": {
+            "valid": {
+              "const": true
+            },
+            "completionAsSuccess": {
+              "const": false
+            },
+            "successByAssertion": {
+              "const": false
+            },
+            "outcomeAsConsensus": {
+              "const": false
+            },
+            "consensusCreated": {
+              "const": false
+            },
+            "governanceApproval": {
+              "const": false
+            },
+            "amendmentApproval": {
+              "const": false
+            },
+            "authorityCreated": {
+              "const": false
+            },
+            "retroactiveExpectedEffect": {
+              "const": false
+            },
+            "unmeasuredImpactAchieved": {
+              "const": false
+            },
+            "silentUnintendedConsequence": {
+              "const": false
+            },
+            "governanceMutation": {
+              "const": false
+            },
+            "stateMutation": {
               "const": false
             }
           }
@@ -5335,6 +5993,11 @@
             "ExecutionFailed",
             "ExecutionRolledBack",
             "ExecutionViolationRecorded",
+            "OutcomeExpected",
+            "OutcomeObserved",
+            "OutcomeEvaluated",
+            "OutcomeDisputed",
+            "OutcomeViolationRecorded",
             "AssumptionDeclared",
             "EvidenceCommitted",
             "ClaimCreated",

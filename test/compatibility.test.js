@@ -27,12 +27,14 @@ test("compatibility verify accepts current continuity packets as explicitly degr
   assert.ok(result.packetContext.requiredCapabilities.includes("federation"));
   assert.ok(result.packetContext.requiredCapabilities.includes("negotiation"));
   assert.ok(result.packetContext.requiredCapabilities.includes("execution"));
+  assert.ok(result.packetContext.requiredCapabilities.includes("outcome"));
   assert.ok(result.packetContext.requiredVerificationLayers.includes("compatibility"));
   assert.ok(result.packetContext.requiredVerificationLayers.includes("interoperability"));
   assert.ok(result.packetContext.requiredVerificationLayers.includes("federation"));
   assert.ok(result.packetContext.requiredVerificationLayers.includes("negotiation"));
   assert.ok(result.packetContext.requiredVerificationLayers.includes("execution"));
-  assert.equal(result.localContext.compatibilityProtocolVersion, "0.20.0");
+  assert.ok(result.packetContext.requiredVerificationLayers.includes("outcome"));
+  assert.equal(result.localContext.compatibilityProtocolVersion, "0.21.0");
   assert.equal(summary.valid, true);
   assert.equal(summary.status, "degraded");
 });

@@ -36,7 +36,7 @@
       "const": "continuity"
     },
     "protocol_version": {
-      "const": "0.20.0"
+      "const": "0.21.0"
     },
     "schema_version": {
       "const": "clista.continuity.packet.v0"
@@ -99,6 +99,11 @@
         {
           "contains": {
             "const": "execution"
+          }
+        },
+        {
+          "contains": {
+            "const": "outcome"
           }
         }
       ]
@@ -213,7 +218,7 @@
           "const": "translation != reinterpretation"
         },
         "interoperabilityProtocolVersion": {
-          "const": "0.20.0"
+          "const": "0.21.0"
         },
         "localProtocolVersion": {
           "const": "clista.protocol.v0"
@@ -228,7 +233,19 @@
           },
           "contains": {
             "const": "authority_context"
-          }
+          },
+          "allOf": [
+            {
+              "contains": {
+                "const": "execution_status"
+              }
+            },
+            {
+              "contains": {
+                "const": "protocol_outcome_status"
+              }
+            }
+          ]
         },
         "optionalSemantics": {
           "type": "array",
@@ -243,7 +260,19 @@
           },
           "contains": {
             "const": "InteroperabilityProfileDeclared"
-          }
+          },
+          "allOf": [
+            {
+              "contains": {
+                "const": "ExecutionStarted"
+              }
+            },
+            {
+              "contains": {
+                "const": "OutcomeExpected"
+              }
+            }
+          ]
         },
         "objectSemantics": {
           "type": "object",
@@ -265,7 +294,10 @@
             "compatibility",
             "interoperability",
             "federation",
-            "negotiation"
+            "negotiation",
+            "delegation",
+            "execution",
+            "protocol_outcome"
           ]
         },
         "semanticLossAccepted": {
@@ -331,6 +363,7 @@
         "negotiation_state",
         "delegation_state",
         "execution_state",
+        "protocol_outcome_state",
         "verification_status",
         "integrity_state",
         "status",
@@ -460,6 +493,10 @@
           "type": "object",
           "additionalProperties": true
         },
+        "protocol_outcome_state": {
+          "type": "object",
+          "additionalProperties": true
+        },
         "verification_status": {
           "type": "object",
           "additionalProperties": true,
@@ -581,6 +618,7 @@
         "negotiationValidationStatus",
         "delegationValidationStatus",
         "executionValidationStatus",
+        "outcomeValidationStatus",
         "transcriptReplay",
         "memoryTrust",
         "authorityCreated",
@@ -606,7 +644,7 @@
           ]
         },
         "continuityProtocolVersion": {
-          "const": "0.20.0"
+          "const": "0.21.0"
         },
         "verificationMode": {
           "enum": [

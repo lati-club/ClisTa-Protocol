@@ -82,6 +82,13 @@ const {
   validateNegotiationTermsRejected
 } = require("./negotiation");
 const {
+  validateOutcomeDispute,
+  validateOutcomeEvaluation,
+  validateOutcomeExpectation,
+  validateOutcomeObservation,
+  validateOutcomeViolation
+} = require("./outcome");
+const {
   VALID_AUTHORITIES,
   VALID_AUTHORITY_SCOPES,
   applyIdentityEvent,
@@ -324,6 +331,21 @@ function validateEvents(events) {
       case "ExecutionViolationRecorded":
         validateExecutionViolationRecordedEvent(event, state);
         break;
+      case "OutcomeExpected":
+        validateOutcomeExpectedEvent(event, state);
+        break;
+      case "OutcomeObserved":
+        validateOutcomeObservedEvent(event, state);
+        break;
+      case "OutcomeEvaluated":
+        validateOutcomeEvaluatedEvent(event, state);
+        break;
+      case "OutcomeDisputed":
+        validateOutcomeDisputedEvent(event, state);
+        break;
+      case "OutcomeViolationRecorded":
+        validateOutcomeViolationRecordedEvent(event, state);
+        break;
       case "ThreadCreated":
         validateThreadCreated(event, state);
         break;
@@ -461,6 +483,12 @@ function emptyValidationState(events = []) {
     executionRollbacks: new Map(),
     executionViolations: new Map(),
     executionStatusById: new Map(),
+    outcomeExpectations: new Map(),
+    outcomeObservations: new Map(),
+    outcomeEvaluations: new Map(),
+    outcomeDisputes: new Map(),
+    outcomeViolations: new Map(),
+    outcomeStatusById: new Map(),
     lastContentHash: undefined,
     lastSequence: undefined,
     events: []
@@ -1371,6 +1399,155 @@ function validateExecutionViolationRecordedEvent(event, state) {
   }
 }
 
+function validateOutcomeExpectedEvent(event, state) {
+  const record = event.payload.outcomeRecord;
+  if (!record) {
+    addError(state, event, "OutcomeExpected payload missing outcomeRecord");
+    return;
+  }
+  for (const reason of validateOutcomeExpectation(record)) {
+    addError(state, event, reason);
+  }
+  validateThreadObject(event, record, state, "outcome expectation");
+  validateOutcomeActor(event, state, record, "expectation");
+  validateOutcomeExecutionReference(event, state, record, "expectation");
+  const executionStatus = state.executionStatusById.get(record.executionId);
+  if (executionStatus && executionStatus !== "active") {
+    addError(state, event, "expected outcome must be declared before execution completion");
+  }
+  if (record.id && state.outcomeExpectations.has(record.id)) {
+    addError(state, event, `duplicate outcome expectation ${record.id}`);
+  }
+  if (record.id) {
+    state.outcomeExpectations.set(record.id, record);
+    state.outcomeStatusById.set(record.id, "pending");
+  }
+}
+
+function validateOutcomeObservedEvent(event, state) {
+  const record = event.payload.outcomeRecord;
+  if (!record) {
+    addError(state, event, "OutcomeObserved payload missing outcomeRecord");
+    return;
+  }
+  for (const reason of validateOutcomeObservation(record)) {
+    addError(state, event, reason);
+  }
+  validateThreadObject(event, record, state, "outcome observation");
+  validateOutcomeActor(event, state, record, "observation");
+  validateOutcomeExecutionReference(event, state, record, "observation");
+  const expectation = validateOutcomeReferencesExpectation(event, state, record, "observation");
+  if (expectation) {
+    validateOutcomeRecordMatchesExpectation(event, state, record, expectation, "observation");
+  }
+  const status = state.outcomeStatusById.get(record.id);
+  if (status && status !== "pending") {
+    addError(state, event, `outcome observation references ${status} outcome ${record.id}`);
+  }
+  if (record.id) {
+    state.outcomeObservations.set(record.id, record);
+    state.outcomeStatusById.set(record.id, "observed");
+  }
+}
+
+function validateOutcomeEvaluatedEvent(event, state) {
+  const record = event.payload.outcomeRecord;
+  if (!record) {
+    addError(state, event, "OutcomeEvaluated payload missing outcomeRecord");
+    return;
+  }
+  for (const reason of validateOutcomeEvaluation(record)) {
+    addError(state, event, reason);
+  }
+  validateThreadObject(event, record, state, "outcome evaluation");
+  validateOutcomeActor(event, state, record, "evaluation");
+  if (record.evaluatedByParticipantId && event.actor_id !== record.evaluatedByParticipantId) {
+    addError(state, event, "outcome evaluation actor_id must match evaluatedByParticipantId");
+  }
+  validateOutcomeExecutionReference(event, state, record, "evaluation");
+  const expectation = validateOutcomeReferencesExpectation(event, state, record, "evaluation");
+  if (expectation) {
+    validateOutcomeRecordMatchesExpectation(event, state, record, expectation, "evaluation");
+  }
+  if (!state.outcomeObservations.has(record.id)) {
+    addError(state, event, `outcome evaluation requires observed outcome ${record.id}`);
+  }
+  const executionStatus = state.executionStatusById.get(record.executionId);
+  if (executionStatus !== "completed") {
+    addError(state, event, `outcome evaluation requires completed execution ${record.executionId}`);
+  }
+  const status = state.outcomeStatusById.get(record.id);
+  if (status && status !== "observed") {
+    addError(state, event, `outcome evaluation references ${status} outcome ${record.id}`);
+  }
+  if (record.id) {
+    state.outcomeEvaluations.set(record.id, record);
+    state.outcomeStatusById.set(record.id, "evaluated");
+  }
+}
+
+function validateOutcomeDisputedEvent(event, state) {
+  const dispute = event.payload.outcomeDispute;
+  if (!dispute) {
+    addError(state, event, "OutcomeDisputed payload missing outcomeDispute");
+    return;
+  }
+  for (const reason of validateOutcomeDispute(dispute)) {
+    addError(state, event, reason);
+  }
+  validateOutcomeThread(event, state, dispute, "dispute");
+  const expectation = state.outcomeExpectations.get(dispute.outcomeId);
+  if (!expectation) {
+    addError(state, event, `outcome dispute references unknown outcome ${dispute.outcomeId}`);
+  } else {
+    validateOutcomeSideRecordMatchesExpectation(event, state, dispute, expectation, "dispute");
+  }
+  validateOutcomeParticipant(event, state, dispute.disputedByParticipantId, "dispute");
+  if (event.actor_id !== dispute.disputedByParticipantId) {
+    addError(state, event, "outcome dispute actor_id must match disputedByParticipantId");
+  }
+  if (dispute.id && state.outcomeDisputes.has(dispute.id)) {
+    addError(state, event, `duplicate outcome dispute ${dispute.id}`);
+  }
+  if (dispute.id) {
+    state.outcomeDisputes.set(dispute.id, dispute);
+  }
+  if (dispute.outcomeId) {
+    state.outcomeStatusById.set(dispute.outcomeId, "disputed");
+  }
+}
+
+function validateOutcomeViolationRecordedEvent(event, state) {
+  const violation = event.payload.outcomeViolation;
+  if (!violation) {
+    addError(state, event, "OutcomeViolationRecorded payload missing outcomeViolation");
+    return;
+  }
+  for (const reason of validateOutcomeViolation(violation)) {
+    addError(state, event, reason);
+  }
+  validateOutcomeThread(event, state, violation, "violation");
+  const expectation = state.outcomeExpectations.get(violation.outcomeId);
+  if (!expectation) {
+    addError(state, event, `outcome violation references unknown outcome ${violation.outcomeId}`);
+  } else {
+    validateOutcomeSideRecordMatchesExpectation(event, state, violation, expectation, "violation");
+  }
+  validateOutcomeParticipant(event, state, violation.detectedByParticipantId, "violation");
+  if (event.actor_id !== violation.detectedByParticipantId) {
+    addError(state, event, "outcome violation actor_id must match detectedByParticipantId");
+  }
+  if (violation.id && state.outcomeViolations.has(violation.id)) {
+    addError(state, event, `duplicate outcome violation ${violation.id}`);
+  }
+  if (violation.id) {
+    state.outcomeViolations.set(violation.id, violation);
+  }
+  if (violation.outcomeId) {
+    state.outcomeStatusById.set(violation.outcomeId, "violated");
+  }
+}
+
 function validateThreadCreated(event, state) {
   const thread = event.payload.thread;
   if (!thread?.id) {
@@ -2201,6 +2378,77 @@ function requireExecutionConstraints(event, state, record, requiredConstraints, 
   }
 }
 
+function validateOutcomeActor(event, state, record, label) {
+  if (!record?.actorId) {
+    return;
+  }
+  validateOutcomeParticipant(event, state, record.actorId, label);
+  if (event.actor_id !== record.actorId) {
+    addError(state, event, `outcome ${label} actor_id must match actorId`);
+  }
+}
+
+function validateOutcomeParticipant(event, state, participantId, label) {
+  if (!participantId) {
+    addError(state, event, `outcome ${label} requires accountable participant`);
+    return;
+  }
+  if (!state.participants.has(participantId)) {
+    addError(state, event, `outcome ${label} references unknown participant ${participantId}`);
+  }
+}
+
+function validateOutcomeExecutionReference(event, state, record, label) {
+  const execution = record?.executionId ? state.executionRecords.get(record.executionId) : null;
+  if (!execution) {
+    addError(state, event, `outcome ${label} references unknown execution ${record?.executionId}`);
+    return null;
+  }
+  if (execution.threadId !== record.threadId) {
+    addError(state, event, `outcome ${label} threadId must match execution record`);
+  }
+  return execution;
+}
+
+function validateOutcomeReferencesExpectation(event, state, record, label) {
+  const expectation = record?.id ? state.outcomeExpectations.get(record.id) : null;
+  if (!expectation) {
+    addError(state, event, `outcome ${label} references unknown expected outcome ${record?.id}`);
+    return null;
+  }
+  return expectation;
+}
+
+function validateOutcomeRecordMatchesExpectation(event, state, record, expectation, label) {
+  if (record.executionId !== expectation.executionId) {
+    addError(state, event, `outcome ${label} executionId must match expected outcome`);
+  }
+  if (record.threadId !== expectation.threadId) {
+    addError(state, event, `outcome ${label} threadId must match expected outcome`);
+  }
+  if (normalizeOutcomeEffect(record.expectedEffect) !== normalizeOutcomeEffect(expectation.expectedEffect)) {
+    addError(state, event, `outcome ${label} must not rewrite expected effect`);
+  }
+}
+
+function validateOutcomeSideRecordMatchesExpectation(event, state, record, expectation, label) {
+  if (record.executionId !== expectation.executionId) {
+    addError(state, event, `outcome ${label} executionId must match expected outcome`);
+  }
+  if (record.threadId !== expectation.threadId) {
+    addError(state, event, `outcome ${label} threadId must match expected outcome`);
+  }
+}
+
+function validateOutcomeThread(event, state, object, label) {
+  if (object.threadId !== event.thread_id) {
+    addError(state, event, `outcome ${label} threadId must match event thread_id`);
+  }
+  if (!state.threads.has(object.threadId)) {
+    addError(state, event, `outcome ${label} references unknown thread ${object.threadId}`);
+  }
+}
+
 function validateTargetExists(event, targetType, targetId, state) {
   if (!targetId) {
     return;
@@ -2236,6 +2484,10 @@ function normalizeDelegationText(value) {
     .trim()
     .toLowerCase()
     .replace(/[\s-]+/g, "_");
+}
+
+function normalizeOutcomeEffect(value) {
+  return String(value || "").trim();
 }
 
 function arrayValues(value) {
@@ -2426,6 +2678,9 @@ function primaryObject(event) {
     || payload.decisionScore
     || payload.executionRecord
     || payload.executionViolation
+    || payload.outcomeRecord
+    || payload.outcomeDispute
+    || payload.outcomeViolation
     || null;
 }
 

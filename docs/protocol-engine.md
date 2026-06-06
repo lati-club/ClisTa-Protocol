@@ -32,6 +32,7 @@ that another human or agent can reload later.
 19. Protocol delegation
 19.1. Delegation actor boundary
 20. Protocol execution
+21. Protocol outcome
 
 ## Protocol Objects
 
@@ -71,6 +72,12 @@ The protocol core defines:
 - `negotiationDifference`
 - `negotiationTerms`
 - `negotiationFailure`
+- `delegationGrant`
+- `delegatedAction`
+- `executionRecord`
+- `outcomeRecord`
+- `outcomeDispute`
+- `outcomeViolation`
 
 See `schemas/clista-protocol.schema.json`.
 
@@ -142,6 +149,16 @@ Supported events:
 - `DelegationRevoked`
 - `DelegationExpired`
 - `DelegationViolationRecorded`
+- `ExecutionStarted`
+- `ExecutionCompleted`
+- `ExecutionFailed`
+- `ExecutionRolledBack`
+- `ExecutionViolationRecorded`
+- `OutcomeExpected`
+- `OutcomeObserved`
+- `OutcomeEvaluated`
+- `OutcomeDisputed`
+- `OutcomeViolationRecorded`
 
 The local store lives at:
 
@@ -168,6 +185,11 @@ npm run clista -- decision merge --thread thd_example --request drq_example --de
 npm run clista -- outcome expect --thread thd_example --decision dcr_example --metric revenue_growth --operator ">" --target 0.15 --review-date 2027-03-01
 npm run clista -- outcome audit --thread thd_example --expected exo_example --actual 0.08 --result failed --summary "Revenue growth missed target." --auditor "Troy"
 npm run clista -- decision score --thread thd_example --decision dcr_example --score 0.4 --status failed --rationale "The expected outcome was not met." --audits out_example
+npm run clista -- execution start --delegation dlg_example --action verify --scope thread:thd_example --constraint "Verify only the delegated execution scope"
+npm run clista -- execution complete --execution exe_example --evidence "Verification completed with replay evidence."
+npm run clista -- outcome expect --execution exe_example --expected-effect "Remote packet accepted under strict verification."
+npm run clista -- outcome observe --outcome oco_example --observed-effect "Remote packet accepted under strict verification." --evidence "Strict verification output matched expected result."
+npm run clista -- outcome evaluate --outcome oco_example --result success --comparison "Observed effect satisfied expected effect." --evidence "Outcome evidence reviewed."
 npm run clista -- merge open --source thd_example_alt --target thd_example --summary "Integrate useful fork reasoning."
 npm run clista -- merge eligibility --request mrg_example
 npm run clista -- merge complete --request mrg_example --merged-by "Troy"
@@ -187,6 +209,7 @@ npm run clista -- federation verify
 npm run clista -- negotiation check --packet continuity.json
 npm run clista -- negotiation verify
 npm run clista -- execution verify
+npm run clista -- outcome verify
 npm run clista -- identity show --participant par_troy
 npm run clista -- attribution list --thread thd_example
 npm run clista -- attribution show clm_example

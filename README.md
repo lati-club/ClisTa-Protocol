@@ -97,6 +97,14 @@ clista execution verify
 
 If it verifies performed action with evidence under authorized scope and constraints, execution can be trusted without treating intent as completion.
 
+The outcome command is:
+
+```text
+clista outcome verify
+```
+
+If it verifies observed effect against intended effect with evidence, completed execution can be evaluated without treating completion as success.
+
 The identity command is:
 
 ```text
@@ -176,6 +184,8 @@ Delegation is not authority surrender. Delegated action is scoped and attributab
 Non-participant delegation is not actor exemption. Every delegate that records action resolves to an accountable participant.
 
 Execution is not intent. Completion requires evidence that the authorized action was performed under verified scope and constraints.
+
+Completion is not success. Outcome evidence must satisfy the intended effect before performed action can be evaluated as successful.
 
 ## Repository Boundary
 

@@ -101,6 +101,16 @@ Projected state is derived.
 - `DelegationRevoked`
 - `DelegationExpired`
 - `DelegationViolationRecorded`
+- `ExecutionStarted`
+- `ExecutionCompleted`
+- `ExecutionFailed`
+- `ExecutionRolledBack`
+- `ExecutionViolationRecorded`
+- `OutcomeExpected`
+- `OutcomeObserved`
+- `OutcomeEvaluated`
+- `OutcomeDisputed`
+- `OutcomeViolationRecorded`
 - `EvidenceCommitted`
 - `AssumptionDeclared`
 - `ClaimCreated`
@@ -143,7 +153,7 @@ Projected state is derived.
 - pattern-level learning signals from outcome evidence
 - governance adaptation recommendations from learning signals
 - explicit protocol amendments and amendment history
-- portability, interoperability, federation, negotiation, delegation, and execution status
+- portability, interoperability, federation, negotiation, delegation, execution, and outcome status
 
 ## Required Validation
 
@@ -168,6 +178,9 @@ Validation checks:
 - interoperability semantic preservation, event-type preservation, object-meaning preservation, and explicit-degradation boundaries
 - federation packet verification, independent-context references, non-authority-import, and non-centralization boundaries
 - negotiation request, constraint, difference, terms, non-authority-transfer, non-governance-merger, and explicit-downgrade boundaries
+- delegation authority, accountable delegate, scoped action, and attribution boundaries
+- execution authorization, actor accountability, scope, constraints, evidence, and explicit lifecycle boundaries
+- outcome expectation, observation evidence, evaluation judgment, dispute, violation, and completion-not-success boundaries
 
 ## Required Integrity
 
@@ -216,7 +229,7 @@ A Continuity Packet must be integrity-gated and must preserve:
 - projection hash
 - state hash
 - resume status: `verified`, `degraded`, or `rejected`
-- verification status for integrity, attribution, provenance, learning, adaptation, amendments, compatibility, interoperability, federation, and negotiation
+- verification status for integrity, attribution, provenance, learning, adaptation, amendments, compatibility, interoperability, federation, negotiation, delegation, execution, and outcome
 - current question
 - current decision
 - assumptions
@@ -235,6 +248,9 @@ A Continuity Packet must be integrity-gated and must preserve:
 - interoperability state
 - federation state
 - negotiation state
+- delegation state
+- execution state
+- protocol outcome state
 - next action
 
 Continuity must reject packets that trust transcript replay, trust model memory, skip failed verification, create authority, approve amendments, mutate governance, mutate imported state, or bypass validation.
@@ -472,6 +488,46 @@ Execution must verify:
 - violations are projected, not silently ignored
 
 Execution must reject records that create authority, imply consensus, approve amendments, merge governance, complete by assertion, silently complete, silently fail, silently rollback, or treat intent as performed action.
+
+## Required Outcome
+
+```text
+clista outcome expect
+clista outcome observe
+clista outcome evaluate
+clista outcome dispute
+clista outcome list
+clista outcome show <outcomeId>
+clista outcome verify
+```
+
+must evaluate completed execution against intended effect using observed evidence, explicit judgment, and accountable attribution.
+
+The theorem is:
+
+```text
+protocol_outcome = evaluate(execution_result, against_intended_effect)
+```
+
+The hard law is:
+
+```text
+completion != success
+```
+
+Outcome must verify:
+
+- expected outcome references an existing execution
+- expected outcome is declared before or at execution completion
+- outcome actor resolves to a known accountable participant
+- observation includes evidence
+- evaluation references a completed execution
+- evaluation compares observed effect against intended effect
+- evaluation judgment is success, partial_success, failure, or inconclusive
+- disputes and violations are projected
+- outcome status remains distinct from evaluation judgment
+
+Outcome must reject records that treat completion as success, assert success without evidence, rewrite intended effect retroactively, treat unmeasured impact as achieved impact, silently ignore unintended consequence, imply consensus, grant governance approval, approve amendments, or create authority.
 
 ## Required Identity
 

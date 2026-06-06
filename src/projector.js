@@ -29,6 +29,11 @@ const {
   selectExecutionForThread
 } = require("./execution");
 const {
+  buildOutcomeState: buildProtocolOutcomeState,
+  projectOutcome,
+  selectOutcomeForThread
+} = require("./outcome");
+const {
   buildFederationState,
   projectFederation,
   selectFederationForThread
@@ -226,7 +231,7 @@ function emptyProjection() {
       schema: "clista.compatibility.v0",
       theorem: "protocol_compatibility = verify(capability_set, amendment_state, validation_requirements)",
       hardLaw: "unsupported_state != valid_state",
-      compatibilityProtocolVersion: "0.20.0",
+      compatibilityProtocolVersion: "0.21.0",
       localProtocolVersion: PROTOCOL_VERSION,
       localCapabilitySet: [],
       supportedContinuityProtocolVersions: [],
@@ -259,7 +264,7 @@ function emptyProjection() {
       schema: "clista.interoperability.v0",
       theorem: "protocol_interoperability = preserve(meaning, across_compatible_contexts)",
       hardLaw: "translation != reinterpretation",
-      interoperabilityProtocolVersion: "0.20.0",
+      interoperabilityProtocolVersion: "0.21.0",
       localProtocolVersion: PROTOCOL_VERSION,
       supportedExchangeFormats: [],
       supportedSemantics: [],
@@ -466,6 +471,57 @@ function emptyProjection() {
         silentRollback: false
       }
     },
+    outcome: {
+      schema: "clista.outcome.v0",
+      theorem: "protocol_outcome = evaluate(execution_result, against_intended_effect)",
+      hardLaw: "completion != success",
+      outcomeProtocolVersion: "0.21.0",
+      localProtocolVersion: PROTOCOL_VERSION,
+      statuses: ["pending", "observed", "evaluated", "disputed", "violated"],
+      evaluationResults: ["success", "partial_success", "failure", "inconclusive"],
+      records: [],
+      expected: [],
+      pending: [],
+      observed: [],
+      evaluated: [],
+      disputed: [],
+      violated: [],
+      observations: [],
+      evaluations: [],
+      disputes: [],
+      violations: [],
+      byOutcome: {},
+      byExpected: {},
+      byObservation: {},
+      byEvaluation: {},
+      byDispute: {},
+      byViolation: {},
+      observationsByOutcome: {},
+      evaluationsByOutcome: {},
+      disputesByOutcome: {},
+      violationsByOutcome: {},
+      outcomeValidationStatus: {
+        valid: true,
+        recordCount: 0,
+        pendingCount: 0,
+        observedCount: 0,
+        evaluatedCount: 0,
+        disputeCount: 0,
+        violationCount: 0,
+        completionAsSuccess: false,
+        successByAssertion: false,
+        outcomeAsConsensus: false,
+        consensusCreated: false,
+        governanceApproval: false,
+        amendmentApproval: false,
+        authorityCreated: false,
+        retroactiveExpectedEffect: false,
+        unmeasuredImpactAchieved: false,
+        silentUnintendedConsequence: false,
+        governanceMutation: false,
+        stateMutation: false
+      }
+    },
     events: []
   };
 }
@@ -542,6 +598,11 @@ function projectEvents(events) {
       case "ExecutionFailed":
       case "ExecutionRolledBack":
       case "ExecutionViolationRecorded":
+      case "OutcomeExpected":
+      case "OutcomeObserved":
+      case "OutcomeEvaluated":
+      case "OutcomeDisputed":
+      case "OutcomeViolationRecorded":
         break;
       case "ThreadCreated":
         upsert(projection.threads, payload.thread);
@@ -650,6 +711,7 @@ function projectEvents(events) {
   projection.negotiation = projectNegotiation(buildNegotiationState(projection));
   projection.delegation = projectDelegation(buildDelegationState(projection));
   projection.execution = projectExecution(buildExecutionState(projection));
+  projection.outcome = projectOutcome(buildProtocolOutcomeState(projection));
 
   return projection;
 }
@@ -722,6 +784,7 @@ function selectThreadState(projection, requestedThreadId) {
   const negotiationState = selectNegotiationForThread(projection.negotiation, threadId);
   const delegationState = selectDelegationForThread(projection.delegation, threadId);
   const executionState = selectExecutionForThread(projection.execution, threadId);
+  const protocolOutcomeState = selectOutcomeForThread(projection.outcome, threadId);
   const reasoningState = buildReasoningState({
     thread,
     evidence: supportingEvidence,
@@ -747,6 +810,7 @@ function selectThreadState(projection, requestedThreadId) {
     negotiationState,
     delegationState,
     executionState,
+    protocolOutcomeState,
     events: projection.events
   });
 
@@ -790,6 +854,7 @@ function selectThreadState(projection, requestedThreadId) {
     negotiationState,
     delegationState,
     executionState,
+    protocolOutcomeState,
     auditTrail: auditTrailForThread(projection, threadId)
   };
 }
@@ -819,6 +884,7 @@ function buildReasoningState({
   negotiationState,
   delegationState,
   executionState,
+  protocolOutcomeState,
   events
 }) {
   return {
@@ -859,6 +925,7 @@ function buildReasoningState({
     negotiation: negotiationState,
     delegation: delegationState,
     execution: executionState,
+    outcome: protocolOutcomeState,
     next_action: decisionRecord?.nextAction || null,
     audit_summary: {
       source: "append_only_event_log",
@@ -943,6 +1010,7 @@ function exportProtocol(projection) {
     negotiation: projection.negotiation,
     delegation: projection.delegation,
     execution: projection.execution,
+    outcome: projection.outcome,
     events: projection.events
   };
 }

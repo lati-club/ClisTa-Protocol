@@ -177,6 +177,8 @@ M16 adds interoperability verification status so a resumed packet records whethe
 M17 adds federation verification status so exchanged state can be referenced without importing remote authority.
 M18 adds negotiation verification status so exchanged state can declare unresolved differences and exchange terms without transferring authority.
 M19 adds delegation verification status so scoped action can be authorized without surrendering authority.
+M20 adds execution verification status so performed action is separate from intent.
+M21 adds outcome verification status so completion is separate from success.
 
 ## Compatibility Context
 
@@ -311,3 +313,25 @@ Completion requires evidence. Execution does not create authority, imply consens
 A record that execution exceeded, attempted to exceed, or failed to satisfy its authorized scope or constraints.
 
 Violation is projected onto execution state and preserves accountability without converting intent into completed action.
+
+## Outcome Record
+
+A lifecycle record that declares an expected effect for an execution, observes the actual effect with evidence, and evaluates the observed effect against the intended effect.
+
+It records execution id, actor id, expected effect, observed effect, evidence, evaluation result, confidence, evaluator, timestamps, disputes, violations, and attribution.
+
+Outcome status describes observation state. Evaluation result describes judgment.
+
+Completion is not success. A completed execution becomes successful only when outcome evidence satisfies the expected effect.
+
+## Outcome Dispute
+
+A record that an outcome expectation, observation, or evaluation is contested.
+
+Disputes are projected onto outcome state. They do not erase the underlying execution or create governance approval.
+
+## Outcome Violation
+
+A record that an outcome boundary was violated, such as treating completion as success, asserting success without evidence, rewriting expected effect retroactively, or converting outcome into consensus.
+
+Violation preserves the audit trail without granting authority, approving amendments, or mutating governance.

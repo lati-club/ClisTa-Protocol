@@ -41,6 +41,13 @@ const {
   executionForId
 } = require("./execution");
 const {
+  buildOutcomeDispute,
+  buildOutcomeEvaluation,
+  buildOutcomeExpectation,
+  buildOutcomeObservation,
+  outcomeForId
+} = require("./outcome");
+const {
   summarizeProtocolCompatibility,
   verifyProtocolCompatibility
 } = require("./compatibility");
@@ -181,6 +188,18 @@ function main(argv = process.argv.slice(2), cwd = process.cwd()) {
         return decisionMerge(options, cwd);
       case "outcome expect":
         return outcomeExpect(options, cwd);
+      case "outcome observe":
+        return outcomeObserve(options, cwd);
+      case "outcome evaluate":
+        return outcomeEvaluate(options, cwd);
+      case "outcome dispute":
+        return outcomeDispute(options, cwd);
+      case "outcome list":
+        return outcomeList(options, cwd);
+      case "outcome show":
+        return outcomeShow(options, cwd);
+      case "outcome verify":
+        return outcomeVerify(options, cwd);
       case "outcome audit":
         return outcomeAudit(options, cwd);
       case "decision score":
@@ -1161,6 +1180,9 @@ function decisionMerge(options, cwd) {
 }
 
 function outcomeExpect(options, cwd) {
+  if (options.execution) {
+    return protocolOutcomeExpect(options, cwd);
+  }
   requireOption(options, "thread");
   requireOption(options, "decision");
   requireOption(options, "metric");
@@ -1207,6 +1229,225 @@ function outcomeExpect(options, cwd) {
   });
   appendEvent(event, cwd);
   return print({ expectedOutcome, event });
+}
+
+function protocolOutcomeExpect(options, cwd) {
+  requireOption(options, "execution");
+  const expectedEffect = options.expectedEffect || options.effect;
+  if (!expectedEffect) {
+    throw new Error("Missing required option --expected-effect");
+  }
+  const projection = projectEvents(readValidEventsForOptions(options, cwd));
+  const execution = projection.execution.byExecution[options.execution];
+  if (!execution) {
+    throw new Error(`Unknown execution ${options.execution}`);
+  }
+  const actor = options.actor ? participantFrom(options.actor, options.role || "outcome_author") : null;
+  if (actor) {
+    appendParticipant(actor, cwd, execution.threadId);
+  }
+  const actorId = actor?.id || execution.actorId;
+  const at = nowIso();
+  const outcomeRecord = buildOutcomeExpectation({
+    id: options.id || options.outcome,
+    executionId: execution.id,
+    threadId: execution.threadId,
+    actorId,
+    expectedEffect,
+    evidence: parseList(options.evidence),
+    createdAt: at
+  });
+  const event = createEvent({
+    type: "OutcomeExpected",
+    threadId: outcomeRecord.threadId,
+    actorId: outcomeRecord.actorId,
+    at,
+    payload: { outcomeRecord }
+  });
+  appendEvent(event, cwd);
+  return print({
+    schema: "clista.outcome.expect.v0",
+    expected: true,
+    outcomeRecord,
+    event
+  });
+}
+
+function outcomeObserve(options, cwd) {
+  requireOption(options, "outcome");
+  requireOption(options, "evidence");
+  const observedEffect = options.observedEffect || options.effect;
+  if (!observedEffect) {
+    throw new Error("Missing required option --observed-effect");
+  }
+  const { record } = outcomeRecordForCli(options, cwd);
+  const observer = options.observer || options.actor
+    ? participantFrom(options.observer || options.actor, options.role || "outcome_observer")
+    : null;
+  if (observer) {
+    appendParticipant(observer, cwd, record.threadId);
+  }
+  const actorId = observer?.id || record.actorId;
+  const at = nowIso();
+  const outcomeRecord = buildOutcomeObservation({
+    id: record.id,
+    executionId: record.executionId,
+    threadId: record.threadId,
+    actorId,
+    expectedEffect: record.expectedEffect,
+    observedEffect,
+    evidence: parseList(options.evidence),
+    observedAt: at
+  });
+  const event = createEvent({
+    type: "OutcomeObserved",
+    threadId: outcomeRecord.threadId,
+    actorId: outcomeRecord.actorId,
+    at,
+    payload: { outcomeRecord }
+  });
+  appendEvent(event, cwd);
+  return print({
+    schema: "clista.outcome.observe.v0",
+    observed: true,
+    outcomeRecord,
+    event
+  });
+}
+
+function outcomeEvaluate(options, cwd) {
+  requireOption(options, "outcome");
+  requireOption(options, "result");
+  requireOption(options, "comparison");
+  requireOption(options, "evidence");
+  const { projection, record } = outcomeRecordForCli(options, cwd);
+  const observation = projection.outcome.observationsByOutcome[record.id]?.at(-1);
+  if (!observation) {
+    throw new Error(`Outcome ${record.id} has not been observed`);
+  }
+  const evaluator = options.evaluator || options.actor
+    ? participantFrom(options.evaluator || options.actor, options.role || "outcome_evaluator")
+    : null;
+  if (evaluator) {
+    appendParticipant(evaluator, cwd, record.threadId);
+  }
+  const evaluatorId = evaluator?.id || record.actorId;
+  const at = nowIso();
+  const outcomeRecord = buildOutcomeEvaluation({
+    id: record.id,
+    executionId: record.executionId,
+    threadId: record.threadId,
+    actorId: evaluatorId,
+    expectedEffect: record.expectedEffect,
+    observedEffect: observation.observedEffect,
+    evidence: parseList(options.evidence),
+    evaluationResult: options.result,
+    comparison: options.comparison,
+    confidence: options.confidence,
+    evaluatedByParticipantId: evaluatorId,
+    evaluatedAt: at
+  });
+  const event = createEvent({
+    type: "OutcomeEvaluated",
+    threadId: outcomeRecord.threadId,
+    actorId: outcomeRecord.actorId,
+    at,
+    payload: { outcomeRecord }
+  });
+  appendEvent(event, cwd);
+  return print({
+    schema: "clista.outcome.evaluate.v0",
+    evaluated: true,
+    outcomeRecord,
+    event
+  });
+}
+
+function outcomeDispute(options, cwd) {
+  requireOption(options, "outcome");
+  requireOption(options, "reason");
+  const { record } = outcomeRecordForCli(options, cwd);
+  const disputer = options.disputer || options.actor
+    ? participantFrom(options.disputer || options.actor, options.role || "outcome_disputer")
+    : null;
+  if (disputer) {
+    appendParticipant(disputer, cwd, record.threadId);
+  }
+  const disputerId = disputer?.id || record.actorId;
+  const at = nowIso();
+  const outcomeDisputeRecord = buildOutcomeDispute({
+    id: options.id || options.dispute,
+    outcomeId: record.id,
+    executionId: record.executionId,
+    threadId: record.threadId,
+    reason: options.reason,
+    disputedByParticipantId: disputerId,
+    disputedAt: at
+  });
+  const event = createEvent({
+    type: "OutcomeDisputed",
+    threadId: outcomeDisputeRecord.threadId,
+    actorId: outcomeDisputeRecord.disputedByParticipantId,
+    at,
+    payload: { outcomeDispute: outcomeDisputeRecord }
+  });
+  appendEvent(event, cwd);
+  return print({
+    schema: "clista.outcome.dispute.v0",
+    disputed: true,
+    outcomeDispute: outcomeDisputeRecord,
+    event
+  });
+}
+
+function outcomeList(options, cwd) {
+  const projection = projectEvents(readValidEventsForOptions(options, cwd));
+  let records = projection.outcome.records;
+  if (options.thread) {
+    records = records.filter((record) => record.threadId === options.thread);
+  }
+  if (options.status) {
+    records = records.filter((record) => record.status === options.status);
+  }
+  return print({
+    schema: "clista.outcome.list.v0",
+    theorem: projection.outcome.theorem,
+    hardLaw: projection.outcome.hardLaw,
+    threadId: options.thread || null,
+    status: options.status || null,
+    count: records.length,
+    records
+  });
+}
+
+function outcomeShow(options, cwd) {
+  const outcomeId = options.outcome || options.outcomeId || options.id;
+  if (!outcomeId) {
+    throw new Error("Missing required option --outcome");
+  }
+  const projection = projectEvents(readValidEventsForOptions(options, cwd));
+  return print(outcomeForId(projection.outcome, outcomeId));
+}
+
+function outcomeVerify(options, cwd) {
+  const events = readEventsForOptions(options, cwd);
+  const result = validateEvents(events);
+  if (!result.valid) {
+    print({
+      schema: "clista.outcome.verify.v0",
+      valid: false,
+      errors: result.errors
+    });
+    process.exitCode = 1;
+    return;
+  }
+  const projection = projectEvents(events);
+  return print({
+    schema: "clista.outcome.verify.v0",
+    valid: true,
+    errors: [],
+    outcomeValidationStatus: projection.outcome.outcomeValidationStatus
+  });
 }
 
 function outcomeAudit(options, cwd) {
@@ -2429,6 +2670,16 @@ function executionRecordForCli(options, cwd) {
   return { projection, record };
 }
 
+function outcomeRecordForCli(options, cwd) {
+  const projection = projectEvents(readValidEventsForOptions(options, cwd));
+  const outcomeId = options.outcome || options.outcomeId || options.id;
+  const record = projection.outcome.byOutcome[outcomeId];
+  if (!record) {
+    throw new Error(`Unknown outcome ${outcomeId}`);
+  }
+  return { projection, record };
+}
+
 function compatibilityOptionsFromCli(options, continuityVerification) {
   const result = { continuityVerification };
   const supportedAmendmentIds = parseList(options.supportAmendment || options.supportedAmendment || options.supportedAmendments);
@@ -2789,6 +3040,15 @@ function normalizeCommand(command, options) {
       }
     };
   }
+  if (command.startsWith("outcome show ")) {
+    return {
+      command: "outcome show",
+      options: {
+        ...options,
+        outcome: options.outcome || command.slice("outcome show ".length).trim()
+      }
+    };
+  }
   return { command, options };
 }
 
@@ -3039,6 +3299,13 @@ function usage() {
   clista decision merge --thread <threadId> --request <requestId> --decider <name|id>
   clista outcome expect --thread <threadId> --decision <decisionRecordId> --metric <metric> --operator <operator> --target <target> --review-date <YYYY-MM-DD>
   clista outcome audit --thread <threadId> --expected <expectedOutcomeId> --actual <actual> --result <result> --summary <summary> --auditor <name|id>
+  clista outcome expect --execution <executionId> --expected-effect <effect>
+  clista outcome observe --outcome <outcomeId> --observed-effect <effect> --evidence <evidence>
+  clista outcome evaluate --outcome <outcomeId> --result <success|partial_success|failure|inconclusive> --comparison <comparison> --evidence <evidence>
+  clista outcome dispute --outcome <outcomeId> --reason <reason>
+  clista outcome list [--thread <threadId>] [--status <status>]
+  clista outcome show <outcomeId>
+  clista outcome verify [--events <path>]
   clista decision score --thread <threadId> --decision <decisionRecordId> --score <score> --status <status> --rationale <text> --audits <outcomeAuditIds>
   clista merge open --source <forkThreadId> --target <threadId> --summary <summary>
   clista merge review --request <mergeRequestId> --status <approve|request_changes|reject> --summary <summary>
