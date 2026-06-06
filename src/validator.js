@@ -14,6 +14,13 @@ const {
   validateProtocolAmendmentSupersession
 } = require("./amendments");
 const {
+  validateCapabilitySetDeclaration,
+  validateCompatibilityAcceptance,
+  validateCompatibilityCheck,
+  validateCompatibilityDegradation,
+  validateCompatibilityFailure
+} = require("./compatibility");
+const {
   validateAttributionCorrection,
   validateAttributionDispute,
   validateAttributionRevocation,
@@ -171,6 +178,21 @@ function validateEvents(events) {
         break;
       case "ProtocolAmendmentSuperseded":
         validateProtocolAmendmentSupersededEvent(event, state);
+        break;
+      case "CapabilitySetDeclared":
+        validateCapabilitySetDeclaredEvent(event, state);
+        break;
+      case "CompatibilityCheckRecorded":
+        validateCompatibilityCheckRecordedEvent(event, state);
+        break;
+      case "CompatibilityFailureRecorded":
+        validateCompatibilityFailureRecordedEvent(event, state);
+        break;
+      case "CompatibilityDegradationRecorded":
+        validateCompatibilityDegradationRecordedEvent(event, state);
+        break;
+      case "CompatibilityAcceptanceRecorded":
+        validateCompatibilityAcceptanceRecordedEvent(event, state);
         break;
       case "ThreadCreated":
         validateThreadCreated(event, state);
@@ -695,6 +717,61 @@ function validateProtocolAmendmentSupersededEvent(event, state) {
   const supersededBy = supersession.supersededBy || event.actor_id;
   if (!isDecisionOwner(supersededBy, state, event.thread_id) && !isDecisionOwner(event.actor_id, state, event.thread_id)) {
     addError(state, event, `protocol amendment supersession requires decision_owner authority ${supersededBy}`);
+  }
+}
+
+function validateCapabilitySetDeclaredEvent(event, state) {
+  const declaration = event.payload.capabilitySetDeclaration || event.payload.capabilitySet;
+  if (!declaration) {
+    addError(state, event, "CapabilitySetDeclared payload missing capabilitySetDeclaration");
+    return;
+  }
+  for (const reason of validateCapabilitySetDeclaration(declaration, state.events)) {
+    addError(state, event, reason);
+  }
+}
+
+function validateCompatibilityCheckRecordedEvent(event, state) {
+  const check = event.payload.compatibilityCheck;
+  if (!check) {
+    addError(state, event, "CompatibilityCheckRecorded payload missing compatibilityCheck");
+    return;
+  }
+  for (const reason of validateCompatibilityCheck(check, state.events)) {
+    addError(state, event, reason);
+  }
+}
+
+function validateCompatibilityFailureRecordedEvent(event, state) {
+  const failure = event.payload.compatibilityFailure;
+  if (!failure) {
+    addError(state, event, "CompatibilityFailureRecorded payload missing compatibilityFailure");
+    return;
+  }
+  for (const reason of validateCompatibilityFailure(failure, state.events)) {
+    addError(state, event, reason);
+  }
+}
+
+function validateCompatibilityDegradationRecordedEvent(event, state) {
+  const degradation = event.payload.compatibilityDegradation;
+  if (!degradation) {
+    addError(state, event, "CompatibilityDegradationRecorded payload missing compatibilityDegradation");
+    return;
+  }
+  for (const reason of validateCompatibilityDegradation(degradation, state.events)) {
+    addError(state, event, reason);
+  }
+}
+
+function validateCompatibilityAcceptanceRecordedEvent(event, state) {
+  const acceptance = event.payload.compatibilityAcceptance;
+  if (!acceptance) {
+    addError(state, event, "CompatibilityAcceptanceRecorded payload missing compatibilityAcceptance");
+    return;
+  }
+  for (const reason of validateCompatibilityAcceptance(acceptance, state.events)) {
+    addError(state, event, reason);
   }
 }
 

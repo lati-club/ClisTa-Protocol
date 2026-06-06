@@ -35,7 +35,7 @@
       "const": "continuity"
     },
     "protocol_version": {
-      "const": "0.14.0"
+      "const": "0.15.0"
     },
     "schema_version": {
       "const": "clista.continuity.packet.v0"
@@ -68,7 +68,14 @@
       },
       "contains": {
         "const": "amendments"
-      }
+      },
+      "allOf": [
+        {
+          "contains": {
+            "const": "compatibility"
+          }
+        }
+      ]
     },
     "integrity_verified": {
       "const": true
@@ -170,6 +177,7 @@
         "learning_state",
         "adaptation_state",
         "amendment_state",
+        "compatibility_state",
         "verification_status",
         "integrity_state",
         "status",
@@ -272,6 +280,10 @@
           "additionalProperties": true
         },
         "amendment_state": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "compatibility_state": {
           "type": "object",
           "additionalProperties": true
         },
@@ -390,6 +402,7 @@
         "learningValidationStatus",
         "adaptationValidationStatus",
         "amendmentValidationStatus",
+        "compatibilityValidationStatus",
         "transcriptReplay",
         "memoryTrust",
         "authorityCreated",
@@ -415,7 +428,7 @@
           ]
         },
         "continuityProtocolVersion": {
-          "const": "0.14.0"
+          "const": "0.15.0"
         },
         "verificationMode": {
           "enum": [

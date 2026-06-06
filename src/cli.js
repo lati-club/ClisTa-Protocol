@@ -23,6 +23,10 @@ const {
   amendmentForId
 } = require("./amendments");
 const {
+  summarizeProtocolCompatibility,
+  verifyProtocolCompatibility
+} = require("./compatibility");
+const {
   attributionForContribution,
   attributionsForParticipant
 } = require("./attribution");
@@ -168,6 +172,12 @@ function main(argv = process.argv.slice(2), cwd = process.cwd()) {
         return continuityShow(options, cwd);
       case "continuity summary":
         return continuitySummary(options, cwd);
+      case "compatibility check":
+        return compatibilityCheck(options, cwd);
+      case "compatibility show":
+        return compatibilityShow(options, cwd);
+      case "compatibility verify":
+        return compatibilityVerify(options, cwd);
       case "state show":
         return stateShow(options, cwd);
       case "audit show":
@@ -1658,6 +1668,48 @@ function continuitySummary(options, cwd) {
   }
 }
 
+function compatibilityCheck(options, cwd) {
+  const packet = readContinuityPacketForOptions(options, cwd);
+  const continuityVerification = verifyContinuityPacket(packet);
+  const result = verifyProtocolCompatibility(packet, compatibilityOptionsFromCli(options, continuityVerification));
+  print(result);
+  if (!result.valid) {
+    process.exitCode = 1;
+  }
+}
+
+function compatibilityShow(options, cwd) {
+  const packet = readContinuityPacketForOptions(options, cwd);
+  const continuityVerification = verifyContinuityPacket(packet);
+  const result = verifyProtocolCompatibility(packet, compatibilityOptionsFromCli(options, continuityVerification));
+  const summary = summarizeProtocolCompatibility(result);
+  print(summary);
+  if (!summary.valid) {
+    process.exitCode = 1;
+  }
+}
+
+function compatibilityVerify(options, cwd) {
+  return compatibilityCheck(options, cwd);
+}
+
+function compatibilityOptionsFromCli(options, continuityVerification) {
+  const result = { continuityVerification };
+  const supportedAmendmentIds = parseList(options.supportAmendment || options.supportedAmendment || options.supportedAmendments);
+  const supportedCapabilities = parseList(options.supportCapability || options.supportedCapability || options.supportedCapabilities);
+  const supportedVerificationLayers = parseList(options.supportLayer || options.supportedLayer || options.supportedVerificationLayers);
+  if (supportedAmendmentIds.length) {
+    result.supportedAmendmentIds = supportedAmendmentIds;
+  }
+  if (supportedCapabilities.length) {
+    result.supportedCapabilities = supportedCapabilities;
+  }
+  if (supportedVerificationLayers.length) {
+    result.supportedVerificationLayers = supportedVerificationLayers;
+  }
+  return result;
+}
+
 function validateCommand(options, cwd) {
   const events = readEventsForOptions(options, cwd);
   const result = validateEvents(events);
@@ -1821,6 +1873,17 @@ function normalizeCommand(command, options) {
         options: {
           ...options,
           packet: options.packet || command.slice(`${continuityCommand} `.length).trim()
+        }
+      };
+    }
+  }
+  for (const compatibilityCommand of ["compatibility check", "compatibility show", "compatibility verify"]) {
+    if (command.startsWith(`${compatibilityCommand} `)) {
+      return {
+        command: compatibilityCommand,
+        options: {
+          ...options,
+          packet: options.packet || command.slice(`${compatibilityCommand} `.length).trim()
         }
       };
     }
@@ -2065,6 +2128,9 @@ function usage() {
   clista continuity resume [--packet <path>]
   clista continuity show [--packet <path>]
   clista continuity summary [--packet <path>]
+  clista compatibility check [--packet <path>] [--support-amendment <amendmentId>]
+  clista compatibility show [--packet <path>]
+  clista compatibility verify [--packet <path>]
   clista state show [--thread <threadId>] [--events <path>]
   clista audit show [--thread <threadId>] [--events <path>]
   clista fork lineage --thread <forkThreadId> [--events <path>]

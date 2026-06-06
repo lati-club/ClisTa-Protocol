@@ -57,6 +57,14 @@ clista continuity resume --packet continuity.json
 
 If it produces and resumes a verifiable Continuity Packet, projected reasoning state can survive context loss without treating the transcript as memory.
 
+The compatibility command is:
+
+```text
+clista compatibility verify --packet continuity.json
+```
+
+If it verifies the packet against the local protocol capability set, required verification layers, and active amendment support, portable reasoning can fail closed instead of relying on best effort acceptance.
+
 The identity command is:
 
 ```text
@@ -122,6 +130,8 @@ Adaptation is not governance mutation. It recommends authorized review; it does 
 Recommendation is not amendment. Amendments require explicit approval by active governance authority.
 
 Continuity is not transcript replay. A resumed thread is trusted because projected state verifies, not because a model remembers the conversation.
+
+Compatibility is not best effort acceptance. Unsupported state is not valid state.
 
 ## Repository Boundary
 

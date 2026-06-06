@@ -172,4 +172,16 @@ It is not a transcript, not model memory, not governance approval, and not a new
 
 A deterministic record of whether transferred reasoning state is `verified`, `degraded`, or `rejected`.
 
-It records required verification layers for integrity, attribution, provenance, learning, adaptation, and amendments.
+It records required verification layers for integrity, attribution, provenance, learning, adaptation, amendments, and compatibility.
+
+## Compatibility Context
+
+A deterministic declaration of the local protocol version, capability set, supported verification layers, supported continuity packet versions, and supported amendment types.
+
+It is not governance approval and does not mutate imported state.
+
+## Compatibility Check
+
+A verification result that classifies a continuity packet as `compatible`, `degraded`, `incompatible`, or `rejected` for a specific receiving context.
+
+Unsupported required capabilities or unsupported active amendments fail closed.

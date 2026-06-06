@@ -133,6 +133,7 @@ Validation checks:
 - learning references, uncertainty, non-scoring, and non-authority-mutation boundaries
 - adaptation references, uncertainty, non-scoring, and non-governance-mutation boundaries
 - amendment references, approval authority, non-implicit-mutation, and non-retroactive boundaries
+- compatibility capability support, verification-layer support, active-amendment support, and fail-closed boundaries
 
 ## Required Integrity
 
@@ -181,7 +182,7 @@ A Continuity Packet must be integrity-gated and must preserve:
 - projection hash
 - state hash
 - resume status: `verified`, `degraded`, or `rejected`
-- verification status for integrity, attribution, provenance, learning, adaptation, and amendments
+- verification status for integrity, attribution, provenance, learning, adaptation, amendments, and compatibility
 - current question
 - current decision
 - assumptions
@@ -196,9 +197,45 @@ A Continuity Packet must be integrity-gated and must preserve:
 - learning state
 - adaptation state
 - amendment state
+- compatibility state
 - next action
 
 Continuity must reject packets that trust transcript replay, trust model memory, skip failed verification, create authority, approve amendments, mutate governance, mutate imported state, or bypass validation.
+
+## Required Compatibility
+
+```text
+clista compatibility check
+clista compatibility show
+clista compatibility verify
+```
+
+must verify that the receiving protocol context can safely resume a continuity packet.
+
+The theorem is:
+
+```text
+protocol_compatibility = verify(capability_set, amendment_state, validation_requirements)
+```
+
+The hard law is:
+
+```text
+unsupported_state != valid_state
+```
+
+Compatibility must verify:
+
+- packet protocol version is declared and supported
+- local protocol version is declared
+- required capabilities are recognized
+- required verification layers are supported
+- active amendments are explicitly supported by the receiver
+- optional unsupported capabilities degrade explicitly
+- incompatible resume does not project as valid
+- unknown required capability fails closed
+
+Compatibility must reject packets that silently downgrade verification, ignore unsupported amendments, accept unknown required capabilities, treat partial compatibility as full validity, mutate imported state to fit local capabilities, or treat compatibility as governance approval.
 
 ## Required Identity
 

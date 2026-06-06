@@ -14,6 +14,10 @@ const {
   projectAttribution,
   selectAttributionForThread
 } = require("./attribution");
+const {
+  buildCompatibilityState,
+  projectCompatibility
+} = require("./compatibility");
 const { buildIdentityState, projectIdentity } = require("./identity");
 const { PROTOCOL_VERSION, verifyEventIntegrity } = require("./integrity");
 const {
@@ -194,6 +198,39 @@ function emptyProjection() {
         recommendationBecomesAmendment: false
       }
     },
+    compatibility: {
+      schema: "clista.compatibility.v0",
+      theorem: "protocol_compatibility = verify(capability_set, amendment_state, validation_requirements)",
+      hardLaw: "unsupported_state != valid_state",
+      compatibilityProtocolVersion: "0.15.0",
+      localProtocolVersion: PROTOCOL_VERSION,
+      localCapabilitySet: [],
+      supportedContinuityProtocolVersions: [],
+      supportedContinuitySchemaVersions: [],
+      supportedVerificationLayers: [],
+      supportedAmendmentTypes: [],
+      declarations: [],
+      checks: [],
+      failures: [],
+      degradations: [],
+      acceptances: [],
+      byCheck: {},
+      compatibilityValidationStatus: {
+        valid: true,
+        capabilityCount: 0,
+        verificationLayerCount: 0,
+        checkCount: 0,
+        failureCount: 0,
+        degradationCount: 0,
+        acceptanceCount: 0,
+        unsupportedStateAccepted: false,
+        bestEffortAcceptance: false,
+        silentDowngrade: false,
+        importedStateMutation: false,
+        governanceApproval: false,
+        amendmentApproval: false
+      }
+    },
     events: []
   };
 }
@@ -235,6 +272,11 @@ function projectEvents(events) {
       case "ProtocolAmendmentApproved":
       case "ProtocolAmendmentRejected":
       case "ProtocolAmendmentSuperseded":
+      case "CompatibilityCheckRecorded":
+      case "CapabilitySetDeclared":
+      case "CompatibilityFailureRecorded":
+      case "CompatibilityDegradationRecorded":
+      case "CompatibilityAcceptanceRecorded":
         break;
       case "ThreadCreated":
         upsert(projection.threads, payload.thread);
@@ -337,6 +379,7 @@ function projectEvents(events) {
   projection.learning = projectLearning(buildLearningState(projection));
   projection.adaptation = projectAdaptation(buildAdaptationState(projection));
   projection.amendments = projectAmendments(buildAmendmentState(projection.events));
+  projection.compatibility = projectCompatibility(buildCompatibilityState(projection));
 
   return projection;
 }
@@ -403,6 +446,7 @@ function selectThreadState(projection, requestedThreadId) {
   const learningState = selectLearningForThread(projection.learning, threadId);
   const adaptationState = selectAdaptationForThread(projection.adaptation, threadId);
   const amendmentState = selectAmendmentsForThread(projection.amendments, threadId);
+  const compatibilityState = projection.compatibility;
   const reasoningState = buildReasoningState({
     thread,
     evidence: supportingEvidence,
@@ -422,6 +466,7 @@ function selectThreadState(projection, requestedThreadId) {
     learningState,
     adaptationState,
     amendmentState,
+    compatibilityState,
     events: projection.events
   });
 
@@ -459,6 +504,7 @@ function selectThreadState(projection, requestedThreadId) {
     learningState,
     adaptationState,
     amendmentState,
+    compatibilityState,
     auditTrail: auditTrailForThread(projection, threadId)
   };
 }
@@ -482,6 +528,7 @@ function buildReasoningState({
   learningState,
   adaptationState,
   amendmentState,
+  compatibilityState,
   events
 }) {
   return {
@@ -516,6 +563,7 @@ function buildReasoningState({
     learning: learningState,
     adaptation: adaptationState,
     amendments: amendmentState,
+    compatibility: compatibilityState,
     next_action: decisionRecord?.nextAction || null,
     audit_summary: {
       source: "append_only_event_log",
@@ -594,6 +642,7 @@ function exportProtocol(projection) {
     amendments: projection.amendments,
     activeAmendments: projection.amendments.activeAmendments,
     amendmentHistory: projection.amendments.historyByAmendment,
+    compatibility: projection.compatibility,
     events: projection.events
   };
 }

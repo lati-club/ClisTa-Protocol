@@ -70,6 +70,7 @@ Verification state must preserve:
 - learning verification status
 - adaptation verification status
 - amendment verification status
+- compatibility verification status
 - transcript replay disabled
 - memory trust disabled
 - authority creation disabled

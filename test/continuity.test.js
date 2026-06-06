@@ -18,7 +18,7 @@ test("continuity export produces deterministic projected-state packets", () => {
 
   assert.equal(first.protocol, "clista");
   assert.equal(first.packet_type, "continuity");
-  assert.equal(first.protocol_version, "0.14.0");
+  assert.equal(first.protocol_version, "0.15.0");
   assert.equal(first.schema_version, "clista.continuity.packet.v0");
   assert.equal(first.theorem, "reasoning_continuity = resume(project(event_log), verification_state)");
   assert.equal(first.hard_law, "context transfer != memory trust");
@@ -29,7 +29,9 @@ test("continuity export produces deterministic projected-state packets", () => {
   assert.equal(first.verification_state.status, "degraded");
   assert.equal(first.verification_state.memoryTrust, false);
   assert.equal(first.verification_state.amendmentValidationStatus.valid, true);
+  assert.equal(first.verification_state.compatibilityValidationStatus.valid, true);
   assert.ok(first.capability_set.includes("amendments"));
+  assert.ok(first.capability_set.includes("compatibility"));
   assert.equal(first.source_thread_id, "thd_thread_0001");
   assert.equal(first.continuity_state.current_question, "How should ClisTa be architected?");
   assert.equal(first.continuity_state.current_decision.id, "dcr_protocol_first_architecture");
@@ -63,6 +65,7 @@ test("continuity verify and summary accept a valid packet", () => {
   assert.equal(summary.verification_state.learningValidationStatus.valid, true);
   assert.equal(summary.verification_state.adaptationValidationStatus.valid, true);
   assert.equal(summary.verification_state.amendmentValidationStatus.valid, true);
+  assert.equal(summary.verification_state.compatibilityValidationStatus.valid, true);
 });
 
 test("continuity import, show, and resume restore verified projected state in a new context", () => {

@@ -13,7 +13,7 @@ const { validateEvents } = require("./validator");
 const CONTINUITY_FILE = "continuity.json";
 const CONTINUITY_PROTOCOL = "clista";
 const CONTINUITY_PACKET_TYPE = "continuity";
-const CONTINUITY_PROTOCOL_VERSION = "0.14.0";
+const CONTINUITY_PROTOCOL_VERSION = "0.15.0";
 const CONTINUITY_SCHEMA_VERSION = "clista.continuity.packet.v0";
 const CONTINUITY_THEOREM = "reasoning_continuity = resume(project(event_log), verification_state)";
 const CONTINUITY_HARD_LAW = "context transfer != memory trust";
@@ -32,7 +32,8 @@ const CONTINUITY_CAPABILITY_SET = [
   "provenance",
   "learning",
   "adaptation",
-  "amendments"
+  "amendments",
+  "compatibility"
 ];
 
 const REQUIRED_VERIFICATION_LAYERS = [
@@ -42,7 +43,8 @@ const REQUIRED_VERIFICATION_LAYERS = [
   "provenance",
   "learning",
   "adaptation",
-  "amendments"
+  "amendments",
+  "compatibility"
 ];
 
 function continuityPacketPath(cwd = process.cwd()) {
@@ -269,6 +271,7 @@ function summarizeContinuityPacket(packet) {
     learning_state: state.learning_state,
     adaptation_state: state.adaptation_state,
     amendment_state: state.amendment_state,
+    compatibility_state: state.compatibility_state,
     integrity_state: state.integrity_state,
     verification_state: packet.verification_state
   };
@@ -386,6 +389,7 @@ function buildContinuityState(state, { eventLogHash, integrity, strictIntegrity,
     learning_state: state.learningState || {},
     adaptation_state: state.adaptationState || {},
     amendment_state: state.amendmentState || {},
+    compatibility_state: state.compatibilityState || {},
     verification_status: {
       status: verificationStatus.status,
       verification_mode: strictIntegrity.valid ? "strict" : "compatibility",
@@ -513,6 +517,7 @@ function buildVerificationState({
     learningValidationStatus: projection.learning?.learningValidationStatus || null,
     adaptationValidationStatus: projection.adaptation?.adaptationValidationStatus || null,
     amendmentValidationStatus: projection.amendments?.amendmentValidationStatus || null,
+    compatibilityValidationStatus: projection.compatibility?.compatibilityValidationStatus || null,
     transcriptReplay: false,
     memoryTrust: false,
     authorityCreated: false,
@@ -532,7 +537,8 @@ function determineResumeStatus({ validation, integrity, strictIntegrity, project
     provenance: projection.provenance?.provenanceValidationStatus?.valid,
     learning: projection.learning?.learningValidationStatus?.valid,
     adaptation: projection.adaptation?.adaptationValidationStatus?.valid,
-    amendments: projection.amendments?.amendmentValidationStatus?.valid
+    amendments: projection.amendments?.amendmentValidationStatus?.valid,
+    compatibility: projection.compatibility?.compatibilityValidationStatus?.valid
   };
 
   for (const layer of REQUIRED_VERIFICATION_LAYERS) {
@@ -582,7 +588,8 @@ function validateVerificationStateShape(verificationState, reasons) {
     ["provenanceValidationStatus", verificationState.provenanceValidationStatus],
     ["learningValidationStatus", verificationState.learningValidationStatus],
     ["adaptationValidationStatus", verificationState.adaptationValidationStatus],
-    ["amendmentValidationStatus", verificationState.amendmentValidationStatus]
+    ["amendmentValidationStatus", verificationState.amendmentValidationStatus],
+    ["compatibilityValidationStatus", verificationState.compatibilityValidationStatus]
   ]) {
     if (!status || typeof status !== "object") {
       reasons.push(reason(`verification_state.${field}`, `missing verification layer ${field}`));
