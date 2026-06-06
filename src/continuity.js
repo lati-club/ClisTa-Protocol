@@ -14,7 +14,7 @@ const { validateEvents } = require("./validator");
 const CONTINUITY_FILE = "continuity.json";
 const CONTINUITY_PROTOCOL = "clista";
 const CONTINUITY_PACKET_TYPE = "continuity";
-const CONTINUITY_PROTOCOL_VERSION = "0.18.0";
+const CONTINUITY_PROTOCOL_VERSION = "0.19.0";
 const CONTINUITY_SCHEMA_VERSION = "clista.continuity.packet.v0";
 const CONTINUITY_THEOREM = "reasoning_continuity = resume(project(event_log), verification_state)";
 const CONTINUITY_HARD_LAW = "context transfer != memory trust";
@@ -37,7 +37,8 @@ const CONTINUITY_CAPABILITY_SET = [
   "compatibility",
   "interoperability",
   "federation",
-  "negotiation"
+  "negotiation",
+  "delegation"
 ];
 
 const REQUIRED_VERIFICATION_LAYERS = [
@@ -51,7 +52,8 @@ const REQUIRED_VERIFICATION_LAYERS = [
   "compatibility",
   "interoperability",
   "federation",
-  "negotiation"
+  "negotiation",
+  "delegation"
 ];
 
 function continuityPacketPath(cwd = process.cwd()) {
@@ -414,6 +416,7 @@ function buildContinuityState(state, { eventLogHash, integrity, strictIntegrity,
     interoperability_state: state.interoperabilityState || {},
     federation_state: state.federationState || {},
     negotiation_state: state.negotiationState || {},
+    delegation_state: state.delegationState || {},
     verification_status: {
       status: verificationStatus.status,
       verification_mode: strictIntegrity.valid ? "strict" : "compatibility",
@@ -545,6 +548,7 @@ function buildVerificationState({
     interoperabilityValidationStatus: projection.interoperability?.interoperabilityValidationStatus || null,
     federationValidationStatus: projection.federation?.federationValidationStatus || null,
     negotiationValidationStatus: projection.negotiation?.negotiationValidationStatus || null,
+    delegationValidationStatus: projection.delegation?.delegationValidationStatus || null,
     transcriptReplay: false,
     memoryTrust: false,
     authorityCreated: false,
@@ -568,7 +572,8 @@ function determineResumeStatus({ validation, integrity, strictIntegrity, project
     compatibility: projection.compatibility?.compatibilityValidationStatus?.valid,
     interoperability: projection.interoperability?.interoperabilityValidationStatus?.valid,
     federation: projection.federation?.federationValidationStatus?.valid,
-    negotiation: projection.negotiation?.negotiationValidationStatus?.valid
+    negotiation: projection.negotiation?.negotiationValidationStatus?.valid,
+    delegation: projection.delegation?.delegationValidationStatus?.valid
   };
 
   for (const layer of REQUIRED_VERIFICATION_LAYERS) {
@@ -622,7 +627,8 @@ function validateVerificationStateShape(verificationState, reasons) {
     ["compatibilityValidationStatus", verificationState.compatibilityValidationStatus],
     ["interoperabilityValidationStatus", verificationState.interoperabilityValidationStatus],
     ["federationValidationStatus", verificationState.federationValidationStatus],
-    ["negotiationValidationStatus", verificationState.negotiationValidationStatus]
+    ["negotiationValidationStatus", verificationState.negotiationValidationStatus],
+    ["delegationValidationStatus", verificationState.delegationValidationStatus]
   ]) {
     if (!status || typeof status !== "object") {
       reasons.push(reason(`verification_state.${field}`, `missing verification layer ${field}`));

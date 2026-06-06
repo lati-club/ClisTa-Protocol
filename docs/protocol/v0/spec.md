@@ -96,6 +96,11 @@ Projected state is derived.
 - `NegotiationTermsRejected`
 - `NegotiationDegradationAccepted`
 - `NegotiationFailureRecorded`
+- `DelegationGranted`
+- `DelegatedActionRecorded`
+- `DelegationRevoked`
+- `DelegationExpired`
+- `DelegationViolationRecorded`
 - `EvidenceCommitted`
 - `AssumptionDeclared`
 - `ClaimCreated`
@@ -138,7 +143,7 @@ Projected state is derived.
 - pattern-level learning signals from outcome evidence
 - governance adaptation recommendations from learning signals
 - explicit protocol amendments and amendment history
-- portability, interoperability, federation, and negotiation status
+- portability, interoperability, federation, negotiation, and delegation status
 
 ## Required Validation
 
@@ -383,6 +388,45 @@ Negotiation must verify:
 - accepted terms do not mutate local state, validation rules, or remote state
 
 Negotiation must reject records that transfer authority, merge governance, adopt amendments automatically, create automatic consensus, mutate local state from remote state, silently downgrade support, or treat negotiation acceptance as a protocol amendment.
+
+## Required Delegation
+
+```text
+clista delegation grant
+clista delegation record
+clista delegation list
+clista delegation show <delegationId>
+clista delegation revoke
+clista delegation verify
+```
+
+must authorize scoped action by an accountable actor without surrendering authority.
+
+The theorem is:
+
+```text
+protocol_delegation = authorize(scoped_action, accountable_actor)
+```
+
+The hard law is:
+
+```text
+delegation != authority surrender
+```
+
+Delegation must verify:
+
+- delegator authority exists at event time
+- delegate actor is declared or explicitly typed
+- delegated action is explicit
+- action scope is explicit
+- limits are explicit
+- attribution is required
+- delegated action references a known active grant
+- delegated action matches the granted delegate, action, and scope
+- revoked, expired, or violated grants cannot silently continue
+
+Delegation must reject records that surrender authority, transfer authority permanently, mutate governance, create unbounded action, omit attribution, create automatic consensus, create delegated consensus, or treat delegated action as underlying authority.
 
 ## Required Identity
 

@@ -55,6 +55,7 @@
     "interoperability",
     "federation",
     "negotiation",
+    "delegation",
     "events"
   ],
   "properties": {
@@ -315,6 +316,9 @@
     "negotiation": {
       "$ref": "#/$defs/negotiationProjection"
     },
+    "delegation": {
+      "$ref": "#/$defs/delegationProjection"
+    },
     "events": {
       "type": "array",
       "items": {
@@ -518,6 +522,231 @@
         }
       }
     },
+    "delegationStatus": {
+      "enum": [
+        "active",
+        "revoked",
+        "expired",
+        "violated"
+      ]
+    },
+    "delegateType": {
+      "enum": [
+        "participant",
+        "agent",
+        "tool",
+        "context"
+      ]
+    },
+    "delegationGrant": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "object",
+        "threadId",
+        "delegatorParticipantId",
+        "delegateId",
+        "delegateType",
+        "action",
+        "scope",
+        "limits",
+        "authorityRequired",
+        "attributionRequired",
+        "status"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "object": {
+          "const": "delegationGrant"
+        },
+        "threadId": {
+          "$ref": "#/$defs/id"
+        },
+        "delegatorParticipantId": {
+          "$ref": "#/$defs/id"
+        },
+        "delegateId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "delegateType": {
+          "$ref": "#/$defs/delegateType"
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "limits": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "authorityRequired": {
+          "type": "string",
+          "minLength": 1
+        },
+        "attributionRequired": {
+          "const": true
+        },
+        "status": {
+          "$ref": "#/$defs/delegationStatus"
+        }
+      }
+    },
+    "delegatedAction": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "object",
+        "delegationId",
+        "threadId",
+        "delegateId",
+        "action",
+        "scope",
+        "summary",
+        "attribution"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "object": {
+          "const": "delegatedAction"
+        },
+        "delegationId": {
+          "$ref": "#/$defs/id"
+        },
+        "threadId": {
+          "$ref": "#/$defs/id"
+        },
+        "delegateId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "attribution": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "delegateId",
+            "delegationId",
+            "action"
+          ]
+        }
+      }
+    },
+    "delegationRevocation": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "object",
+        "delegationId",
+        "revokedByParticipantId",
+        "reason"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "object": {
+          "const": "delegationRevocation"
+        },
+        "delegationId": {
+          "$ref": "#/$defs/id"
+        },
+        "revokedByParticipantId": {
+          "$ref": "#/$defs/id"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "delegationExpiration": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "object",
+        "delegationId",
+        "expiredAt"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "object": {
+          "const": "delegationExpiration"
+        },
+        "delegationId": {
+          "$ref": "#/$defs/id"
+        },
+        "expiredAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "delegationViolation": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "object",
+        "delegationId",
+        "violationType",
+        "reason"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "object": {
+          "const": "delegationViolation"
+        },
+        "delegationId": {
+          "$ref": "#/$defs/id"
+        },
+        "actionId": {
+          "$ref": "#/$defs/id"
+        },
+        "violationType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "integrityReport": {
       "type": "object",
       "additionalProperties": true,
@@ -596,7 +825,7 @@
           "const": "unsupported_state != valid_state"
         },
         "compatibilityProtocolVersion": {
-          "const": "0.18.0"
+          "const": "0.19.0"
         },
         "localProtocolVersion": {
           "const": "clista.protocol.v0"
@@ -731,7 +960,7 @@
           "const": "translation != reinterpretation"
         },
         "interoperabilityProtocolVersion": {
-          "const": "0.18.0"
+          "const": "0.19.0"
         },
         "localProtocolVersion": {
           "const": "clista.protocol.v0"
@@ -1255,6 +1484,220 @@
               "const": false
             },
             "negotiationAcceptanceAsAmendment": {
+              "const": false
+            }
+          }
+        }
+      }
+    },
+    "delegationProjection": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "schema",
+        "theorem",
+        "hardLaw",
+        "delegationProtocolVersion",
+        "localProtocolVersion",
+        "statuses",
+        "grants",
+        "activeGrants",
+        "revokedGrants",
+        "expiredGrants",
+        "violatedGrants",
+        "actions",
+        "revocations",
+        "expirations",
+        "violations",
+        "byGrant",
+        "byAction",
+        "byRevocation",
+        "byExpiration",
+        "byViolation",
+        "actionsByDelegation",
+        "revocationsByDelegation",
+        "expirationsByDelegation",
+        "violationsByDelegation",
+        "delegationValidationStatus"
+      ],
+      "properties": {
+        "schema": {
+          "const": "clista.delegation.v0"
+        },
+        "theorem": {
+          "const": "protocol_delegation = authorize(scoped_action, accountable_actor)"
+        },
+        "hardLaw": {
+          "const": "delegation != authority surrender"
+        },
+        "delegationProtocolVersion": {
+          "const": "0.19.0"
+        },
+        "localProtocolVersion": {
+          "const": "clista.protocol.v0"
+        },
+        "statuses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/delegationStatus"
+          }
+        },
+        "grants": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/delegationGrant"
+          }
+        },
+        "activeGrants": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/delegationGrant"
+          }
+        },
+        "revokedGrants": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/delegationGrant"
+          }
+        },
+        "expiredGrants": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/delegationGrant"
+          }
+        },
+        "violatedGrants": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/delegationGrant"
+          }
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/delegatedAction"
+          }
+        },
+        "revocations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/delegationRevocation"
+          }
+        },
+        "expirations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/delegationExpiration"
+          }
+        },
+        "violations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/delegationViolation"
+          }
+        },
+        "byGrant": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/delegationGrant"
+          }
+        },
+        "byAction": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/delegatedAction"
+          }
+        },
+        "byRevocation": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/delegationRevocation"
+          }
+        },
+        "byExpiration": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/delegationExpiration"
+          }
+        },
+        "byViolation": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/delegationViolation"
+          }
+        },
+        "actionsByDelegation": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/delegatedAction"
+            }
+          }
+        },
+        "revocationsByDelegation": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/delegationRevocation"
+            }
+          }
+        },
+        "expirationsByDelegation": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/delegationExpiration"
+            }
+          }
+        },
+        "violationsByDelegation": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/delegationViolation"
+            }
+          }
+        },
+        "delegationValidationStatus": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "valid",
+            "authoritySurrender",
+            "authorityTransfer",
+            "unboundedAction",
+            "delegationWithoutAttribution",
+            "governanceMutation",
+            "automaticConsensus",
+            "delegatedConsensus"
+          ],
+          "properties": {
+            "valid": {
+              "const": true
+            },
+            "authoritySurrender": {
+              "const": false
+            },
+            "authorityTransfer": {
+              "const": false
+            },
+            "unboundedAction": {
+              "const": false
+            },
+            "delegationWithoutAttribution": {
+              "const": false
+            },
+            "governanceMutation": {
+              "const": false
+            },
+            "automaticConsensus": {
+              "const": false
+            },
+            "delegatedConsensus": {
               "const": false
             }
           }
@@ -4356,6 +4799,11 @@
             "NegotiationTermsRejected",
             "NegotiationDegradationAccepted",
             "NegotiationFailureRecorded",
+            "DelegationGranted",
+            "DelegatedActionRecorded",
+            "DelegationRevoked",
+            "DelegationExpired",
+            "DelegationViolationRecorded",
             "AssumptionDeclared",
             "EvidenceCommitted",
             "ClaimCreated",

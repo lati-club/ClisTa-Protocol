@@ -19,6 +19,11 @@ const {
   projectCompatibility
 } = require("./compatibility");
 const {
+  buildDelegationState,
+  projectDelegation,
+  selectDelegationForThread
+} = require("./delegation");
+const {
   buildFederationState,
   projectFederation,
   selectFederationForThread
@@ -216,7 +221,7 @@ function emptyProjection() {
       schema: "clista.compatibility.v0",
       theorem: "protocol_compatibility = verify(capability_set, amendment_state, validation_requirements)",
       hardLaw: "unsupported_state != valid_state",
-      compatibilityProtocolVersion: "0.18.0",
+      compatibilityProtocolVersion: "0.19.0",
       localProtocolVersion: PROTOCOL_VERSION,
       localCapabilitySet: [],
       supportedContinuityProtocolVersions: [],
@@ -249,7 +254,7 @@ function emptyProjection() {
       schema: "clista.interoperability.v0",
       theorem: "protocol_interoperability = preserve(meaning, across_compatible_contexts)",
       hardLaw: "translation != reinterpretation",
-      interoperabilityProtocolVersion: "0.18.0",
+      interoperabilityProtocolVersion: "0.19.0",
       localProtocolVersion: PROTOCOL_VERSION,
       supportedExchangeFormats: [],
       supportedSemantics: [],
@@ -366,6 +371,48 @@ function emptyProjection() {
         negotiationAcceptanceAsAmendment: false
       }
     },
+    delegation: {
+      schema: "clista.delegation.v0",
+      theorem: "protocol_delegation = authorize(scoped_action, accountable_actor)",
+      hardLaw: "delegation != authority surrender",
+      delegationProtocolVersion: "0.19.0",
+      localProtocolVersion: PROTOCOL_VERSION,
+      statuses: ["active", "revoked", "expired", "violated"],
+      grants: [],
+      activeGrants: [],
+      revokedGrants: [],
+      expiredGrants: [],
+      violatedGrants: [],
+      actions: [],
+      revocations: [],
+      expirations: [],
+      violations: [],
+      byGrant: {},
+      byAction: {},
+      byRevocation: {},
+      byExpiration: {},
+      byViolation: {},
+      actionsByDelegation: {},
+      revocationsByDelegation: {},
+      expirationsByDelegation: {},
+      violationsByDelegation: {},
+      delegationValidationStatus: {
+        valid: true,
+        grantCount: 0,
+        activeGrantCount: 0,
+        actionCount: 0,
+        revocationCount: 0,
+        expirationCount: 0,
+        violationCount: 0,
+        authoritySurrender: false,
+        authorityTransfer: false,
+        unboundedAction: false,
+        delegationWithoutAttribution: false,
+        governanceMutation: false,
+        automaticConsensus: false,
+        delegatedConsensus: false
+      }
+    },
     events: []
   };
 }
@@ -432,6 +479,11 @@ function projectEvents(events) {
       case "NegotiationTermsRejected":
       case "NegotiationDegradationAccepted":
       case "NegotiationFailureRecorded":
+      case "DelegationGranted":
+      case "DelegatedActionRecorded":
+      case "DelegationRevoked":
+      case "DelegationExpired":
+      case "DelegationViolationRecorded":
         break;
       case "ThreadCreated":
         upsert(projection.threads, payload.thread);
@@ -538,6 +590,7 @@ function projectEvents(events) {
   projection.interoperability = projectInteroperability(buildInteroperabilityState(projection));
   projection.federation = projectFederation(buildFederationState(projection));
   projection.negotiation = projectNegotiation(buildNegotiationState(projection));
+  projection.delegation = projectDelegation(buildDelegationState(projection));
 
   return projection;
 }
@@ -608,6 +661,7 @@ function selectThreadState(projection, requestedThreadId) {
   const interoperabilityState = projection.interoperability;
   const federationState = selectFederationForThread(projection.federation, threadId);
   const negotiationState = selectNegotiationForThread(projection.negotiation, threadId);
+  const delegationState = selectDelegationForThread(projection.delegation, threadId);
   const reasoningState = buildReasoningState({
     thread,
     evidence: supportingEvidence,
@@ -631,6 +685,7 @@ function selectThreadState(projection, requestedThreadId) {
     interoperabilityState,
     federationState,
     negotiationState,
+    delegationState,
     events: projection.events
   });
 
@@ -672,6 +727,7 @@ function selectThreadState(projection, requestedThreadId) {
     interoperabilityState,
     federationState,
     negotiationState,
+    delegationState,
     auditTrail: auditTrailForThread(projection, threadId)
   };
 }
@@ -699,6 +755,7 @@ function buildReasoningState({
   interoperabilityState,
   federationState,
   negotiationState,
+  delegationState,
   events
 }) {
   return {
@@ -737,6 +794,7 @@ function buildReasoningState({
     interoperability: interoperabilityState,
     federation: federationState,
     negotiation: negotiationState,
+    delegation: delegationState,
     next_action: decisionRecord?.nextAction || null,
     audit_summary: {
       source: "append_only_event_log",
@@ -819,6 +877,7 @@ function exportProtocol(projection) {
     interoperability: projection.interoperability,
     federation: projection.federation,
     negotiation: projection.negotiation,
+    delegation: projection.delegation,
     events: projection.events
   };
 }

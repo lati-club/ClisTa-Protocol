@@ -2,7 +2,7 @@ const { PROTOCOL_VERSION, contentHash } = require("./integrity");
 
 const COMPATIBILITY_SCHEMA = "clista.compatibility.v0";
 const COMPATIBILITY_VERIFY_SCHEMA = "clista.compatibility.verify.v0";
-const COMPATIBILITY_PROTOCOL_VERSION = "0.18.0";
+const COMPATIBILITY_PROTOCOL_VERSION = "0.19.0";
 const COMPATIBILITY_THEOREM = "protocol_compatibility = verify(capability_set, amendment_state, validation_requirements)";
 const COMPATIBILITY_HARD_LAW = "unsupported_state != valid_state";
 
@@ -24,10 +24,11 @@ const LOCAL_CAPABILITY_SET = [
   "compatibility",
   "interoperability",
   "federation",
-  "negotiation"
+  "negotiation",
+  "delegation"
 ];
 
-const SUPPORTED_CONTINUITY_PROTOCOL_VERSIONS = ["0.18.0"];
+const SUPPORTED_CONTINUITY_PROTOCOL_VERSIONS = ["0.18.0", "0.19.0"];
 const SUPPORTED_CONTINUITY_SCHEMA_VERSIONS = ["clista.continuity.packet.v0"];
 const SUPPORTED_VERIFICATION_LAYERS = [
   "validity",
@@ -40,7 +41,8 @@ const SUPPORTED_VERIFICATION_LAYERS = [
   "compatibility",
   "interoperability",
   "federation",
-  "negotiation"
+  "negotiation",
+  "delegation"
 ];
 
 const SUPPORTED_AMENDMENT_TYPES = [
@@ -507,7 +509,8 @@ function verificationLayerStatus(verificationState, layer) {
     compatibility: "compatibilityValidationStatus",
     interoperability: "interoperabilityValidationStatus",
     federation: "federationValidationStatus",
-    negotiation: "negotiationValidationStatus"
+    negotiation: "negotiationValidationStatus",
+    delegation: "delegationValidationStatus"
   };
   return verificationState[fieldByLayer[layer]] || null;
 }

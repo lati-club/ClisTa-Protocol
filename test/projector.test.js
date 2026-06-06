@@ -162,6 +162,7 @@ test("thread-0001 reasoning state is reconstructed from .clista/events.ndjson on
     "interoperability",
     "federation",
     "negotiation",
+    "delegation",
     "next_action",
     "audit_summary"
   ]);
@@ -194,6 +195,7 @@ test("thread-0001 reasoning state is reconstructed from .clista/events.ndjson on
   assert.equal(reasoning.interoperability.hardLaw, "translation != reinterpretation");
   assert.equal(reasoning.federation.hardLaw, "shared_state != shared_authority");
   assert.equal(reasoning.negotiation.hardLaw, "agreement != governance merger");
+  assert.equal(reasoning.delegation.hardLaw, "delegation != authority surrender");
   assert.equal(reasoning.next_action, "Implement and prove Milestone 0: Protocol Spine Proven.");
   assert.equal(reasoning.audit_summary.source, "append_only_event_log");
   assert.equal(reasoning.audit_summary.external_state_used, false);

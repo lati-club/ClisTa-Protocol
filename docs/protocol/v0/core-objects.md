@@ -176,6 +176,7 @@ It records required verification layers for integrity, attribution, provenance, 
 M16 adds interoperability verification status so a resumed packet records whether protocol meaning can survive exchange.
 M17 adds federation verification status so exchanged state can be referenced without importing remote authority.
 M18 adds negotiation verification status so exchanged state can declare unresolved differences and exchange terms without transferring authority.
+M19 adds delegation verification status so scoped action can be authorized without surrendering authority.
 
 ## Compatibility Context
 
@@ -258,3 +259,37 @@ Accepted terms may constrain exchange behavior. They do not import authority, ad
 A record that exchange terms could not be agreed under declared constraints.
 
 Failure preserves the audit trail without rejecting the underlying local reasoning state.
+
+## Delegation Grant
+
+A scoped authorization from an accountable delegator to a delegate actor.
+
+It records the action, scope, limits, required delegator authority, expiration, and attribution requirement.
+
+Delegation grants action permission. They do not transfer underlying authority.
+
+## Delegated Action
+
+An action performed under a delegation grant.
+
+It records the delegate, grant, action, scope, target, summary, and attribution back to the delegation.
+
+Delegated actions must stay within the granted scope.
+
+## Delegation Revocation
+
+A record that a delegation grant no longer permits action.
+
+Revocation preserves the grant history while preventing future delegated action.
+
+## Delegation Expiration
+
+A record that a delegation grant ended under declared expiration conditions.
+
+Expiration does not mutate the original grant.
+
+## Delegation Violation
+
+A record that a delegated action exceeded or attempted to exceed its scope.
+
+Violation preserves accountability without expanding delegate authority.

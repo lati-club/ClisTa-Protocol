@@ -29,6 +29,7 @@ that another human or agent can reload later.
 16. Protocol interoperability
 17. Protocol federation
 18. Protocol negotiation
+19. Protocol delegation
 
 ## Protocol Objects
 
@@ -134,6 +135,11 @@ Supported events:
 - `NegotiationTermsRejected`
 - `NegotiationDegradationAccepted`
 - `NegotiationFailureRecorded`
+- `DelegationGranted`
+- `DelegatedActionRecorded`
+- `DelegationRevoked`
+- `DelegationExpired`
+- `DelegationViolationRecorded`
 
 The local store lives at:
 

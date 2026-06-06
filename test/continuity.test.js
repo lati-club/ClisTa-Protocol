@@ -18,7 +18,7 @@ test("continuity export produces deterministic projected-state packets", () => {
 
   assert.equal(first.protocol, "clista");
   assert.equal(first.packet_type, "continuity");
-  assert.equal(first.protocol_version, "0.18.0");
+  assert.equal(first.protocol_version, "0.19.0");
   assert.equal(first.schema_version, "clista.continuity.packet.v0");
   assert.equal(first.theorem, "reasoning_continuity = resume(project(event_log), verification_state)");
   assert.equal(first.hard_law, "context transfer != memory trust");

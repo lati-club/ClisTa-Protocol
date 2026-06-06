@@ -163,6 +163,8 @@ Federation is not centralization. Shared state is not shared authority.
 
 Negotiation is not authority transfer. Agreement is not governance merger.
 
+Delegation is not authority surrender. Delegated action is scoped and attributable.
+
 ## Repository Boundary
 
 This repository is `clista-protocol`.

@@ -2,7 +2,7 @@ const { PROTOCOL_VERSION, contentHash } = require("./integrity");
 
 const INTEROPERABILITY_SCHEMA = "clista.interoperability.v0";
 const INTEROPERABILITY_VERIFY_SCHEMA = "clista.interoperability.verify.v0";
-const INTEROPERABILITY_PROTOCOL_VERSION = "0.18.0";
+const INTEROPERABILITY_PROTOCOL_VERSION = "0.19.0";
 const INTEROPERABILITY_THEOREM = "protocol_interoperability = preserve(meaning, across_compatible_contexts)";
 const INTEROPERABILITY_HARD_LAW = "translation != reinterpretation";
 
@@ -29,7 +29,8 @@ const REQUIRED_SEMANTICS = [
   "compatibility_status",
   "interoperability_status",
   "federation_status",
-  "negotiation_status"
+  "negotiation_status",
+  "delegation_status"
 ];
 
 const SUPPORTED_SEMANTICS = REQUIRED_SEMANTICS;
@@ -86,6 +87,11 @@ const SUPPORTED_EVENT_TYPES = [
   "NegotiationTermsRejected",
   "NegotiationDegradationAccepted",
   "NegotiationFailureRecorded",
+  "DelegationGranted",
+  "DelegatedActionRecorded",
+  "DelegationRevoked",
+  "DelegationExpired",
+  "DelegationViolationRecorded",
   "AssumptionDeclared",
   "EvidenceCommitted",
   "ClaimCreated",
@@ -122,7 +128,8 @@ const OBJECT_SEMANTICS = {
   compatibility: "receiver_support_verification_not_acceptance_by_best_effort",
   interoperability: "meaning_preservation_status_not_structural_acceptance",
   federation: "independent_context_alignment_not_shared_authority",
-  negotiation: "explicit_exchange_terms_not_authority_transfer"
+  negotiation: "explicit_exchange_terms_not_authority_transfer",
+  delegation: "scoped_action_permission_not_authority_surrender"
 };
 
 const INTEROPERABILITY_EVENT_TYPES = new Set([
