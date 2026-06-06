@@ -71,6 +71,31 @@ Projected state is derived.
 - `ProtocolAmendmentApproved`
 - `ProtocolAmendmentRejected`
 - `ProtocolAmendmentSuperseded`
+- `CapabilitySetDeclared`
+- `CompatibilityCheckRecorded`
+- `CompatibilityFailureRecorded`
+- `CompatibilityDegradationRecorded`
+- `CompatibilityAcceptanceRecorded`
+- `InteroperabilityProfileDeclared`
+- `SemanticMappingRecorded`
+- `InteroperabilityCheckRecorded`
+- `SemanticDegradationRecorded`
+- `InteroperabilityFailureRecorded`
+- `InteroperabilityAcceptanceRecorded`
+- `FederationContextDeclared`
+- `FederationPeerRecorded`
+- `FederatedStateReferenceRecorded`
+- `FederatedPacketVerified`
+- `FederatedPacketRejected`
+- `FederationBoundaryRecorded`
+- `NegotiationRequested`
+- `NegotiationConstraintDeclared`
+- `NegotiationDifferenceRecorded`
+- `NegotiationTermsProposed`
+- `NegotiationTermsAccepted`
+- `NegotiationTermsRejected`
+- `NegotiationDegradationAccepted`
+- `NegotiationFailureRecorded`
 - `EvidenceCommitted`
 - `AssumptionDeclared`
 - `ClaimCreated`
@@ -113,6 +138,7 @@ Projected state is derived.
 - pattern-level learning signals from outcome evidence
 - governance adaptation recommendations from learning signals
 - explicit protocol amendments and amendment history
+- portability, interoperability, federation, and negotiation status
 
 ## Required Validation
 
@@ -136,6 +162,7 @@ Validation checks:
 - compatibility capability support, verification-layer support, active-amendment support, and fail-closed boundaries
 - interoperability semantic preservation, event-type preservation, object-meaning preservation, and explicit-degradation boundaries
 - federation packet verification, independent-context references, non-authority-import, and non-centralization boundaries
+- negotiation request, constraint, difference, terms, non-authority-transfer, non-governance-merger, and explicit-downgrade boundaries
 
 ## Required Integrity
 
@@ -184,7 +211,7 @@ A Continuity Packet must be integrity-gated and must preserve:
 - projection hash
 - state hash
 - resume status: `verified`, `degraded`, or `rejected`
-- verification status for integrity, attribution, provenance, learning, adaptation, amendments, compatibility, interoperability, and federation
+- verification status for integrity, attribution, provenance, learning, adaptation, amendments, compatibility, interoperability, federation, and negotiation
 - current question
 - current decision
 - assumptions
@@ -202,6 +229,7 @@ A Continuity Packet must be integrity-gated and must preserve:
 - compatibility state
 - interoperability state
 - federation state
+- negotiation state
 - next action
 
 Continuity must reject packets that trust transcript replay, trust model memory, skip failed verification, create authority, approve amendments, mutate governance, mutate imported state, or bypass validation.
@@ -312,6 +340,46 @@ Federation must verify:
 - remote state does not mutate local governance or projected local state
 
 Federation must reject records that create shared authority by default, import remote authority automatically, merge remote governance automatically, import amendments automatically, create automatic consensus, mutate local state from remote state, or treat federation as network consensus.
+
+## Required Negotiation
+
+```text
+clista negotiation propose
+clista negotiation check
+clista negotiation list
+clista negotiation show <negotiationId>
+clista negotiation verify
+```
+
+must resolve exchange terms across independent contexts without transferring authority or merging governance.
+
+The theorem is:
+
+```text
+protocol_negotiation = agree(exchange_terms, across_independent_contexts)
+```
+
+The hard law is:
+
+```text
+agreement != governance merger
+```
+
+Negotiation must verify:
+
+- continuity, compatibility, interoperability, and federation results are declared
+- capability differences are explicit
+- amendment differences are explicit
+- validation requirement differences are explicit
+- interoperability profile differences are explicit
+- accepted, rejected, degraded, and failed terms remain auditable
+- accepted terms may constrain exchange behavior
+- accepted terms do not transfer authority
+- accepted terms do not merge governance
+- accepted terms do not adopt amendments automatically
+- accepted terms do not mutate local state, validation rules, or remote state
+
+Negotiation must reject records that transfer authority, merge governance, adopt amendments automatically, create automatic consensus, mutate local state from remote state, silently downgrade support, or treat negotiation acceptance as a protocol amendment.
 
 ## Required Identity
 

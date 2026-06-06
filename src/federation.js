@@ -2,7 +2,7 @@ const { PROTOCOL_VERSION, contentHash } = require("./integrity");
 
 const FEDERATION_SCHEMA = "clista.federation.v0";
 const FEDERATION_VERIFY_SCHEMA = "clista.federation.verify.v0";
-const FEDERATION_PROTOCOL_VERSION = "0.17.0";
+const FEDERATION_PROTOCOL_VERSION = "0.18.0";
 const FEDERATION_THEOREM = "protocol_federation = align(independent_reasoning_states, shared_protocol_rules)";
 const FEDERATION_HARD_LAW = "shared_state != shared_authority";
 

@@ -58,6 +58,16 @@ const {
   validatePatternObservation
 } = require("./learning");
 const {
+  validateNegotiationConstraint,
+  validateNegotiationDegradationAccepted,
+  validateNegotiationDifference,
+  validateNegotiationFailure,
+  validateNegotiationRequest,
+  validateNegotiationTermsAccepted,
+  validateNegotiationTermsProposed,
+  validateNegotiationTermsRejected
+} = require("./negotiation");
+const {
   VALID_AUTHORITIES,
   VALID_AUTHORITY_SCOPES,
   applyIdentityEvent,
@@ -245,6 +255,30 @@ function validateEvents(events) {
         break;
       case "FederationBoundaryRecorded":
         validateFederationBoundaryRecordedEvent(event, state);
+        break;
+      case "NegotiationRequested":
+        validateNegotiationRequestedEvent(event, state);
+        break;
+      case "NegotiationConstraintDeclared":
+        validateNegotiationConstraintDeclaredEvent(event, state);
+        break;
+      case "NegotiationDifferenceRecorded":
+        validateNegotiationDifferenceRecordedEvent(event, state);
+        break;
+      case "NegotiationTermsProposed":
+        validateNegotiationTermsProposedEvent(event, state);
+        break;
+      case "NegotiationTermsAccepted":
+        validateNegotiationTermsAcceptedEvent(event, state);
+        break;
+      case "NegotiationTermsRejected":
+        validateNegotiationTermsRejectedEvent(event, state);
+        break;
+      case "NegotiationDegradationAccepted":
+        validateNegotiationDegradationAcceptedEvent(event, state);
+        break;
+      case "NegotiationFailureRecorded":
+        validateNegotiationFailureRecordedEvent(event, state);
         break;
       case "ThreadCreated":
         validateThreadCreated(event, state);
@@ -955,6 +989,94 @@ function validateFederationBoundaryRecordedEvent(event, state) {
     return;
   }
   for (const reason of validateFederationBoundary(boundary, state.events)) {
+    addError(state, event, reason);
+  }
+}
+
+function validateNegotiationRequestedEvent(event, state) {
+  const request = event.payload.negotiationRequest;
+  if (!request) {
+    addError(state, event, "NegotiationRequested payload missing negotiationRequest");
+    return;
+  }
+  for (const reason of validateNegotiationRequest(request, state.events)) {
+    addError(state, event, reason);
+  }
+}
+
+function validateNegotiationConstraintDeclaredEvent(event, state) {
+  const constraint = event.payload.negotiationConstraint;
+  if (!constraint) {
+    addError(state, event, "NegotiationConstraintDeclared payload missing negotiationConstraint");
+    return;
+  }
+  for (const reason of validateNegotiationConstraint(constraint, state.events)) {
+    addError(state, event, reason);
+  }
+}
+
+function validateNegotiationDifferenceRecordedEvent(event, state) {
+  const difference = event.payload.negotiationDifference;
+  if (!difference) {
+    addError(state, event, "NegotiationDifferenceRecorded payload missing negotiationDifference");
+    return;
+  }
+  for (const reason of validateNegotiationDifference(difference, state.events)) {
+    addError(state, event, reason);
+  }
+}
+
+function validateNegotiationTermsProposedEvent(event, state) {
+  const terms = event.payload.negotiationTerms;
+  if (!terms) {
+    addError(state, event, "NegotiationTermsProposed payload missing negotiationTerms");
+    return;
+  }
+  for (const reason of validateNegotiationTermsProposed(terms, state.events)) {
+    addError(state, event, reason);
+  }
+}
+
+function validateNegotiationTermsAcceptedEvent(event, state) {
+  const terms = event.payload.negotiationTerms;
+  if (!terms) {
+    addError(state, event, "NegotiationTermsAccepted payload missing negotiationTerms");
+    return;
+  }
+  for (const reason of validateNegotiationTermsAccepted(terms, state.events)) {
+    addError(state, event, reason);
+  }
+}
+
+function validateNegotiationTermsRejectedEvent(event, state) {
+  const terms = event.payload.negotiationTerms;
+  if (!terms) {
+    addError(state, event, "NegotiationTermsRejected payload missing negotiationTerms");
+    return;
+  }
+  for (const reason of validateNegotiationTermsRejected(terms, state.events)) {
+    addError(state, event, reason);
+  }
+}
+
+function validateNegotiationDegradationAcceptedEvent(event, state) {
+  const terms = event.payload.negotiationTerms;
+  if (!terms) {
+    addError(state, event, "NegotiationDegradationAccepted payload missing negotiationTerms");
+    return;
+  }
+  for (const reason of validateNegotiationDegradationAccepted(terms, state.events)) {
+    addError(state, event, reason);
+  }
+}
+
+function validateNegotiationFailureRecordedEvent(event, state) {
+  const failure = event.payload.negotiationFailure;
+  if (!failure) {
+    addError(state, event, "NegotiationFailureRecorded payload missing negotiationFailure");
+    return;
+  }
+  for (const reason of validateNegotiationFailure(failure, state.events)) {
     addError(state, event, reason);
   }
 }

@@ -175,6 +175,7 @@ A deterministic record of whether transferred reasoning state is `verified`, `de
 It records required verification layers for integrity, attribution, provenance, learning, adaptation, amendments, and compatibility.
 M16 adds interoperability verification status so a resumed packet records whether protocol meaning can survive exchange.
 M17 adds federation verification status so exchanged state can be referenced without importing remote authority.
+M18 adds negotiation verification status so exchanged state can declare unresolved differences and exchange terms without transferring authority.
 
 ## Compatibility Context
 
@@ -227,3 +228,33 @@ It records packet hash, event-log hash, projection hash, state hash, remote thre
 ## Federation Boundary
 
 An explicit record that remote state may inform local reasoning but cannot mutate local governance, import authority, import amendments, or create consensus automatically.
+
+## Negotiation Request
+
+A request to compare or resolve exchange terms between independent ClisTa contexts.
+
+It is not authority transfer and does not create shared governance.
+
+## Negotiation Constraint
+
+A declared local or remote constraint on exchange terms, such as required capabilities, validation requirements, supported amendments, semantic mappings, or review conditions.
+
+Constraints may limit exchange. They do not mutate governance rules.
+
+## Negotiation Difference
+
+An explicit record of a capability, amendment, validation requirement, interoperability profile, compatibility status, interoperability status, or federation status difference.
+
+Differences must be declared rather than silently downgraded.
+
+## Negotiation Terms
+
+Proposed, accepted, rejected, or degraded exchange terms for referencing or sharing reasoning state.
+
+Accepted terms may constrain exchange behavior. They do not import authority, adopt amendments, merge governance, mutate local state, or create consensus.
+
+## Negotiation Failure
+
+A record that exchange terms could not be agreed under declared constraints.
+
+Failure preserves the audit trail without rejecting the underlying local reasoning state.

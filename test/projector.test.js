@@ -64,6 +64,7 @@ test("exports all protocol object collections from the event log", () => {
   assert.equal(exported.mergeConflicts.length, 0);
   assert.equal(exported.mergeConflictResolutions.length, 0);
   assert.equal(exported.mergeCompletions.length, 0);
+  assert.equal(exported.negotiation.hardLaw, "agreement != governance merger");
   assert.equal(exported.events.length, 19);
 });
 
@@ -147,22 +148,23 @@ test("thread-0001 reasoning state is reconstructed from .clista/events.ndjson on
     "outcome_status",
     "failed_assumptions",
     "failed_evidence",
-	    "fork_lineage",
-	    "changed_assumptions",
-	    "divergent_claims",
-	    "merge_requests",
-	    "merge_completions",
-	    "attribution",
-	    "provenance",
-	    "learning",
-	    "adaptation",
-	    "amendments",
-	    "compatibility",
-	    "interoperability",
-	    "federation",
-	    "next_action",
-	    "audit_summary"
-	  ]);
+    "fork_lineage",
+    "changed_assumptions",
+    "divergent_claims",
+    "merge_requests",
+    "merge_completions",
+    "attribution",
+    "provenance",
+    "learning",
+    "adaptation",
+    "amendments",
+    "compatibility",
+    "interoperability",
+    "federation",
+    "negotiation",
+    "next_action",
+    "audit_summary"
+  ]);
   assert.equal(reasoning.question, "How should ClisTa be architected?");
   assert.equal(reasoning.decision.summary, "Build ClisTa as a protocol-first append-only reasoning engine.");
   assert.match(reasoning.rationale, /reasoning can be stored as protocol state/);
@@ -178,20 +180,21 @@ test("thread-0001 reasoning state is reconstructed from .clista/events.ndjson on
   assert.equal(reasoning.outcome_status, "unknown");
   assert.equal(reasoning.failed_assumptions.length, 0);
   assert.equal(reasoning.failed_evidence.length, 0);
-	  assert.equal(reasoning.fork_lineage, null);
-	  assert.equal(reasoning.changed_assumptions.length, 0);
-	  assert.equal(reasoning.divergent_claims.length, 0);
-	  assert.equal(reasoning.merge_requests.length, 0);
-	  assert.equal(reasoning.merge_completions.length, 0);
-	  assert.ok(reasoning.attribution.attributions.length > 0);
-	  assert.ok(reasoning.provenance.provenance.length > 0);
-	  assert.equal(reasoning.learning.hardLaw, "learning != reputation");
-	  assert.equal(reasoning.adaptation.hardLaw, "adaptation != governance mutation");
-	  assert.equal(reasoning.amendments.hardLaw, "recommendation != amendment");
-	  assert.equal(reasoning.compatibility.hardLaw, "unsupported_state != valid_state");
-	  assert.equal(reasoning.interoperability.hardLaw, "translation != reinterpretation");
-	  assert.equal(reasoning.federation.hardLaw, "shared_state != shared_authority");
-	  assert.equal(reasoning.next_action, "Implement and prove Milestone 0: Protocol Spine Proven.");
+  assert.equal(reasoning.fork_lineage, null);
+  assert.equal(reasoning.changed_assumptions.length, 0);
+  assert.equal(reasoning.divergent_claims.length, 0);
+  assert.equal(reasoning.merge_requests.length, 0);
+  assert.equal(reasoning.merge_completions.length, 0);
+  assert.ok(reasoning.attribution.attributions.length > 0);
+  assert.ok(reasoning.provenance.provenance.length > 0);
+  assert.equal(reasoning.learning.hardLaw, "learning != reputation");
+  assert.equal(reasoning.adaptation.hardLaw, "adaptation != governance mutation");
+  assert.equal(reasoning.amendments.hardLaw, "recommendation != amendment");
+  assert.equal(reasoning.compatibility.hardLaw, "unsupported_state != valid_state");
+  assert.equal(reasoning.interoperability.hardLaw, "translation != reinterpretation");
+  assert.equal(reasoning.federation.hardLaw, "shared_state != shared_authority");
+  assert.equal(reasoning.negotiation.hardLaw, "agreement != governance merger");
+  assert.equal(reasoning.next_action, "Implement and prove Milestone 0: Protocol Spine Proven.");
   assert.equal(reasoning.audit_summary.source, "append_only_event_log");
   assert.equal(reasoning.audit_summary.external_state_used, false);
 });

@@ -81,6 +81,14 @@ clista federation verify
 
 If it verifies external state references without importing remote authority, independent ClisTa contexts can align without centralizing governance.
 
+The negotiation command is:
+
+```text
+clista negotiation verify
+```
+
+If it verifies exchange terms without authority transfer, independent ClisTa contexts can resolve differences without merging governance.
+
 The identity command is:
 
 ```text
@@ -152,6 +160,8 @@ Compatibility is not best effort acceptance. Unsupported state is not valid stat
 Interoperability is not semantic loss. Translation is not reinterpretation.
 
 Federation is not centralization. Shared state is not shared authority.
+
+Negotiation is not authority transfer. Agreement is not governance merger.
 
 ## Repository Boundary
 

@@ -73,6 +73,7 @@ Verification state must preserve:
 - compatibility verification status
 - interoperability verification status
 - federation verification status
+- negotiation verification status
 - transcript replay disabled
 - memory trust disabled
 - authority creation disabled
@@ -164,3 +165,11 @@ Adaptation makes improvement governable.
 Amendments make governance change explicit.
 
 Continuity makes verified reasoning portable.
+
+Compatibility makes portability safe.
+
+Interoperability makes portability meaningful.
+
+Federation makes independent contexts alignable.
+
+Negotiation makes exchange differences explicit.

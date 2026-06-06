@@ -36,6 +36,11 @@ const {
 } = require("./learning");
 const { evaluateMergeEligibility } = require("./merges");
 const {
+  buildNegotiationState,
+  projectNegotiation,
+  selectNegotiationForThread
+} = require("./negotiation");
+const {
   buildProvenanceState,
   projectProvenance,
   selectProvenanceForThread
@@ -211,7 +216,7 @@ function emptyProjection() {
       schema: "clista.compatibility.v0",
       theorem: "protocol_compatibility = verify(capability_set, amendment_state, validation_requirements)",
       hardLaw: "unsupported_state != valid_state",
-      compatibilityProtocolVersion: "0.17.0",
+      compatibilityProtocolVersion: "0.18.0",
       localProtocolVersion: PROTOCOL_VERSION,
       localCapabilitySet: [],
       supportedContinuityProtocolVersions: [],
@@ -244,7 +249,7 @@ function emptyProjection() {
       schema: "clista.interoperability.v0",
       theorem: "protocol_interoperability = preserve(meaning, across_compatible_contexts)",
       hardLaw: "translation != reinterpretation",
-      interoperabilityProtocolVersion: "0.17.0",
+      interoperabilityProtocolVersion: "0.18.0",
       localProtocolVersion: PROTOCOL_VERSION,
       supportedExchangeFormats: [],
       supportedSemantics: [],
@@ -282,7 +287,7 @@ function emptyProjection() {
       schema: "clista.federation.v0",
       theorem: "protocol_federation = align(independent_reasoning_states, shared_protocol_rules)",
       hardLaw: "shared_state != shared_authority",
-      federationProtocolVersion: "0.17.0",
+      federationProtocolVersion: "0.18.0",
       localProtocolVersion: PROTOCOL_VERSION,
       statuses: ["accepted", "degraded", "rejected", "pending"],
       contexts: [],
@@ -315,6 +320,50 @@ function emptyProjection() {
         automaticConsensus: false,
         remoteStateMutation: false,
         networkConsensus: false
+      }
+    },
+    negotiation: {
+      schema: "clista.negotiation.v0",
+      theorem: "protocol_negotiation = agree(exchange_terms, across_independent_contexts)",
+      hardLaw: "agreement != governance merger",
+      negotiationProtocolVersion: "0.18.0",
+      localProtocolVersion: PROTOCOL_VERSION,
+      statuses: ["proposed", "accepted", "degraded", "rejected", "failed", "pending"],
+      requests: [],
+      constraints: [],
+      differences: [],
+      terms: [],
+      proposedTerms: [],
+      acceptedTerms: [],
+      rejectedTerms: [],
+      degradedTerms: [],
+      failures: [],
+      byRequest: {},
+      byConstraint: {},
+      byDifference: {},
+      byTerm: {},
+      byFailure: {},
+      differencesByNegotiation: {},
+      termsByNegotiation: {},
+      failuresByNegotiation: {},
+      negotiationValidationStatus: {
+        valid: true,
+        requestCount: 0,
+        constraintCount: 0,
+        differenceCount: 0,
+        termsCount: 0,
+        acceptedCount: 0,
+        rejectedCount: 0,
+        degradedCount: 0,
+        failureCount: 0,
+        authorityTransfer: false,
+        remoteAuthorityImported: false,
+        governanceMerge: false,
+        automaticAmendmentAdoption: false,
+        automaticConsensus: false,
+        remoteStateMutation: false,
+        silentDowngrade: false,
+        negotiationAcceptanceAsAmendment: false
       }
     },
     events: []
@@ -375,6 +424,14 @@ function projectEvents(events) {
       case "FederatedPacketVerified":
       case "FederatedPacketRejected":
       case "FederationBoundaryRecorded":
+      case "NegotiationRequested":
+      case "NegotiationConstraintDeclared":
+      case "NegotiationDifferenceRecorded":
+      case "NegotiationTermsProposed":
+      case "NegotiationTermsAccepted":
+      case "NegotiationTermsRejected":
+      case "NegotiationDegradationAccepted":
+      case "NegotiationFailureRecorded":
         break;
       case "ThreadCreated":
         upsert(projection.threads, payload.thread);
@@ -480,6 +537,7 @@ function projectEvents(events) {
   projection.compatibility = projectCompatibility(buildCompatibilityState(projection));
   projection.interoperability = projectInteroperability(buildInteroperabilityState(projection));
   projection.federation = projectFederation(buildFederationState(projection));
+  projection.negotiation = projectNegotiation(buildNegotiationState(projection));
 
   return projection;
 }
@@ -549,6 +607,7 @@ function selectThreadState(projection, requestedThreadId) {
   const compatibilityState = projection.compatibility;
   const interoperabilityState = projection.interoperability;
   const federationState = selectFederationForThread(projection.federation, threadId);
+  const negotiationState = selectNegotiationForThread(projection.negotiation, threadId);
   const reasoningState = buildReasoningState({
     thread,
     evidence: supportingEvidence,
@@ -571,6 +630,7 @@ function selectThreadState(projection, requestedThreadId) {
     compatibilityState,
     interoperabilityState,
     federationState,
+    negotiationState,
     events: projection.events
   });
 
@@ -611,6 +671,7 @@ function selectThreadState(projection, requestedThreadId) {
     compatibilityState,
     interoperabilityState,
     federationState,
+    negotiationState,
     auditTrail: auditTrailForThread(projection, threadId)
   };
 }
@@ -637,6 +698,7 @@ function buildReasoningState({
   compatibilityState,
   interoperabilityState,
   federationState,
+  negotiationState,
   events
 }) {
   return {
@@ -674,6 +736,7 @@ function buildReasoningState({
     compatibility: compatibilityState,
     interoperability: interoperabilityState,
     federation: federationState,
+    negotiation: negotiationState,
     next_action: decisionRecord?.nextAction || null,
     audit_summary: {
       source: "append_only_event_log",
@@ -755,6 +818,7 @@ function exportProtocol(projection) {
     compatibility: projection.compatibility,
     interoperability: projection.interoperability,
     federation: projection.federation,
+    negotiation: projection.negotiation,
     events: projection.events
   };
 }
@@ -1370,6 +1434,17 @@ function primaryObject(event) {
     || payload.amendmentRejection
     || payload.protocolAmendmentSupersession
     || payload.amendmentSupersession
+    || payload.federationContext
+    || payload.federationPeer
+    || payload.federatedStateReference
+    || payload.federatedPacketVerification
+    || payload.federatedPacketRejection
+    || payload.federationBoundary
+    || payload.negotiationRequest
+    || payload.negotiationConstraint
+    || payload.negotiationDifference
+    || payload.negotiationTerms
+    || payload.negotiationFailure
     || null;
 }
 

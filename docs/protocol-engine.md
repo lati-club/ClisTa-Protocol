@@ -18,9 +18,17 @@ that another human or agent can reload later.
 5. Outcomes and learning
 6. Forks and merges
 7. Local event-log integrity
-8. Protocol continuity packets
-9. Protocol identity
-10. Protocol attribution
+8. Protocol identity
+9. Protocol attribution
+10. Protocol provenance
+11. Protocol learning
+12. Protocol adaptation
+13. Protocol amendments
+14. Protocol continuity packets
+15. Protocol compatibility
+16. Protocol interoperability
+17. Protocol federation
+18. Protocol negotiation
 
 ## Protocol Objects
 
@@ -50,6 +58,16 @@ The protocol core defines:
 - `expectedOutcome`
 - `outcomeAudit`
 - `decisionScore`
+- `continuityPacket`
+- `compatibilityContext`
+- `interoperabilityProfile`
+- `federationContext`
+- `federatedStateReference`
+- `negotiationRequest`
+- `negotiationConstraint`
+- `negotiationDifference`
+- `negotiationTerms`
+- `negotiationFailure`
 
 See `schemas/clista-protocol.schema.json`.
 
@@ -108,6 +126,14 @@ Supported events:
 - `MergeConflictDeclared`
 - `MergeConflictResolved`
 - `MergeCompleted`
+- `NegotiationRequested`
+- `NegotiationConstraintDeclared`
+- `NegotiationDifferenceRecorded`
+- `NegotiationTermsProposed`
+- `NegotiationTermsAccepted`
+- `NegotiationTermsRejected`
+- `NegotiationDegradationAccepted`
+- `NegotiationFailureRecorded`
 
 The local store lives at:
 
@@ -150,6 +176,8 @@ npm run clista -- interoperability verify --packet continuity.json
 npm run clista -- interoperability show --packet continuity.json
 npm run clista -- federation check --packet continuity.json
 npm run clista -- federation verify
+npm run clista -- negotiation check --packet continuity.json
+npm run clista -- negotiation verify
 npm run clista -- identity show --participant par_troy
 npm run clista -- attribution list --thread thd_example
 npm run clista -- attribution show clm_example

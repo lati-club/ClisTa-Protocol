@@ -54,6 +54,7 @@
     "compatibility",
     "interoperability",
     "federation",
+    "negotiation",
     "events"
   ],
   "properties": {
@@ -311,6 +312,9 @@
     "federation": {
       "$ref": "#/$defs/federationProjection"
     },
+    "negotiation": {
+      "$ref": "#/$defs/negotiationProjection"
+    },
     "events": {
       "type": "array",
       "items": {
@@ -405,7 +409,7 @@
           "const": "unsupported_state != valid_state"
         },
         "compatibilityProtocolVersion": {
-          "const": "0.17.0"
+          "const": "0.18.0"
         },
         "localProtocolVersion": {
           "const": "clista.protocol.v0"
@@ -428,6 +432,11 @@
               "contains": {
                 "const": "federation"
               }
+            },
+            {
+              "contains": {
+                "const": "negotiation"
+              }
             }
           ]
         },
@@ -448,6 +457,11 @@
             {
               "contains": {
                 "const": "federation"
+              }
+            },
+            {
+              "contains": {
+                "const": "negotiation"
               }
             }
           ]
@@ -530,7 +544,7 @@
           "const": "translation != reinterpretation"
         },
         "interoperabilityProtocolVersion": {
-          "const": "0.17.0"
+          "const": "0.18.0"
         },
         "localProtocolVersion": {
           "const": "clista.protocol.v0"
@@ -581,7 +595,8 @@
             "continuity",
             "compatibility",
             "interoperability",
-            "federation"
+            "federation",
+            "negotiation"
           ]
         },
         "profiles": {
@@ -715,7 +730,7 @@
           "const": "shared_state != shared_authority"
         },
         "federationProtocolVersion": {
-          "const": "0.17.0"
+          "const": "0.18.0"
         },
         "localProtocolVersion": {
           "const": "clista.protocol.v0"
@@ -845,6 +860,205 @@
               "const": false
             },
             "networkConsensus": {
+              "const": false
+            }
+          }
+        }
+      }
+    },
+    "negotiationProjection": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "schema",
+        "theorem",
+        "hardLaw",
+        "negotiationProtocolVersion",
+        "localProtocolVersion",
+        "statuses",
+        "requests",
+        "constraints",
+        "differences",
+        "terms",
+        "proposedTerms",
+        "acceptedTerms",
+        "rejectedTerms",
+        "degradedTerms",
+        "failures",
+        "byRequest",
+        "byConstraint",
+        "byDifference",
+        "byTerm",
+        "byFailure",
+        "differencesByNegotiation",
+        "termsByNegotiation",
+        "failuresByNegotiation",
+        "negotiationValidationStatus"
+      ],
+      "properties": {
+        "schema": {
+          "const": "clista.negotiation.v0"
+        },
+        "theorem": {
+          "const": "protocol_negotiation = agree(exchange_terms, across_independent_contexts)"
+        },
+        "hardLaw": {
+          "const": "agreement != governance merger"
+        },
+        "negotiationProtocolVersion": {
+          "const": "0.18.0"
+        },
+        "localProtocolVersion": {
+          "const": "clista.protocol.v0"
+        },
+        "statuses": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "proposed",
+              "accepted",
+              "degraded",
+              "rejected",
+              "failed",
+              "pending"
+            ]
+          }
+        },
+        "requests": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "differences": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "terms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "proposedTerms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "acceptedTerms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "rejectedTerms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "degradedTerms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "failures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "byRequest": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "byConstraint": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "byDifference": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "byTerm": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "byFailure": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "differencesByNegotiation": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "termsByNegotiation": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "failuresByNegotiation": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "negotiationValidationStatus": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "valid",
+            "authorityTransfer",
+            "remoteAuthorityImported",
+            "governanceMerge",
+            "automaticAmendmentAdoption",
+            "automaticConsensus",
+            "remoteStateMutation",
+            "silentDowngrade",
+            "negotiationAcceptanceAsAmendment"
+          ],
+          "properties": {
+            "valid": {
+              "const": true
+            },
+            "authorityTransfer": {
+              "const": false
+            },
+            "remoteAuthorityImported": {
+              "const": false
+            },
+            "governanceMerge": {
+              "const": false
+            },
+            "automaticAmendmentAdoption": {
+              "const": false
+            },
+            "automaticConsensus": {
+              "const": false
+            },
+            "remoteStateMutation": {
+              "const": false
+            },
+            "silentDowngrade": {
+              "const": false
+            },
+            "negotiationAcceptanceAsAmendment": {
               "const": false
             }
           }
@@ -3938,6 +4152,14 @@
             "FederatedPacketVerified",
             "FederatedPacketRejected",
             "FederationBoundaryRecorded",
+            "NegotiationRequested",
+            "NegotiationConstraintDeclared",
+            "NegotiationDifferenceRecorded",
+            "NegotiationTermsProposed",
+            "NegotiationTermsAccepted",
+            "NegotiationTermsRejected",
+            "NegotiationDegradationAccepted",
+            "NegotiationFailureRecorded",
             "AssumptionDeclared",
             "EvidenceCommitted",
             "ClaimCreated",
