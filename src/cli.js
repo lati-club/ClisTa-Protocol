@@ -17,6 +17,10 @@ const {
   writeEvents
 } = require("./events");
 const {
+  attributionForContribution,
+  attributionsForParticipant
+} = require("./attribution");
+const {
   buildIdentityState,
   identityForParticipant
 } = require("./identity");
@@ -47,7 +51,8 @@ const { evaluateMergeEligibility } = require("./merges");
 const { assertValidEvents, validateEvents } = require("./validator");
 
 function main(argv = process.argv.slice(2), cwd = process.cwd()) {
-  const { command, options } = parseCommand(argv);
+  let { command, options } = parseCommand(argv);
+  ({ command, options } = normalizeCommand(command, options));
 
   try {
     switch (command) {
@@ -65,6 +70,14 @@ function main(argv = process.argv.slice(2), cwd = process.cwd()) {
         return participantAuthorityRevoke(options, cwd);
       case "identity show":
         return identityShow(options, cwd);
+      case "attribution list":
+        return attributionList(options, cwd);
+      case "attribution show":
+        return attributionShow(options, cwd);
+      case "attribution by-participant":
+        return attributionByParticipant(options, cwd);
+      case "attribution verify":
+        return attributionVerify(options, cwd);
       case "thread fork":
         return threadFork(options, cwd);
       case "evidence commit":
@@ -291,6 +304,58 @@ function identityShow(options, cwd) {
   const events = readValidEventsForOptions(options, cwd);
   const participantId = participantIdFor(options.participant);
   return print(identityForParticipant(buildIdentityState(events), participantId));
+}
+
+function attributionList(options, cwd) {
+  const projection = projectEvents(readValidEventsForOptions(options, cwd));
+  const attributions = options.thread
+    ? projection.attribution.attributions.filter((record) => record.threadId === options.thread)
+    : projection.attribution.attributions;
+  return print({
+    schema: "clista.attribution.list.v0",
+    threadId: options.thread || null,
+    count: attributions.length,
+    attributions
+  });
+}
+
+function attributionShow(options, cwd) {
+  const contributionId = options.contribution || options.contributionId || options.id;
+  if (!contributionId) {
+    throw new Error("Missing required option --contribution");
+  }
+  const projection = projectEvents(readValidEventsForOptions(options, cwd));
+  return print(attributionForContribution(projection.attribution, contributionId));
+}
+
+function attributionByParticipant(options, cwd) {
+  const participant = options.participant || options.participantId || options.id;
+  if (!participant) {
+    throw new Error("Missing required option --participant");
+  }
+  const projection = projectEvents(readValidEventsForOptions(options, cwd));
+  return print(attributionsForParticipant(projection.attribution, participantIdFor(participant)));
+}
+
+function attributionVerify(options, cwd) {
+  const events = readEventsForOptions(options, cwd);
+  const result = validateEvents(events);
+  if (!result.valid) {
+    print({
+      schema: "clista.attribution.verify.v0",
+      valid: false,
+      errors: result.errors
+    });
+    process.exitCode = 1;
+    return;
+  }
+  const projection = projectEvents(events);
+  return print({
+    schema: "clista.attribution.verify.v0",
+    valid: true,
+    errors: [],
+    attributionValidationStatus: projection.attribution.attributionValidationStatus
+  });
 }
 
 function threadFork(options, cwd) {
@@ -1348,6 +1413,28 @@ function parseCommand(argv) {
   };
 }
 
+function normalizeCommand(command, options) {
+  if (command.startsWith("attribution show ")) {
+    return {
+      command: "attribution show",
+      options: {
+        ...options,
+        contribution: options.contribution || command.slice("attribution show ".length).trim()
+      }
+    };
+  }
+  if (command.startsWith("attribution by-participant ")) {
+    return {
+      command: "attribution by-participant",
+      options: {
+        ...options,
+        participant: options.participant || command.slice("attribution by-participant ".length).trim()
+      }
+    };
+  }
+  return { command, options };
+}
+
 function parseOptions(args) {
   const options = {};
   for (let index = 0; index < args.length; index += 1) {
@@ -1495,6 +1582,10 @@ function usage() {
   clista participant authority grant --participant <name|id> --authority <authority> [--scope global|thread] [--thread <threadId>]
   clista participant authority revoke --participant <name|id> --authority <authority> [--scope global|thread] [--thread <threadId>]
   clista identity show --participant <name|id> [--events <path>]
+  clista attribution list [--thread <threadId>] [--events <path>]
+  clista attribution show <contributionId> [--events <path>]
+  clista attribution by-participant <participantId> [--events <path>]
+  clista attribution verify [--events <path>]
   clista thread fork --parent <threadId> --fork <forkThreadId> --title <title> --reason <reason> --through <eventId>
   clista evidence commit --thread <threadId> --source <source> --finding <finding>
   clista assumption declare --thread <threadId> --text <assumption>

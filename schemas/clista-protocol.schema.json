@@ -35,6 +35,11 @@
     "activeAuthorities",
     "revokedAuthorities",
     "authorityHistory",
+    "attribution",
+    "contributionAttributions",
+    "attributionCorrections",
+    "attributionDisputes",
+    "attributionRevocations",
     "events"
   ],
   "properties": {
@@ -202,6 +207,33 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/participantAuthorityHistory"
+      }
+    },
+    "attribution": {
+      "$ref": "#/$defs/attributionProjection"
+    },
+    "contributionAttributions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/contributionAttribution"
+      }
+    },
+    "attributionCorrections": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/attributionCorrection"
+      }
+    },
+    "attributionDisputes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/attributionDispute"
+      }
+    },
+    "attributionRevocations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/attributionRevocation"
       }
     },
     "events": {
@@ -471,6 +503,240 @@
           }
         },
         "identityValidationStatus": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "contributionType": {
+      "enum": [
+        "evidence",
+        "assumption",
+        "claim",
+        "position",
+        "objection",
+        "objection_resolution",
+        "decision_request",
+        "governance",
+        "decision",
+        "minority_report",
+        "outcome",
+        "outcome_audit",
+        "decision_score",
+        "fork",
+        "merge",
+        "merge_conflict",
+        "merge_conflict_resolution",
+        "merge_completion"
+      ]
+    },
+    "contributionAttribution": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "object",
+        "contributionId",
+        "contributionType",
+        "sourceEventId",
+        "participantId"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "object": {
+          "const": "contributionAttribution"
+        },
+        "contributionId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contributionType": {
+          "$ref": "#/$defs/contributionType"
+        },
+        "sourceEventId": {
+          "$ref": "#/$defs/id"
+        },
+        "sourceEventType": {
+          "type": "string"
+        },
+        "threadId": {
+          "$ref": "#/$defs/id"
+        },
+        "participantId": {
+          "$ref": "#/$defs/id"
+        },
+        "role": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "roleContext": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "authorityContext": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "status": {
+          "enum": [
+            "active",
+            "corrected",
+            "disputed",
+            "revoked"
+          ]
+        }
+      }
+    },
+    "attributionCorrection": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "object",
+        "attributionId",
+        "reason"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "object": {
+          "const": "attributionCorrection"
+        },
+        "attributionId": {
+          "$ref": "#/$defs/id"
+        },
+        "correctedParticipantId": {
+          "$ref": "#/$defs/id"
+        },
+        "correctedRole": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "attributionDispute": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "object",
+        "attributionId",
+        "reason"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "object": {
+          "const": "attributionDispute"
+        },
+        "attributionId": {
+          "$ref": "#/$defs/id"
+        },
+        "disputedBy": {
+          "$ref": "#/$defs/id"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "attributionRevocation": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "object",
+        "attributionId",
+        "reason"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "object": {
+          "const": "attributionRevocation"
+        },
+        "attributionId": {
+          "$ref": "#/$defs/id"
+        },
+        "revokedBy": {
+          "$ref": "#/$defs/id"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "attributionProjection": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "schema",
+        "attributions",
+        "byContribution",
+        "byParticipant",
+        "byEvent",
+        "corrections",
+        "disputes",
+        "revocations",
+        "attributionValidationStatus"
+      ],
+      "properties": {
+        "schema": {
+          "const": "clista.attribution.v0"
+        },
+        "attributions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/contributionAttribution"
+          }
+        },
+        "byContribution": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "byParticipant": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "byEvent": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "corrections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attributionCorrection"
+          }
+        },
+        "disputes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attributionDispute"
+          }
+        },
+        "revocations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attributionRevocation"
+          }
+        },
+        "attributionValidationStatus": {
           "type": "object",
           "additionalProperties": true
         }
@@ -1938,6 +2204,10 @@
             "ParticipantRoleAssigned",
             "ParticipantAuthorityGranted",
             "ParticipantAuthorityRevoked",
+            "ContributionAttributed",
+            "ContributionAttributionCorrected",
+            "ContributionAttributionDisputed",
+            "ContributionAttributionRevoked",
             "AssumptionDeclared",
             "EvidenceCommitted",
             "ClaimCreated",

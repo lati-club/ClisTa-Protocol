@@ -1,4 +1,9 @@
 const { nowIso } = require("./events");
+const {
+  buildAttributionState,
+  projectAttribution,
+  selectAttributionForThread
+} = require("./attribution");
 const { buildIdentityState, projectIdentity } = require("./identity");
 const { PROTOCOL_VERSION, verifyEventIntegrity } = require("./integrity");
 const { evaluateMergeEligibility } = require("./merges");
@@ -42,6 +47,23 @@ function emptyProjection() {
         revokedAuthorityCount: 0
       }
     },
+    attribution: {
+      schema: "clista.attribution.v0",
+      attributions: [],
+      byContribution: {},
+      byParticipant: {},
+      byEvent: {},
+      corrections: [],
+      disputes: [],
+      revocations: [],
+      attributionValidationStatus: {
+        valid: true,
+        attributionCount: 0,
+        correctedCount: 0,
+        disputedCount: 0,
+        revokedCount: 0
+      }
+    },
     events: []
   };
 }
@@ -63,6 +85,11 @@ function projectEvents(events) {
       case "ParticipantRoleAssigned":
       case "ParticipantAuthorityGranted":
       case "ParticipantAuthorityRevoked":
+        break;
+      case "ContributionAttributed":
+      case "ContributionAttributionCorrected":
+      case "ContributionAttributionDisputed":
+      case "ContributionAttributionRevoked":
         break;
       case "ThreadCreated":
         upsert(projection.threads, payload.thread);
@@ -154,11 +181,13 @@ function projectEvents(events) {
     }
   }
 
-  projection.identity = projectIdentity(buildIdentityState(projection.events));
+  const identityState = buildIdentityState(projection.events);
+  projection.identity = projectIdentity(identityState);
   projection.participants = projection.identity.participants.reduce((participants, participant) => {
     participants[participant.id] = participant;
     return participants;
   }, {});
+  projection.attribution = projectAttribution(buildAttributionState(projection.events), identityState);
 
   return projection;
 }
@@ -220,6 +249,7 @@ function selectThreadState(projection, requestedThreadId) {
   const changedAssumptions = selectChangedObjects(assumptionsWithParticipants, forkLineage?.changedAssumptionIds);
   const divergentClaims = forkLineage ? selectDivergentClaims(claims, forkLineage.changedClaimIds) : [];
   const mergeState = selectMergeState(projection, threadId);
+  const attributionState = selectAttributionForThread(projection.attribution, threadId);
   const reasoningState = buildReasoningState({
     thread,
     evidence: supportingEvidence,
@@ -234,6 +264,7 @@ function selectThreadState(projection, requestedThreadId) {
     changedAssumptions,
     divergentClaims,
     mergeState,
+    attributionState,
     events: projection.events
   });
 
@@ -266,6 +297,7 @@ function selectThreadState(projection, requestedThreadId) {
     divergentClaims,
     mergeState,
     identityState: projection.identity,
+    attributionState,
     auditTrail: auditTrailForThread(projection, threadId)
   };
 }
@@ -284,6 +316,7 @@ function buildReasoningState({
   changedAssumptions,
   divergentClaims,
   mergeState,
+  attributionState,
   events
 }) {
   return {
@@ -313,6 +346,7 @@ function buildReasoningState({
     divergent_claims: divergentClaims,
     merge_requests: mergeState.requests,
     merge_completions: mergeState.completed,
+    attribution: attributionState,
     next_action: decisionRecord?.nextAction || null,
     audit_summary: {
       source: "append_only_event_log",
@@ -375,6 +409,11 @@ function exportProtocol(projection) {
     activeAuthorities: projection.identity.activeAuthorities,
     revokedAuthorities: projection.identity.revokedAuthorities,
     authorityHistory: projection.identity.authorityHistory,
+    attribution: projection.attribution,
+    contributionAttributions: projection.attribution.attributions,
+    attributionCorrections: projection.attribution.corrections,
+    attributionDisputes: projection.attribution.disputes,
+    attributionRevocations: projection.attribution.revocations,
     events: projection.events
   };
 }
@@ -949,6 +988,10 @@ function primaryObject(event) {
     || payload.participantRole
     || payload.participantAuthority
     || payload.participantAuthorityRevocation
+    || payload.contributionAttribution
+    || payload.attributionCorrection
+    || payload.attributionDispute
+    || payload.attributionRevocation
     || payload.evidence
     || payload.assumption
     || payload.claim

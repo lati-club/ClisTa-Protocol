@@ -53,6 +53,10 @@ Projected state is derived.
 - `ParticipantRoleAssigned`
 - `ParticipantAuthorityGranted`
 - `ParticipantAuthorityRevoked`
+- `ContributionAttributed`
+- `ContributionAttributionCorrected`
+- `ContributionAttributionDisputed`
+- `ContributionAttributionRevoked`
 - `EvidenceCommitted`
 - `AssumptionDeclared`
 - `ClaimCreated`
@@ -90,6 +94,7 @@ Projected state is derived.
 - fork lineage
 - merge state
 - active and revoked authorities
+- attribution by contribution, participant, and source event
 
 ## Required Validation
 
@@ -105,6 +110,7 @@ Validation checks:
 - audit integrity
 - event hash chain integrity
 - protocol and hash schema versions
+- attribution source, participant, role, authority, and event-time provenance
 
 ## Required Integrity
 
@@ -142,6 +148,7 @@ A Continuity Packet must be integrity-gated and must preserve:
 - outcome state
 - fork lineage
 - merge state
+- attribution state
 - next action
 
 ## Required Identity
@@ -163,3 +170,16 @@ vibes with hashes
 ```
 
 A system that preserves artifacts with hashes but cannot prove who authored them, what authority they carried, or why their contributions should be trusted.
+
+## Required Attribution
+
+```text
+clista attribution list
+clista attribution show <contributionId>
+clista attribution by-participant <participantId>
+clista attribution verify
+```
+
+must trace reasoning contributions to participant, role, source event, provenance, and authority context at contribution event time.
+
+Attribution is not reputation. It records who contributed a reasoning element; it does not score participant trustworthiness.

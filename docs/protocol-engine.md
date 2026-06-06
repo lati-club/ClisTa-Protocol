@@ -20,6 +20,7 @@ that another human or agent can reload later.
 7. Local event-log integrity
 8. Protocol continuity packets
 9. Protocol identity
+10. Protocol attribution
 
 ## Protocol Objects
 
@@ -29,6 +30,10 @@ The protocol core defines:
 - `participant`
 - `participantRole`
 - `participantAuthority`
+- `contributionAttribution`
+- `attributionCorrection`
+- `attributionDispute`
+- `attributionRevocation`
 - `assumption`
 - `claim`
 - `position`
@@ -82,6 +87,10 @@ Supported events:
 - `ParticipantRoleAssigned`
 - `ParticipantAuthorityGranted`
 - `ParticipantAuthorityRevoked`
+- `ContributionAttributed`
+- `ContributionAttributionCorrected`
+- `ContributionAttributionDisputed`
+- `ContributionAttributionRevoked`
 - `ThreadForked`
 - `ClaimCreated`
 - `PositionTaken`
@@ -135,6 +144,10 @@ npm run clista -- continuity verify --packet continuity.json
 npm run clista -- continuity import --packet continuity.json
 npm run clista -- continuity summary --packet continuity.json
 npm run clista -- identity show --participant par_troy
+npm run clista -- attribution list --thread thd_example
+npm run clista -- attribution show clm_example
+npm run clista -- attribution by-participant par_troy
+npm run clista -- attribution verify
 npm run clista -- state show --thread thd_example
 npm run clista -- audit show --thread thd_example
 npm run clista -- fork lineage --thread thd_example_alt

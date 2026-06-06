@@ -76,6 +76,7 @@ The packet must preserve:
 - outcome state
 - fork lineage
 - merge state
+- attribution state
 - integrity state
 - thread status
 - next action

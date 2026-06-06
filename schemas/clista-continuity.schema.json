@@ -131,6 +131,7 @@
         "outcome_state",
         "fork_lineage",
         "merge_state",
+        "attribution_state",
         "integrity_state",
         "status",
         "next_action"
@@ -193,6 +194,10 @@
           "additionalProperties": true
         },
         "merge_state": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "attribution_state": {
           "type": "object",
           "additionalProperties": true
         },

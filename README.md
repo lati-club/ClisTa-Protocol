@@ -64,6 +64,14 @@ clista identity show --participant par_troy
 
 If it reconstructs roles, active authority, revoked authority, and authority history from the event log, portable reasoning stays accountable after it leaves its original context.
 
+The attribution command is:
+
+```text
+clista attribution list
+```
+
+If it traces claims, assumptions, evidence, objections, decisions, outcomes, forks, merges, and governance reviews back to participants and event-time authority context, reasoning contributions are accountable without becoming reputation.
+
 Anti-pattern:
 
 ```text

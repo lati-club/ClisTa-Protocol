@@ -182,6 +182,8 @@ function summarizeContinuityPacket(packet) {
     outcome_status: state.outcome_state?.status || null,
     fork_lineage: state.fork_lineage,
     merge_state: state.merge_state,
+    attribution_count: (state.attribution_state?.attributions || []).length,
+    attribution_state: state.attribution_state,
     integrity_state: state.integrity_state
   };
 }
@@ -269,6 +271,7 @@ function buildContinuityState(state, { eventLogHash, integrity, strictIntegrity 
     outcome_state: state.outcomeState || {},
     fork_lineage: state.forkLineage || null,
     merge_state: state.mergeState || {},
+    attribution_state: state.attributionState || {},
     integrity_state: {
       event_count: integrity.eventCount,
       event_log_hash: eventLogHash,
