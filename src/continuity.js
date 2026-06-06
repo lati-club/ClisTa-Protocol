@@ -14,7 +14,7 @@ const { validateEvents } = require("./validator");
 const CONTINUITY_FILE = "continuity.json";
 const CONTINUITY_PROTOCOL = "clista";
 const CONTINUITY_PACKET_TYPE = "continuity";
-const CONTINUITY_PROTOCOL_VERSION = "0.22.0";
+const CONTINUITY_PROTOCOL_VERSION = "0.23.0";
 const CONTINUITY_SCHEMA_VERSION = "clista.continuity.packet.v0";
 const CONTINUITY_THEOREM = "reasoning_continuity = resume(project(event_log), verification_state)";
 const CONTINUITY_HARD_LAW = "context transfer != memory trust";
@@ -41,7 +41,8 @@ const CONTINUITY_CAPABILITY_SET = [
   "delegation",
   "execution",
   "outcome",
-  "outcome_learning"
+  "outcome_learning",
+  "review"
 ];
 
 const REQUIRED_VERIFICATION_LAYERS = [
@@ -59,7 +60,8 @@ const REQUIRED_VERIFICATION_LAYERS = [
   "delegation",
   "execution",
   "outcome",
-  "outcome_learning"
+  "outcome_learning",
+  "review"
 ];
 
 function continuityPacketPath(cwd = process.cwd()) {
@@ -300,6 +302,7 @@ function summarizeContinuityPacket(packet) {
     federation_state: state.federation_state,
     negotiation_state: state.negotiation_state,
     outcome_learning_state: state.outcome_learning_state,
+    review_state: state.review_state,
     integrity_state: state.integrity_state,
     verification_state: packet.verification_state
   };
@@ -427,6 +430,7 @@ function buildContinuityState(state, { eventLogHash, integrity, strictIntegrity,
     execution_state: state.executionState || {},
     protocol_outcome_state: state.protocolOutcomeState || {},
     outcome_learning_state: state.outcomeLearningState || {},
+    review_state: state.reviewState || {},
     verification_status: {
       status: verificationStatus.status,
       verification_mode: strictIntegrity.valid ? "strict" : "compatibility",
@@ -562,6 +566,7 @@ function buildVerificationState({
     executionValidationStatus: projection.execution?.executionValidationStatus || null,
     outcomeValidationStatus: projection.outcome?.outcomeValidationStatus || null,
     outcomeLearningValidationStatus: projection.outcomeLearning?.outcomeLearningValidationStatus || null,
+    reviewValidationStatus: projection.review?.reviewValidationStatus || null,
     transcriptReplay: false,
     memoryTrust: false,
     authorityCreated: false,
@@ -589,7 +594,8 @@ function determineResumeStatus({ validation, integrity, strictIntegrity, project
     delegation: projection.delegation?.delegationValidationStatus?.valid,
     execution: projection.execution?.executionValidationStatus?.valid,
     outcome: projection.outcome?.outcomeValidationStatus?.valid,
-    outcome_learning: projection.outcomeLearning?.outcomeLearningValidationStatus?.valid
+    outcome_learning: projection.outcomeLearning?.outcomeLearningValidationStatus?.valid,
+    review: projection.review?.reviewValidationStatus?.valid
   };
 
   for (const layer of REQUIRED_VERIFICATION_LAYERS) {
@@ -647,7 +653,8 @@ function validateVerificationStateShape(verificationState, reasons) {
     ["delegationValidationStatus", verificationState.delegationValidationStatus],
     ["executionValidationStatus", verificationState.executionValidationStatus],
     ["outcomeValidationStatus", verificationState.outcomeValidationStatus],
-    ["outcomeLearningValidationStatus", verificationState.outcomeLearningValidationStatus]
+    ["outcomeLearningValidationStatus", verificationState.outcomeLearningValidationStatus],
+    ["reviewValidationStatus", verificationState.reviewValidationStatus]
   ]) {
     if (!status || typeof status !== "object") {
       reasons.push(reason(`verification_state.${field}`, `missing verification layer ${field}`));

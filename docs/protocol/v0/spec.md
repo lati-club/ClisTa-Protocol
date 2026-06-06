@@ -139,6 +139,11 @@ Change a layer version only when that layer's protocol behavior changes. Change 
 - `LessonRecorded`
 - `LearningDisputed`
 - `LearningViolationRecorded`
+- `ReviewRequired`
+- `ReviewOpened`
+- `ReviewCompleted`
+- `ReviewDisputed`
+- `ReviewViolationRecorded`
 - `EvidenceCommitted`
 - `AssumptionDeclared`
 - `ClaimCreated`
@@ -181,7 +186,7 @@ Change a layer version only when that layer's protocol behavior changes. Change 
 - pattern-level learning signals from outcome evidence
 - governance adaptation recommendations from learning signals
 - explicit protocol amendments and amendment history
-- portability, interoperability, federation, negotiation, delegation, execution, outcome, and outcome-learning status
+- portability, interoperability, federation, negotiation, delegation, execution, outcome, outcome-learning, and review status
 
 ## Required Validation
 
@@ -210,6 +215,7 @@ Validation checks:
 - execution authorization, actor accountability, scope, constraints, evidence, and explicit lifecycle boundaries
 - outcome expectation, observation evidence, evaluation judgment, dispute, violation, and completion-not-success boundaries
 - outcome-learning evaluated-outcome references, evidence links, actor accountability, and non-retroactive-justification boundaries
+- review subject existence, actor accountability, required-review pending state, completion-as-reviewed, and review-not-approval boundaries
 
 ## Required Integrity
 

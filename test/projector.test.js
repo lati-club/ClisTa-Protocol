@@ -166,6 +166,7 @@ test("thread-0001 reasoning state is reconstructed from .clista/events.ndjson on
     "execution",
     "outcome",
     "outcome_learning",
+    "review",
     "next_action",
     "audit_summary"
   ]);
@@ -202,6 +203,7 @@ test("thread-0001 reasoning state is reconstructed from .clista/events.ndjson on
   assert.equal(reasoning.execution.hardLaw, "execution != intent");
   assert.equal(reasoning.outcome.hardLaw, "completion != success");
   assert.equal(reasoning.outcome_learning.hardLaw, "learning != retroactive justification");
+  assert.equal(reasoning.review.hardLaw, "review != approval");
   assert.equal(reasoning.next_action, "Implement and prove Milestone 0: Protocol Spine Proven.");
   assert.equal(reasoning.audit_summary.source, "append_only_event_log");
   assert.equal(reasoning.audit_summary.external_state_used, false);

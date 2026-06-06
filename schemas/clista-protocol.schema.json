@@ -59,6 +59,7 @@
     "execution",
     "outcome",
     "outcomeLearning",
+    "review",
     "events"
   ],
   "properties": {
@@ -330,6 +331,9 @@
     },
     "outcomeLearning": {
       "$ref": "#/$defs/outcomeLearningProjection"
+    },
+    "review": {
+      "$ref": "#/$defs/reviewProjection"
     },
     "events": {
       "type": "array",
@@ -1447,7 +1451,7 @@
           "const": "unsupported_state != valid_state"
         },
         "compatibilityProtocolVersion": {
-          "const": "0.22.0"
+          "const": "0.23.0"
         },
         "localProtocolVersion": {
           "const": "clista.protocol.v0"
@@ -1495,6 +1499,11 @@
               "contains": {
                 "const": "outcome_learning"
               }
+            },
+            {
+              "contains": {
+                "const": "review"
+              }
             }
           ]
         },
@@ -1540,6 +1549,11 @@
             {
               "contains": {
                 "const": "outcome_learning"
+              }
+            },
+            {
+              "contains": {
+                "const": "review"
               }
             }
           ]
@@ -1622,7 +1636,7 @@
           "const": "translation != reinterpretation"
         },
         "interoperabilityProtocolVersion": {
-          "const": "0.22.0"
+          "const": "0.23.0"
         },
         "localProtocolVersion": {
           "const": "clista.protocol.v0"
@@ -1659,6 +1673,11 @@
               "contains": {
                 "const": "protocol_outcome_learning_status"
               }
+            },
+            {
+              "contains": {
+                "const": "protocol_review_status"
+              }
             }
           ]
         },
@@ -1684,6 +1703,11 @@
             {
               "contains": {
                 "const": "LearningSignalDerived"
+              }
+            },
+            {
+              "contains": {
+                "const": "ReviewRequired"
               }
             }
           ]
@@ -1712,7 +1736,8 @@
             "delegation",
             "execution",
             "protocol_outcome",
-            "protocol_outcome_learning"
+            "protocol_outcome_learning",
+            "protocol_review"
           ]
         },
         "profiles": {
@@ -3463,6 +3488,651 @@
               "const": false
             },
             "outcomeSuccessMutation": {
+              "const": false
+            },
+            "stateMutation": {
+              "const": false
+            }
+          }
+        }
+      }
+    },
+    "reviewStatus": {
+      "enum": [
+        "required",
+        "open",
+        "reviewed",
+        "disputed",
+        "violated"
+      ]
+    },
+    "protocolReview": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "object",
+        "threadId",
+        "subjectType",
+        "subjectId",
+        "subjectRef",
+        "triggerType",
+        "reason",
+        "required",
+        "status",
+        "reviewAsApproval",
+        "governanceMutation",
+        "authorityCreated",
+        "authorityMutation",
+        "consensusCreated",
+        "amendmentApproval",
+        "recoveryPerformed",
+        "rollbackPerformed",
+        "accountabilityScoreAssigned",
+        "blameAssigned",
+        "violationResolved",
+        "outcomeMutation",
+        "executionMutation",
+        "delegationMutation",
+        "learningMutation",
+        "stateMutation"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "object": {
+          "const": "protocolReview"
+        },
+        "threadId": {
+          "$ref": "#/$defs/id"
+        },
+        "subjectType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subjectId": {
+          "$ref": "#/$defs/id"
+        },
+        "subjectRef": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "type",
+            "id"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "minLength": 1
+            },
+            "id": {
+              "$ref": "#/$defs/id"
+            }
+          }
+        },
+        "subjectKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "triggerType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "triggerEventId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "status": {
+          "$ref": "#/$defs/reviewStatus"
+        },
+        "requiredReviewerRole": {
+          "type": "string"
+        },
+        "reviewerParticipantId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "requiredReviewId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "requiredByParticipantId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "openedByParticipantId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "requiredAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "openedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "completedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "completedByParticipantId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "completions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/protocolReviewCompletion"
+          }
+        },
+        "disputes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/protocolReviewDispute"
+          }
+        },
+        "violations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/protocolReviewViolation"
+          }
+        },
+        "reviewAsApproval": {
+          "const": false
+        },
+        "governanceMutation": {
+          "const": false
+        },
+        "authorityCreated": {
+          "const": false
+        },
+        "authorityMutation": {
+          "const": false
+        },
+        "consensusCreated": {
+          "const": false
+        },
+        "amendmentApproval": {
+          "const": false
+        },
+        "recoveryPerformed": {
+          "const": false
+        },
+        "rollbackPerformed": {
+          "const": false
+        },
+        "accountabilityScoreAssigned": {
+          "const": false
+        },
+        "blameAssigned": {
+          "const": false
+        },
+        "violationResolved": {
+          "const": false
+        },
+        "outcomeMutation": {
+          "const": false
+        },
+        "executionMutation": {
+          "const": false
+        },
+        "delegationMutation": {
+          "const": false
+        },
+        "learningMutation": {
+          "const": false
+        },
+        "stateMutation": {
+          "const": false
+        }
+      }
+    },
+    "protocolReviewCompletion": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "object",
+        "reviewId",
+        "threadId",
+        "completionStatus",
+        "summary",
+        "completedByParticipantId",
+        "reviewAsApproval",
+        "governanceMutation",
+        "authorityCreated",
+        "authorityMutation",
+        "consensusCreated",
+        "amendmentApproval",
+        "recoveryPerformed",
+        "rollbackPerformed",
+        "accountabilityScoreAssigned",
+        "blameAssigned",
+        "violationResolved",
+        "outcomeMutation",
+        "executionMutation",
+        "delegationMutation",
+        "learningMutation",
+        "stateMutation"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "object": {
+          "const": "protocolReviewCompletion"
+        },
+        "reviewId": {
+          "$ref": "#/$defs/id"
+        },
+        "threadId": {
+          "$ref": "#/$defs/id"
+        },
+        "completionStatus": {
+          "const": "reviewed"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "completedByParticipantId": {
+          "$ref": "#/$defs/id"
+        },
+        "completedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reviewAsApproval": {
+          "const": false
+        },
+        "governanceMutation": {
+          "const": false
+        },
+        "authorityCreated": {
+          "const": false
+        },
+        "authorityMutation": {
+          "const": false
+        },
+        "consensusCreated": {
+          "const": false
+        },
+        "amendmentApproval": {
+          "const": false
+        },
+        "recoveryPerformed": {
+          "const": false
+        },
+        "rollbackPerformed": {
+          "const": false
+        },
+        "accountabilityScoreAssigned": {
+          "const": false
+        },
+        "blameAssigned": {
+          "const": false
+        },
+        "violationResolved": {
+          "const": false
+        },
+        "outcomeMutation": {
+          "const": false
+        },
+        "executionMutation": {
+          "const": false
+        },
+        "delegationMutation": {
+          "const": false
+        },
+        "learningMutation": {
+          "const": false
+        },
+        "stateMutation": {
+          "const": false
+        }
+      }
+    },
+    "protocolReviewDispute": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "object",
+        "reviewId",
+        "threadId",
+        "reason",
+        "disputedByParticipantId",
+        "reviewAsApproval",
+        "governanceMutation",
+        "authorityCreated",
+        "consensusCreated",
+        "amendmentApproval",
+        "stateMutation"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "object": {
+          "const": "protocolReviewDispute"
+        },
+        "reviewId": {
+          "$ref": "#/$defs/id"
+        },
+        "threadId": {
+          "$ref": "#/$defs/id"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "disputedByParticipantId": {
+          "$ref": "#/$defs/id"
+        },
+        "disputedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reviewAsApproval": {
+          "const": false
+        },
+        "governanceMutation": {
+          "const": false
+        },
+        "authorityCreated": {
+          "const": false
+        },
+        "consensusCreated": {
+          "const": false
+        },
+        "amendmentApproval": {
+          "const": false
+        },
+        "stateMutation": {
+          "const": false
+        }
+      }
+    },
+    "protocolReviewViolation": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "object",
+        "reviewId",
+        "threadId",
+        "violationType",
+        "reason",
+        "detectedByParticipantId",
+        "reviewAsApproval",
+        "governanceMutation",
+        "authorityCreated",
+        "consensusCreated",
+        "amendmentApproval",
+        "stateMutation"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "object": {
+          "const": "protocolReviewViolation"
+        },
+        "reviewId": {
+          "$ref": "#/$defs/id"
+        },
+        "threadId": {
+          "$ref": "#/$defs/id"
+        },
+        "violationType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "detectedByParticipantId": {
+          "$ref": "#/$defs/id"
+        },
+        "detectedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reviewAsApproval": {
+          "const": false
+        },
+        "governanceMutation": {
+          "const": false
+        },
+        "authorityCreated": {
+          "const": false
+        },
+        "consensusCreated": {
+          "const": false
+        },
+        "amendmentApproval": {
+          "const": false
+        },
+        "stateMutation": {
+          "const": false
+        }
+      }
+    },
+    "reviewProjection": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "schema",
+        "theorem",
+        "hardLaw",
+        "reviewProtocolVersion",
+        "localProtocolVersion",
+        "statuses",
+        "triggerTypes",
+        "records",
+        "required",
+        "open",
+        "completed",
+        "disputed",
+        "violated",
+        "completions",
+        "disputes",
+        "violations",
+        "byReview",
+        "bySubject",
+        "completionsByReview",
+        "disputesByReview",
+        "violationsByReview",
+        "reviewValidationStatus"
+      ],
+      "properties": {
+        "schema": {
+          "const": "clista.review.v0"
+        },
+        "theorem": {
+          "const": "protocol_review = route(state_change, through_required_review)"
+        },
+        "hardLaw": {
+          "const": "review != approval"
+        },
+        "reviewProtocolVersion": {
+          "const": "0.23.0"
+        },
+        "localProtocolVersion": {
+          "const": "clista.protocol.v0"
+        },
+        "statuses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/reviewStatus"
+          }
+        },
+        "triggerTypes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "records": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/protocolReview"
+          }
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/protocolReview"
+          }
+        },
+        "open": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/protocolReview"
+          }
+        },
+        "completed": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/protocolReview"
+          }
+        },
+        "disputed": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/protocolReview"
+          }
+        },
+        "violated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/protocolReview"
+          }
+        },
+        "completions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/protocolReviewCompletion"
+          }
+        },
+        "disputes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/protocolReviewDispute"
+          }
+        },
+        "violations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/protocolReviewViolation"
+          }
+        },
+        "byReview": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/protocolReview"
+          }
+        },
+        "bySubject": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/protocolReview"
+            }
+          }
+        },
+        "completionsByReview": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "disputesByReview": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "violationsByReview": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "reviewValidationStatus": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "valid",
+            "reviewAsApproval",
+            "governanceMutation",
+            "authorityCreated",
+            "consensusCreated",
+            "amendmentApproval",
+            "recoveryPerformed",
+            "rollbackPerformed",
+            "accountabilityScoreAssigned",
+            "blameAssigned",
+            "stateMutation"
+          ],
+          "properties": {
+            "valid": {
+              "const": true
+            },
+            "reviewAsApproval": {
+              "const": false
+            },
+            "governanceMutation": {
+              "const": false
+            },
+            "authorityCreated": {
+              "const": false
+            },
+            "consensusCreated": {
+              "const": false
+            },
+            "amendmentApproval": {
+              "const": false
+            },
+            "recoveryPerformed": {
+              "const": false
+            },
+            "rollbackPerformed": {
+              "const": false
+            },
+            "accountabilityScoreAssigned": {
+              "const": false
+            },
+            "blameAssigned": {
               "const": false
             },
             "stateMutation": {
@@ -6586,6 +7256,11 @@
             "LessonRecorded",
             "LearningDisputed",
             "LearningViolationRecorded",
+            "ReviewRequired",
+            "ReviewOpened",
+            "ReviewCompleted",
+            "ReviewDisputed",
+            "ReviewViolationRecorded",
             "AssumptionDeclared",
             "EvidenceCommitted",
             "ClaimCreated",

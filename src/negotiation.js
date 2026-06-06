@@ -945,7 +945,8 @@ function verificationLayerStatus(verificationState, layer) {
     delegation: "delegationValidationStatus",
     execution: "executionValidationStatus",
     outcome: "outcomeValidationStatus",
-    outcome_learning: "outcomeLearningValidationStatus"
+    outcome_learning: "outcomeLearningValidationStatus",
+    review: "reviewValidationStatus"
   };
   return verificationState?.[mapping[layer] || layer];
 }

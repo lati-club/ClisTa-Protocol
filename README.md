@@ -22,7 +22,7 @@ Commit Evidence -> Pull Decision -> Track Audit
 - Projected state derived from events.
 - CLI-first protocol engine.
 
-The compressed M0-M22 primitive map is:
+The compressed M0-M23 primitive map is:
 
 ```text
 docs/protocol/v0/primitive-map.md
@@ -123,6 +123,16 @@ If it verifies lessons derived from evaluated outcomes without rewriting prior r
 
 `clista outcome-learning derive` accepts optional `--evidence`. When omitted, the learning signal uses the latest outcome evaluation evidence. `clista outcome-learning lesson` also accepts optional `--evidence`; when omitted, the lesson uses the source signal evidence. Read-only outcome-learning commands accept `--events <path>` for fixture and export inspection.
 
+The protocol review command is:
+
+```text
+clista review verify
+```
+
+If it verifies required review routing without treating review as approval, state changes that require examination can be held for review without mutating governance, authority, recovery, rollback, accountability, or the reviewed object.
+
+M23 review commands are distinct from `clista review submit`, which remains the M3 decision-review command for decision requests.
+
 The identity command is:
 
 ```text
@@ -206,6 +216,8 @@ Execution is not intent. Completion requires evidence that the authorized action
 Completion is not success. Outcome evidence must satisfy the intended effect before performed action can be evaluated as successful.
 
 Learning is not retroactive justification. Lessons can derive from evaluated outcomes, but they cannot rewrite prior rationale, intended effect, governance, or authority.
+
+Review is not approval. Required review routes state changes through examination before further action; it does not approve, repair, recover, roll back, score accountability, create authority, create consensus, or mutate the reviewed state.
 
 Layer versions are capability boundaries, not release numbers. A cleanup release can advance the package or tag version while unchanged layers keep the protocol version where that capability was introduced.
 

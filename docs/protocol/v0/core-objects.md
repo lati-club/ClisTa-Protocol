@@ -64,6 +64,16 @@ A governance response to a decision request.
 
 Examples include approval, approval with conditions, request changes, rejection, or comment.
 
+This is the M3 decision-review object recorded by `ReviewSubmitted`.
+
+## Protocol Review
+
+An M23 routing record for a state change, violation, dispute, degraded exchange, rollback, failed outcome, inconclusive outcome, or learning signal that requires review before further action.
+
+Protocol review records subject, trigger, reviewer role, status, completion, disputes, and violations.
+
+It is not approval. Completing a protocol review records `reviewed`; it does not approve, repair, recover, roll back, mutate governance, create authority, create consensus, assign accountability scores, assign blame, or mutate the reviewed object.
+
 ## Decision Record
 
 The immutable record of an accepted or rejected decision.
@@ -184,6 +194,7 @@ M19 adds delegation verification status so scoped action can be authorized witho
 M20 adds execution verification status so performed action is separate from intent.
 M21 adds outcome verification status so completion is separate from success.
 M22 adds outcome learning verification status so lessons can derive from evaluated outcomes without retroactive justification.
+M23 adds review verification status so required examination routes state change without becoming approval.
 
 ## Compatibility Context
 

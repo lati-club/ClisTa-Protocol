@@ -34,8 +34,9 @@ that another human or agent can reload later.
 20. Protocol execution
 21. Protocol outcome
 22. Protocol learning from outcomes
+23. Protocol review
 
-The compressed primitive map for M0-M22 is:
+The compressed primitive map for M0-M23 is:
 
 ```text
 docs/protocol/v0/primitive-map.md
@@ -91,6 +92,10 @@ The protocol core defines:
 - `outcomeLesson`
 - `outcomeLearningDispute`
 - `outcomeLearningViolation`
+- `protocolReview`
+- `protocolReviewCompletion`
+- `protocolReviewDispute`
+- `protocolReviewViolation`
 
 See `schemas/clista-protocol.schema.json`.
 
@@ -176,6 +181,11 @@ Supported events:
 - `LessonRecorded`
 - `LearningDisputed`
 - `LearningViolationRecorded`
+- `ReviewRequired`
+- `ReviewOpened`
+- `ReviewCompleted`
+- `ReviewDisputed`
+- `ReviewViolationRecorded`
 
 The local store lives at:
 
@@ -209,6 +219,9 @@ npm run clista -- outcome observe --outcome oco_example --observed-effect "Remot
 npm run clista -- outcome evaluate --outcome oco_example --result success --comparison "Observed effect satisfied expected effect." --evidence "Outcome evidence reviewed."
 npm run clista -- outcome-learning derive --outcome oco_example --lesson "Strict verification evidence predicted packet acceptance."
 npm run clista -- outcome-learning lesson --signal ols_example --lesson "Require strict verification evidence on similar packet acceptance."
+npm run clista -- review require --thread thd_example --subject ols_example --subject-type outcome_learning_signal --trigger outcome_learning_dispute --reason "Learning signal requires review before reuse."
+npm run clista -- review open --review prv_example
+npm run clista -- review complete --review prv_example --summary "Signal was reviewed without approving a governance change."
 npm run clista -- merge open --source thd_example_alt --target thd_example --summary "Integrate useful fork reasoning."
 npm run clista -- merge eligibility --request mrg_example
 npm run clista -- merge complete --request mrg_example --merged-by "Troy"
@@ -228,6 +241,7 @@ npm run clista -- federation verify
 npm run clista -- negotiation check --packet continuity.json
 npm run clista -- negotiation verify
 npm run clista -- execution verify
+npm run clista -- review verify
 npm run clista -- outcome verify
 npm run clista -- outcome-learning verify
 npm run clista -- identity show --participant par_troy

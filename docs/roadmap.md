@@ -27,6 +27,30 @@ External systems are adapters or projections:
 
 None of those systems should define the protocol.
 
+## Protocol Milestone Runway
+
+Verified baseline:
+
+- M22: Protocol Outcome Learning
+- M22.1: Roadmap Compression Cleanup
+
+Current milestone:
+
+- M23: Protocol Review
+
+M23 adds review routing for state changes that require examination before further action.
+
+Hard law:
+
+```text
+review != approval
+```
+
+Next candidates remain separate:
+
+- M24: Protocol Recovery
+- M25: Runtime / Packaging
+
 ## Phase 0: Protocol Spike
 
 Goal: prove that one real reasoning thread can be exported, reloaded, and continued without reading the original transcript.

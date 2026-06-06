@@ -1,6 +1,6 @@
-# Primitive Map M0-M22
+# Primitive Map M0-M23
 
-This map compresses the verified M0-M22 surface into protocol primitives.
+This map compresses the verified M0-M23 surface into protocol primitives.
 
 ```text
 Conversation is input.
@@ -59,13 +59,14 @@ Milestones:
 - M1 Protocol Validity
 - M2 Protocol Governance
 - M6 Protocol Integrity
-- M8-M22 layer-specific validation
+- M8-M23 layer-specific validation
 
 Preserved laws:
 
 - Validation proves protocol.
 - Unsupported state is not valid state.
 - Invalid reasoning must fail loudly with `event_id` and `reason`.
+- Required review is pending until completed as `reviewed`.
 
 ## Governance And Authority
 
@@ -81,6 +82,7 @@ Milestones:
 - M13 Protocol Amendments
 - M18 Protocol Negotiation
 - M19 and M19.1 Protocol Delegation
+- M23 Protocol Review
 
 Preserved laws:
 
@@ -88,6 +90,7 @@ Preserved laws:
 - Recommendation is not amendment.
 - Delegation is not authority surrender.
 - Agreement is not governance merger.
+- Review is not approval.
 
 ## Accountability: Identity, Attribution, Provenance
 
@@ -188,6 +191,22 @@ delegation -> execution -> outcome -> outcome learning
 
 without adding events to the canonical origin log.
 
+## Review Routing
+
+What it does:
+
+Routes state changes, violations, disputes, degraded exchange signals, rollbacks, failed outcomes, inconclusive outcomes, and outcome-learning signals through required review before further action when protocol rules require review.
+
+Milestones:
+
+- M23 Protocol Review
+
+Preserved laws:
+
+- Review is not approval.
+- Review completion means `reviewed`.
+- Review does not approve, repair, recover, roll back, mutate governance, create authority, create consensus, assign blame, assign accountability scores, or mutate the reviewed object.
+
 ## Decision Outcomes And Protocol Outcomes
 
 M3 decision outcome means:
@@ -226,9 +245,9 @@ The names overlap because M21 reuses the CLI namespace for a narrower execution-
 
 ## Layer Versioning And Release Versioning
 
-Layer protocol versions mark capability boundaries. For example, delegation remains `0.19.0`, execution remains `0.20.0`, outcome remains `0.21.0`, and outcome learning remains `0.22.0` until that layer's behavior changes.
+Layer protocol versions mark capability boundaries. For example, delegation remains `0.19.0`, execution remains `0.20.0`, outcome remains `0.21.0`, outcome learning remains `0.22.0`, and review is `0.23.0` until those layer behaviors change.
 
-Package and release versions mark repository releases. A cleanup release can advance to `v0.22.1` while M19-M22 layer versions stay at their original capability boundaries.
+Package and release versions mark repository releases. A feature release can advance to `v0.23.0` while unchanged M19-M22 layer versions stay at their original capability boundaries.
 
 Use a layer version to ask:
 
@@ -259,6 +278,7 @@ clista delegation verify
 clista execution verify
 clista outcome verify
 clista outcome-learning verify
+clista review verify
 ```
 
 If schema permissiveness and validator strictness differ, validator strictness controls trusted protocol state.
