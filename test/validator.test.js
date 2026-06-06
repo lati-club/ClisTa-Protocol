@@ -140,11 +140,57 @@ test("rejects decisions merged without review", () => {
   assertInvalid(events, /decision merged without review/);
 });
 
+test("rejects decisions merged with unresolved request changes", () => {
+  const events = cloneCanonicalEvents();
+  insertEventBefore(events, makeReviewEvent({
+    id: "rev_protocol_changes_requested",
+    reviewerParticipantId: "par_chatgpt",
+    status: "request_changes",
+    reviewedAt: "2026-06-05T23:52:16.370Z"
+  }), "DecisionMerged");
+
+  assertInvalid(events, /review rev_protocol_changes_requested has unresolved request_changes/);
+});
+
+test("allows request changes resolved by a later approving review from the same reviewer", () => {
+  const events = cloneCanonicalEvents();
+  insertEventBefore(events, makeReviewEvent({
+    id: "rev_protocol_changes_requested",
+    reviewerParticipantId: "par_chatgpt",
+    status: "request_changes",
+    reviewedAt: "2026-06-05T23:52:16.370Z"
+  }), "DecisionMerged");
+  insertEventBefore(events, makeReviewEvent({
+    id: "rev_protocol_changes_resolved",
+    reviewerParticipantId: "par_chatgpt",
+    status: "approve",
+    reviewedAt: "2026-06-05T23:52:16.380Z"
+  }), "DecisionMerged");
+
+  assert.deepEqual(validateEvents(events), { valid: true, errors: [] });
+});
+
 test("rejects decisions merged with unresolved blocking objections omitted", () => {
   const events = cloneCanonicalEvents();
   eventOf(events, "DecisionMerged").payload.decisionRecord.preservedObjectionIds = [];
 
   assertInvalid(events, /decision record omits unresolved objection obj_object_model_too_broad/);
+});
+
+test("rejects decisions merged without supporting claims", () => {
+  const events = cloneCanonicalEvents();
+  eventOf(events, "DecisionRequestOpened").payload.decisionRequest.supportingClaimIds = [];
+  eventOf(events, "DecisionMerged").payload.decisionRecord.supportingClaimIds = [];
+
+  assertInvalid(events, /decision merged without supporting claims/);
+});
+
+test("rejects decisions merged without supporting assumptions", () => {
+  const events = cloneCanonicalEvents();
+  eventOf(events, "DecisionRequestOpened").payload.decisionRequest.supportingAssumptionIds = [];
+  eventOf(events, "DecisionMerged").payload.decisionRecord.supportingAssumptionIds = [];
+
+  assertInvalid(events, /decision merged without supporting assumptions/);
 });
 
 test("rejects decisions merged without an authorized decision owner", () => {
@@ -182,6 +228,55 @@ test("rejects preserved objections without minority reports", () => {
   const events = cloneCanonicalEvents().filter((event) => event.event_type !== "MinorityReportFiled");
 
   assertInvalid(events, /decision record preserves obj_object_model_too_broad without minority report/);
+});
+
+test("rejects expected outcomes that reference unknown decisions", () => {
+  const events = cloneCanonicalEvents();
+  events.push(makeExpectedOutcomeEvent({ decisionRecordId: "dcr_missing" }));
+
+  assertInvalid(events, /expected outcome references unknown decision dcr_missing/);
+});
+
+test("rejects expected outcomes with invalid review dates", () => {
+  for (const reviewDate of ["eventually", "2027-02-31"]) {
+    const events = cloneCanonicalEvents();
+    events.push(makeExpectedOutcomeEvent({ reviewDate }));
+
+    assertInvalid(events, new RegExp(`expected outcome reviewDate is not a valid date: ${reviewDate}`));
+  }
+});
+
+test("rejects outcome audits that reference unknown expected outcomes", () => {
+  const events = cloneCanonicalEvents();
+  events.push(makeOutcomeAuditEvent({ expectedOutcomeId: "exo_missing" }));
+
+  assertInvalid(events, /outcome audit references unknown expected outcome exo_missing/);
+});
+
+test("rejects outcome audits with unknown failed assumptions and evidence", () => {
+  const events = cloneCanonicalEvents();
+  events.push(makeExpectedOutcomeEvent({}));
+  events.push(makeOutcomeAuditEvent({
+    failedAssumptionIds: ["asm_missing"],
+    failedEvidenceIds: ["evd_missing"]
+  }));
+
+  assertInvalid(events, /assumption reference does not exist: asm_missing/);
+  assertInvalid(events, /evidence reference does not exist: evd_missing/);
+});
+
+test("rejects decision scores before outcome audits exist", () => {
+  const events = cloneCanonicalEvents();
+  events.push(makeDecisionScoreEvent({ basedOnOutcomeAuditIds: [] }));
+
+  assertInvalid(events, /decision score cannot exist before outcome audits/);
+});
+
+test("rejects decision scores that reference unknown outcome audits", () => {
+  const events = cloneCanonicalEvents();
+  events.push(makeDecisionScoreEvent({ basedOnOutcomeAuditIds: ["out_missing"] }));
+
+  assertInvalid(events, /outcome audit reference does not exist: out_missing/);
 });
 
 test("rejects duplicate event ids", () => {
@@ -275,6 +370,111 @@ function moveEventBefore(events, movingType, targetType) {
   const targetIndex = events.findIndex((event) => event.event_type === targetType);
   assert.notEqual(targetIndex, -1, `expected ${targetType} event`);
   events.splice(targetIndex, 0, moving);
+}
+
+function insertEventBefore(events, event, targetType) {
+  const targetIndex = events.findIndex((candidate) => candidate.event_type === targetType);
+  assert.notEqual(targetIndex, -1, `expected ${targetType} event`);
+  events.splice(targetIndex, 0, event);
+}
+
+function makeReviewEvent({ id, reviewerParticipantId, status, reviewedAt }) {
+  return makeEvent({
+    event_id: `evt_${id}`,
+    event_type: "ReviewSubmitted",
+    actor_id: reviewerParticipantId,
+    payload: {
+      review: {
+        id,
+        object: "review",
+        threadId: "thd_thread_0001",
+        decisionRequestId: "drq_protocol_first_architecture",
+        reviewerParticipantId,
+        status,
+        reviewedAt
+      }
+    }
+  });
+}
+
+function makeExpectedOutcomeEvent({
+  decisionRecordId = "dcr_protocol_first_architecture",
+  reviewDate = "2027-03-01"
+}) {
+  return makeEvent({
+    event_id: "evt_expected_outcome_declared_test",
+    event_type: "ExpectedOutcomeDeclared",
+    actor_id: "par_troy",
+    payload: {
+      expectedOutcome: {
+        id: "exo_protocol_success",
+        expectedOutcomeId: "exo_protocol_success",
+        object: "expectedOutcome",
+        threadId: "thd_thread_0001",
+        decisionRecordId,
+        metric: "protocol_success",
+        operator: ">",
+        target: 0.8,
+        reviewDate,
+        assumptionIds: ["asm_projected_state_is_minimum_memory"],
+        evidenceIds: ["evd_structured_state_survives"],
+        description: "Protocol success should be empirically visible."
+      }
+    }
+  });
+}
+
+function makeOutcomeAuditEvent({
+  expectedOutcomeId = "exo_protocol_success",
+  failedAssumptionIds = [],
+  failedEvidenceIds = []
+}) {
+  return makeEvent({
+    event_id: "evt_outcome_audited_test",
+    event_type: "OutcomeAudited",
+    actor_id: "par_troy",
+    payload: {
+      outcomeAudit: {
+        id: "out_protocol_success",
+        outcomeAuditId: "out_protocol_success",
+        object: "outcomeAudit",
+        threadId: "thd_thread_0001",
+        decisionRecordId: "dcr_protocol_first_architecture",
+        expectedOutcomeId,
+        actual: 0.6,
+        result: "failed",
+        summary: "Outcome missed target.",
+        failedAssumptionIds,
+        failedEvidenceIds,
+        auditedBy: "par_troy",
+        auditedAt: "2027-03-02T00:00:00.000Z"
+      }
+    }
+  });
+}
+
+function makeDecisionScoreEvent({
+  basedOnOutcomeAuditIds = ["out_protocol_success"]
+}) {
+  return makeEvent({
+    event_id: "evt_decision_scored_test",
+    event_type: "DecisionScored",
+    actor_id: "par_troy",
+    payload: {
+      decisionScore: {
+        id: "dsc_protocol_success",
+        object: "decisionScore",
+        threadId: "thd_thread_0001",
+        decisionRecordId: "dcr_protocol_first_architecture",
+        score: 0.4,
+        status: "failed",
+        rationale: "Outcome audit missed target.",
+        basedOnOutcomeAuditIds,
+        scoredByParticipantId: "par_troy",
+        scoredAt: "2027-03-03T00:00:00.000Z"
+      }
+    }
+  });
 }
 
 function makeEvent({ event_id, event_type, actor_id, payload }) {

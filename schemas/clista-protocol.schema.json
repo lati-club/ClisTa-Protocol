@@ -18,7 +18,9 @@
     "reviews",
     "decisionRecords",
     "minorityReports",
+    "expectedOutcomes",
     "outcomeAudits",
+    "decisionScores",
     "alignmentSnapshots",
     "events"
   ],
@@ -96,10 +98,22 @@
         "$ref": "#/$defs/minorityReport"
       }
     },
+    "expectedOutcomes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/expectedOutcome"
+      }
+    },
     "outcomeAudits": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/outcomeAudit"
+      }
+    },
+    "decisionScores": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/decisionScore"
       }
     },
     "alignmentSnapshots": {
@@ -518,6 +532,9 @@
         "resolution": {
           "type": "string"
         },
+        "blocking": {
+          "type": "boolean"
+        },
         "raisedAt": {
           "type": "string",
           "format": "date-time"
@@ -729,6 +746,43 @@
           },
           "uniqueItems": true
         },
+        "objectionIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "reviewIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "authorityTrail": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "participantId",
+              "source"
+            ],
+            "properties": {
+              "participantId": {
+                "$ref": "#/$defs/id"
+              },
+              "role": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
         "preservedObjectionIds": {
           "type": "array",
           "items": {
@@ -819,6 +873,87 @@
         }
       }
     },
+    "expectedOutcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "object",
+        "threadId",
+        "decisionRecordId",
+        "metric",
+        "operator",
+        "target",
+        "reviewDate"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "expectedOutcomeId": {
+          "$ref": "#/$defs/id"
+        },
+        "object": {
+          "const": "expectedOutcome"
+        },
+        "threadId": {
+          "$ref": "#/$defs/id"
+        },
+        "decisionRecordId": {
+          "$ref": "#/$defs/id"
+        },
+        "metric": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target": {
+          "type": [
+            "number",
+            "string",
+            "boolean"
+          ]
+        },
+        "reviewDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "assumptionIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "evidenceIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "description": {
+          "type": "string"
+        },
+        "declaredByParticipantId": {
+          "$ref": "#/$defs/id"
+        },
+        "declaredAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "contentHash": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "metadata": {
+          "$ref": "#/$defs/metadata"
+        }
+      }
+    },
     "outcomeAudit": {
       "type": "object",
       "additionalProperties": false,
@@ -827,13 +962,18 @@
         "object",
         "threadId",
         "decisionRecordId",
-        "outcomeStatus",
+        "expectedOutcomeId",
+        "actual",
+        "result",
         "summary",
-        "auditedAt",
-        "contentHash"
+        "auditedBy",
+        "auditedAt"
       ],
       "properties": {
         "id": {
+          "$ref": "#/$defs/id"
+        },
+        "outcomeAuditId": {
           "$ref": "#/$defs/id"
         },
         "object": {
@@ -845,29 +985,114 @@
         "decisionRecordId": {
           "$ref": "#/$defs/id"
         },
-        "outcomeStatus": {
+        "expectedOutcomeId": {
+          "$ref": "#/$defs/id"
+        },
+        "actual": {
+          "type": [
+            "number",
+            "string",
+            "boolean"
+          ]
+        },
+        "result": {
           "enum": [
-            "met",
-            "missed",
-            "partial",
-            "unknown"
+            "confirmed",
+            "partially_confirmed",
+            "failed",
+            "inconclusive"
           ]
         },
         "summary": {
           "type": "string",
           "minLength": 1
         },
-        "evidenceIds": {
+        "failedAssumptionIds": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/id"
           },
           "uniqueItems": true
         },
-        "notes": {
-          "type": "string"
+        "failedEvidenceIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "auditedBy": {
+          "$ref": "#/$defs/id"
+        },
+        "auditedByParticipantId": {
+          "$ref": "#/$defs/id"
         },
         "auditedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "contentHash": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "metadata": {
+          "$ref": "#/$defs/metadata"
+        }
+      }
+    },
+    "decisionScore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "object",
+        "threadId",
+        "decisionRecordId",
+        "score",
+        "status",
+        "rationale",
+        "basedOnOutcomeAuditIds",
+        "scoredAt"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "object": {
+          "const": "decisionScore"
+        },
+        "threadId": {
+          "$ref": "#/$defs/id"
+        },
+        "decisionRecordId": {
+          "$ref": "#/$defs/id"
+        },
+        "score": {
+          "type": "number"
+        },
+        "status": {
+          "enum": [
+            "confirmed",
+            "partially_confirmed",
+            "failed",
+            "inconclusive"
+          ]
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        },
+        "basedOnOutcomeAuditIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "scoredByParticipantId": {
+          "$ref": "#/$defs/id"
+        },
+        "scoredAt": {
           "type": "string",
           "format": "date-time"
         },
@@ -962,7 +1187,9 @@
             "ReviewSubmitted",
             "DecisionMerged",
             "MinorityReportFiled",
-            "OutcomeAudited"
+            "ExpectedOutcomeDeclared",
+            "OutcomeAudited",
+            "DecisionScored"
           ]
         },
         "thread_id": {

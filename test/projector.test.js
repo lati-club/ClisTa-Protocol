@@ -136,6 +136,12 @@ test("thread-0001 reasoning state is reconstructed from .clista/events.ndjson on
     "positions",
     "objections",
     "minority_reports",
+    "expected_outcomes",
+    "outcome_audits",
+    "decision_score",
+    "outcome_status",
+    "failed_assumptions",
+    "failed_evidence",
     "next_action",
     "audit_summary"
   ]);
@@ -148,6 +154,12 @@ test("thread-0001 reasoning state is reconstructed from .clista/events.ndjson on
   assert.equal(reasoning.positions.length, 3);
   assert.equal(reasoning.objections.length, 2);
   assert.equal(reasoning.minority_reports.length, 1);
+  assert.equal(reasoning.expected_outcomes.length, 0);
+  assert.equal(reasoning.outcome_audits.length, 0);
+  assert.equal(reasoning.decision_score, null);
+  assert.equal(reasoning.outcome_status, "unknown");
+  assert.equal(reasoning.failed_assumptions.length, 0);
+  assert.equal(reasoning.failed_evidence.length, 0);
   assert.equal(reasoning.next_action, "Implement and prove Milestone 0: Protocol Spine Proven.");
   assert.equal(reasoning.audit_summary.source, "append_only_event_log");
   assert.equal(reasoning.audit_summary.external_state_used, false);

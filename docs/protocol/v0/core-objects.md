@@ -48,6 +48,10 @@ Examples include approval, approval with conditions, request changes, rejection,
 
 The immutable record of an accepted or rejected decision.
 
+## Expected Outcome
+
+A measurable expectation attached to a decision record before reality is known.
+
 ## Minority Report
 
 Preserved dissent attached to a decision record.
@@ -56,3 +60,6 @@ Preserved dissent attached to a decision record.
 
 A later comparison between the decision and reality.
 
+## Decision Score
+
+An empirical quality score derived from outcome audits.

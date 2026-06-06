@@ -1,3 +1,5 @@
+const { evaluateDecisionEligibility, isBlockingObjection, isDecisionOwnerRole } = require("./governance");
+
 class ValidationError extends Error {
   constructor(errors) {
     super(formatValidationErrors(errors));
@@ -14,6 +16,13 @@ const ENVELOPE_FIELDS = [
   "timestamp",
   "payload"
 ];
+
+const OUTCOME_STATUSES = new Set([
+  "confirmed",
+  "partially_confirmed",
+  "failed",
+  "inconclusive"
+]);
 
 function validateEvents(events) {
   const state = emptyValidationState();
@@ -65,8 +74,14 @@ function validateEvents(events) {
       case "MinorityReportFiled":
         validateMinorityReportFiled(event, state);
         break;
+      case "ExpectedOutcomeDeclared":
+        validateExpectedOutcomeDeclared(event, state);
+        break;
       case "OutcomeAudited":
         validateOutcomeAudited(event, state);
+        break;
+      case "DecisionScored":
+        validateDecisionScored(event, state);
         break;
       case "AlignmentCalculated":
         break;
@@ -74,6 +89,8 @@ function validateEvents(events) {
         addError(state, event, `unsupported event_type ${event.event_type}`);
         break;
     }
+
+    state.events.push(event);
   });
 
   validateFinalDecisionIntegrity(state);
@@ -104,13 +121,18 @@ function emptyValidationState() {
     positions: new Map(),
     objections: new Map(),
     decisionRequests: new Map(),
+    reviews: new Map(),
     reviewsByRequest: new Map(),
     decisionsByRequest: new Map(),
     decisionRecords: new Map(),
     decisionEventsByRecord: new Map(),
     minorityReports: [],
+    expectedOutcomes: new Map(),
+    outcomeAudits: new Map(),
+    decisionScores: new Map(),
     lastContentHash: undefined,
-    lastSequence: undefined
+    lastSequence: undefined,
+    events: []
   };
 }
 
@@ -329,6 +351,7 @@ function validateReviewSubmitted(event, state) {
   if (!state.participants.has(review.reviewerParticipantId)) {
     addError(state, event, `review references unknown participant ${review.reviewerParticipantId}`);
   }
+  state.reviews.set(review.id, review);
   addToMapList(state.reviewsByRequest, review.decisionRequestId, review);
 }
 
@@ -359,6 +382,20 @@ function validateDecisionMerged(event, state) {
   validateIdsExist(event, state, decision.supportingClaimIds, state.claims, "claim");
   validateIdsExist(event, state, decision.supportingAssumptionIds, state.assumptions, "assumption");
   validateIdsExist(event, state, decision.preservedObjectionIds, state.objections, "objection");
+  validateIdsExist(event, state, decision.objectionIds, state.objections, "objection");
+  validateIdsExist(event, state, decision.reviewIds, state.reviews, "review");
+
+  const eligibility = evaluateDecisionEligibility(state.events, decision.decisionRequestId, {
+    actorId: event.actor_id,
+    decisionRecord: decision,
+    eventId: event.event_id
+  });
+  for (const reason of eligibility.reasons) {
+    addError(state, {
+      event_id: reason.event_id || event.event_id,
+      event_type: event.event_type
+    }, reason.reason);
+  }
 
   if (!state.reviewsByRequest.has(decision.decisionRequestId)) {
     addError(state, event, "decision merged without review");
@@ -395,6 +432,24 @@ function validateMinorityReportFiled(event, state) {
   state.minorityReports.push(report);
 }
 
+function validateExpectedOutcomeDeclared(event, state) {
+  const expected = event.payload.expectedOutcome;
+  if (!expected?.id) {
+    addError(state, event, "ExpectedOutcomeDeclared payload missing expectedOutcome.id");
+    return;
+  }
+  validateThreadObject(event, expected, state, "expected outcome");
+  if (!state.decisionRecords.has(expected.decisionRecordId)) {
+    addError(state, event, `expected outcome references unknown decision ${expected.decisionRecordId}`);
+  }
+  if (!isValidDateString(expected.reviewDate)) {
+    addError(state, event, `expected outcome reviewDate is not a valid date: ${expected.reviewDate}`);
+  }
+  validateIdsExist(event, state, expected.assumptionIds, state.assumptions, "assumption");
+  validateIdsExist(event, state, expected.evidenceIds, state.evidence, "evidence");
+  state.expectedOutcomes.set(expected.id, expected);
+}
+
 function validateOutcomeAudited(event, state) {
   const audit = event.payload.outcomeAudit;
   if (!audit?.id) {
@@ -405,7 +460,52 @@ function validateOutcomeAudited(event, state) {
   if (!state.decisionRecords.has(audit.decisionRecordId)) {
     addError(state, event, `outcome audit references unknown decision ${audit.decisionRecordId}`);
   }
+  const expected = state.expectedOutcomes.get(audit.expectedOutcomeId);
+  if (!expected) {
+    addError(state, event, `outcome audit references unknown expected outcome ${audit.expectedOutcomeId}`);
+  } else if (expected.decisionRecordId !== audit.decisionRecordId) {
+    addError(state, event, `outcome audit decisionRecordId must match expected outcome ${audit.expectedOutcomeId}`);
+  }
+  if (!OUTCOME_STATUSES.has(String(audit.result || ""))) {
+    addError(state, event, `unsupported outcome result ${audit.result}`);
+  }
+  const auditedBy = audit.auditedBy || audit.auditedByParticipantId;
+  if (!state.participants.has(auditedBy)) {
+    addError(state, event, `outcome audit references unknown auditor ${auditedBy}`);
+  }
+  validateIdsExist(event, state, audit.failedAssumptionIds, state.assumptions, "assumption");
+  validateIdsExist(event, state, audit.failedEvidenceIds, state.evidence, "evidence");
   validateIdsExist(event, state, audit.evidenceIds, state.evidence, "evidence");
+  state.outcomeAudits.set(audit.id, audit);
+}
+
+function validateDecisionScored(event, state) {
+  const score = event.payload.decisionScore;
+  if (!score?.id) {
+    addError(state, event, "DecisionScored payload missing decisionScore.id");
+    return;
+  }
+  validateThreadObject(event, score, state, "decision score");
+  if (!state.decisionRecords.has(score.decisionRecordId)) {
+    addError(state, event, `decision score references unknown decision ${score.decisionRecordId}`);
+  }
+  if (!OUTCOME_STATUSES.has(String(score.status || ""))) {
+    addError(state, event, `unsupported decision score status ${score.status}`);
+  }
+  if (typeof score.score !== "number" || !Number.isFinite(score.score)) {
+    addError(state, event, "decision score must be numeric");
+  }
+  if (!(score.basedOnOutcomeAuditIds || []).length) {
+    addError(state, event, "decision score cannot exist before outcome audits");
+  }
+  validateIdsExist(event, state, score.basedOnOutcomeAuditIds, state.outcomeAudits, "outcome audit");
+  for (const auditId of score.basedOnOutcomeAuditIds || []) {
+    const audit = state.outcomeAudits.get(auditId);
+    if (audit && audit.decisionRecordId !== score.decisionRecordId) {
+      addError(state, event, `decision score audit ${auditId} belongs to a different decision`);
+    }
+  }
+  state.decisionScores.set(score.id, score);
 }
 
 function validateFinalDecisionIntegrity(state) {
@@ -422,6 +522,10 @@ function validateFinalDecisionIntegrity(state) {
       }
     }
     for (const objectionId of decision.preservedObjectionIds || []) {
+      const objection = state.objections.get(objectionId);
+      if (!isBlockingObjection(objection)) {
+        continue;
+      }
       const hasMinorityReport = state.minorityReports.some((report) => {
         return report.decisionRecordId === decision.id && (report.objectionIds || []).includes(objectionId);
       });
@@ -480,6 +584,21 @@ function validateIdsExist(event, state, ids, collection, label) {
   }
 }
 
+function isValidDateString(value) {
+  if (!value || typeof value !== "string") {
+    return false;
+  }
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (dateOnly) {
+    const [, year, month, day] = dateOnly;
+    const date = new Date(`${value}T00:00:00.000Z`);
+    return date.getUTCFullYear() === Number(year)
+      && date.getUTCMonth() + 1 === Number(month)
+      && date.getUTCDate() === Number(day);
+  }
+  return !Number.isNaN(Date.parse(value));
+}
+
 function addError(state, event, reason) {
   state.errors.push({
     event_id: event?.event_id ?? null,
@@ -495,18 +614,13 @@ function addToMapList(map, key, value) {
   map.get(key).push(value);
 }
 
-function isBlockingObjection(objection) {
-  return objection && (objection.status === "open" || objection.status === "preserved");
-}
-
 function isAuthorizedToResolve(actorId, objection, state) {
   return actorId === objection.participantId || isDecisionOwner(actorId, state);
 }
 
 function isDecisionOwner(participantId, state) {
   const participant = state.participants.get(participantId);
-  const role = String(participant?.role || "").toLowerCase().replace(/[_-]+/g, " ");
-  return role.includes("decision") && role.includes("owner");
+  return isDecisionOwnerRole(participant?.role);
 }
 
 function unique(values) {

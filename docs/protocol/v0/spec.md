@@ -46,7 +46,9 @@ Projected state is derived.
 - `ReviewSubmitted`
 - `DecisionMerged`
 - `MinorityReportFiled`
+- `ExpectedOutcomeDeclared`
 - `OutcomeAudited`
+- `DecisionScored`
 
 ## Required Projection
 

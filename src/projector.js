@@ -15,7 +15,9 @@ function emptyProjection() {
     reviews: {},
     decisionRecords: {},
     minorityReports: {},
+    expectedOutcomes: {},
     outcomeAudits: {},
+    decisionScores: {},
     alignmentSnapshots: {},
     events: []
   };
@@ -79,8 +81,17 @@ function projectEvents(events) {
         upsert(projection.minorityReports, payload.minorityReport);
         attachMinorityReport(projection, payload.minorityReport);
         break;
+      case "ExpectedOutcomeDeclared":
+        upsert(projection.expectedOutcomes, payload.expectedOutcome);
+        touchThread(projection, payload.expectedOutcome?.threadId, eventTimestamp(event));
+        break;
       case "OutcomeAudited":
         upsert(projection.outcomeAudits, payload.outcomeAudit);
+        touchThread(projection, payload.outcomeAudit?.threadId, eventTimestamp(event));
+        break;
+      case "DecisionScored":
+        upsert(projection.decisionScores, payload.decisionScore);
+        touchThread(projection, payload.decisionScore?.threadId, eventTimestamp(event));
         break;
       default:
         break;
@@ -110,7 +121,9 @@ function selectThreadState(projection, requestedThreadId) {
   const reviews = valuesForThread(projection.reviews, threadId);
   const decisionRecords = valuesForThread(projection.decisionRecords, threadId);
   const minorityReports = valuesForThread(projection.minorityReports, threadId);
+  const expectedOutcomes = valuesForThread(projection.expectedOutcomes, threadId);
   const outcomeAudits = valuesForThread(projection.outcomeAudits, threadId);
+  const decisionScores = valuesForThread(projection.decisionScores, threadId);
   const currentProposal = latestBy(decisionRequests, "openedAt");
   const decisionRecord = latestBy(decisionRecords, "decidedAt");
   const supportingEvidence = selectSupportingEvidence(evidence, claims, currentProposal, decisionRecord);
@@ -120,6 +133,13 @@ function selectThreadState(projection, requestedThreadId) {
     ...assumption,
     participant: projection.participants[assumption.declaredByParticipantId] || null
   }));
+  const outcomeState = buildOutcomeState({
+    expectedOutcomes,
+    outcomeAudits,
+    decisionScores,
+    assumptions: assumptionsWithParticipants,
+    evidence
+  });
   const positionsWithParticipants = positions.map((position) => ({
     ...position,
     participant: projection.participants[position.participantId] || null
@@ -139,6 +159,7 @@ function selectThreadState(projection, requestedThreadId) {
     objections: objectionsWithParticipants,
     decisionRecord,
     minorityReports,
+    outcomeState,
     events: projection.events
   });
 
@@ -160,8 +181,12 @@ function selectThreadState(projection, requestedThreadId) {
       decisionRecord: decisionRecord || null,
       reviews,
       minorityReports,
-      outcomeAudits
+      expectedOutcomes,
+      outcomeAudits,
+      decisionScores,
+      outcomeState
     },
+    outcomeState,
     auditTrail: auditTrail(projection.events, threadId)
   };
 }
@@ -175,6 +200,7 @@ function buildReasoningState({
   objections,
   decisionRecord,
   minorityReports,
+  outcomeState,
   events
 }) {
   return {
@@ -193,6 +219,12 @@ function buildReasoningState({
     positions,
     objections,
     minority_reports: minorityReports,
+    expected_outcomes: outcomeState.expectedOutcomes,
+    outcome_audits: outcomeState.outcomeAudits,
+    decision_score: outcomeState.latestDecisionScore,
+    outcome_status: outcomeState.status,
+    failed_assumptions: outcomeState.failedAssumptions,
+    failed_evidence: outcomeState.failedEvidence,
     next_action: decisionRecord?.nextAction || null,
     audit_summary: {
       source: "append_only_event_log",
@@ -237,7 +269,9 @@ function exportProtocol(projection) {
     reviews: Object.values(projection.reviews),
     decisionRecords: Object.values(projection.decisionRecords),
     minorityReports: Object.values(projection.minorityReports),
+    expectedOutcomes: Object.values(projection.expectedOutcomes),
     outcomeAudits: Object.values(projection.outcomeAudits),
+    decisionScores: Object.values(projection.decisionScores),
     alignmentSnapshots: Object.values(projection.alignmentSnapshots),
     events: projection.events
   };
@@ -337,6 +371,25 @@ function attachMinorityReport(projection, minorityReport) {
     ids.add(minorityReport.id);
     record.minorityReportIds = Array.from(ids);
   }
+}
+
+function buildOutcomeState({ expectedOutcomes, outcomeAudits, decisionScores, assumptions, evidence }) {
+  const latestDecisionScore = latestBy(decisionScores, "scoredAt") || null;
+  const failedAssumptionIds = unique(outcomeAudits.flatMap((audit) => audit.failedAssumptionIds || []));
+  const failedEvidenceIds = unique(outcomeAudits.flatMap((audit) => audit.failedEvidenceIds || []));
+  const assumptionsById = new Map(assumptions.map((assumption) => [assumption.id, assumption]));
+  const evidenceById = new Map(evidence.map((item) => [item.id, item]));
+
+  return {
+    expectedOutcomes,
+    outcomeAudits,
+    decisionScores,
+    latestDecisionScore,
+    status: latestDecisionScore?.status || latestBy(outcomeAudits, "auditedAt")?.result || "unknown",
+    score: latestDecisionScore?.score ?? null,
+    failedAssumptions: failedAssumptionIds.map((id) => assumptionsById.get(id) || { id }),
+    failedEvidence: failedEvidenceIds.map((id) => evidenceById.get(id) || { id })
+  };
 }
 
 function valuesForThread(collection, threadId) {
@@ -469,7 +522,9 @@ function primaryObject(event) {
     || payload.review
     || payload.decisionRecord
     || payload.minorityReport
+    || payload.expectedOutcome
     || payload.outcomeAudit
+    || payload.decisionScore
     || null;
 }
 
@@ -485,6 +540,10 @@ function summarizeEvent(event) {
     || object.title
     || object.name
     || `${eventType(event)} ${object.id}`;
+}
+
+function unique(values) {
+  return Array.from(new Set(values.filter(Boolean)));
 }
 
 module.exports = {

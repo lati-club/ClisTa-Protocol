@@ -62,7 +62,9 @@ Supported events:
 - `ReviewSubmitted`
 - `DecisionMerged`
 - `MinorityReportFiled`
+- `ExpectedOutcomeDeclared`
 - `OutcomeAudited`
+- `DecisionScored`
 
 The local store lives at:
 
@@ -80,8 +82,12 @@ npm run clista -- claim create --thread thd_example --text "ClisTa should start 
 npm run clista -- position take --thread thd_example --participant "Troy" --stance support
 npm run clista -- objection raise --thread thd_example --participant "Dissent Agent" --target clm_example --text "The schema may be too broad."
 npm run clista -- decision open --thread thd_example --proposal "Build the protocol engine first."
+npm run clista -- decision eligibility --request drq_example
 npm run clista -- review submit --thread thd_example --request drq_example --reviewer "Troy" --status approve_with_conditions
 npm run clista -- decision merge --thread thd_example --request drq_example --decider "Troy"
+npm run clista -- outcome expect --thread thd_example --decision dcr_example --metric revenue_growth --operator ">" --target 0.15 --review-date 2027-03-01
+npm run clista -- outcome audit --thread thd_example --expected exo_example --actual 0.08 --result failed --summary "Revenue growth missed target." --auditor "Troy"
+npm run clista -- decision score --thread thd_example --decision dcr_example --score 0.4 --status failed --rationale "The expected outcome was not met." --audits out_example
 npm run clista -- state show --thread thd_example
 npm run clista -- audit show --thread thd_example
 ```

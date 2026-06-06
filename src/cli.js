@@ -15,6 +15,7 @@ const {
   readEventsAt
 } = require("./events");
 const { exportProtocol, projectEvents, selectAudit, selectThreadState } = require("./projector");
+const { evaluateDecisionEligibility } = require("./governance");
 const { assertValidEvents, validateEvents } = require("./validator");
 
 function main(argv = process.argv.slice(2), cwd = process.cwd()) {
@@ -40,10 +41,18 @@ function main(argv = process.argv.slice(2), cwd = process.cwd()) {
         return objectionRaise(options, cwd);
       case "decision open":
         return decisionOpen(options, cwd);
+      case "decision eligibility":
+        return decisionEligibility(options, cwd);
       case "review submit":
         return reviewSubmit(options, cwd);
       case "decision merge":
         return decisionMerge(options, cwd);
+      case "outcome expect":
+        return outcomeExpect(options, cwd);
+      case "outcome audit":
+        return outcomeAudit(options, cwd);
+      case "decision score":
+        return decisionScore(options, cwd);
       case "validate":
         return validateCommand(options, cwd);
       case "state show":
@@ -246,6 +255,7 @@ function objectionRaise(options, cwd) {
     targetObjectType: options.targetType || inferTargetType(options.target),
     assumption: options.assumption,
     text: options.text,
+    blocking: booleanOption(options.blocking, true),
     status: options.status || "open",
     resolution: options.resolution,
     raisedAt: at
@@ -292,6 +302,12 @@ function decisionOpen(options, cwd) {
   return print({ decisionRequest, event });
 }
 
+function decisionEligibility(options, cwd) {
+  requireOption(options, "request");
+  const events = readValidEventsForOptions(options, cwd);
+  return print(evaluateDecisionEligibility(events, options.request));
+}
+
 function reviewSubmit(options, cwd) {
   requireOption(options, "thread");
   requireOption(options, "request");
@@ -336,6 +352,30 @@ function decisionMerge(options, cwd) {
   appendParticipant(decider, cwd, options.thread);
   const at = nowIso();
   const preservedObjectionIds = parseList(options.preserve || options.preservedObjections);
+  const reviewIds = Object.values(projection.reviews)
+    .filter((review) => review.decisionRequestId === request.id)
+    .map((review) => review.id);
+  const supportingEvidenceIds = unique([
+    ...parseList(options.evidence),
+    ...(request.supportingEvidenceIds || [])
+  ]);
+  const supportingClaimIds = unique([
+    ...parseList(options.claims),
+    ...(request.supportingClaimIds || [])
+  ]);
+  const supportingAssumptionIds = unique([
+    ...parseList(options.assumptions),
+    ...(request.supportingAssumptionIds || [])
+  ]);
+  const objectionIds = unique([
+    ...(request.objectionIds || []),
+    ...preservedObjectionIds
+  ]);
+  const authorityTrail = [{
+    participantId: decider.id,
+    role: decider.role,
+    source: "ParticipantAdded.role"
+  }];
   const decisionRecord = {
     id: options.id || newId("dcr", request.proposal),
     object: "decisionRecord",
@@ -345,18 +385,12 @@ function decisionMerge(options, cwd) {
     summary: options.summary || request.proposal,
     rationale: options.rationale,
     conditions: parseList(options.conditions),
-    supportingEvidenceIds: unique([
-      ...parseList(options.evidence),
-      ...(request.supportingEvidenceIds || [])
-    ]),
-    supportingClaimIds: unique([
-      ...parseList(options.claims),
-      ...(request.supportingClaimIds || [])
-    ]),
-    supportingAssumptionIds: unique([
-      ...parseList(options.assumptions),
-      ...(request.supportingAssumptionIds || [])
-    ]),
+    supportingEvidenceIds,
+    supportingClaimIds,
+    supportingAssumptionIds,
+    objectionIds,
+    reviewIds,
+    authorityTrail,
     preservedObjectionIds,
     minorityReportIds: [],
     nextAction: options.next,
@@ -369,9 +403,12 @@ function decisionMerge(options, cwd) {
       summary: options.summary || request.proposal,
       rationale: options.rationale,
       conditions: parseList(options.conditions),
-      supportingEvidenceIds: request.supportingEvidenceIds || [],
-      supportingClaimIds: request.supportingClaimIds || [],
-      supportingAssumptionIds: request.supportingAssumptionIds || [],
+      supportingEvidenceIds,
+      supportingClaimIds,
+      supportingAssumptionIds,
+      objectionIds,
+      reviewIds,
+      authorityTrail,
       preservedObjectionIds,
       nextAction: options.next,
       nextReviewAt: options.nextReviewAt
@@ -417,6 +454,151 @@ function decisionMerge(options, cwd) {
   }
 
   return print({ decisionRecord, minorityReport, event });
+}
+
+function outcomeExpect(options, cwd) {
+  requireOption(options, "thread");
+  requireOption(options, "decision");
+  requireOption(options, "metric");
+  requireOption(options, "operator");
+  requireOption(options, "target");
+  requireOption(options, "reviewDate");
+  const actor = participantFrom(options.actor || options.participant || "Author", options.role);
+  appendParticipant(actor, cwd, options.thread);
+  const at = nowIso();
+  const id = options.id || options.expectedOutcomeId || newId("exo", options.metric);
+  const expectedOutcome = {
+    id,
+    expectedOutcomeId: id,
+    object: "expectedOutcome",
+    threadId: options.thread,
+    decisionRecordId: options.decision,
+    metric: options.metric,
+    operator: options.operator,
+    target: scalarOption(options.target),
+    reviewDate: options.reviewDate,
+    assumptionIds: parseList(options.assumptions),
+    evidenceIds: parseList(options.evidence),
+    description: options.description,
+    declaredByParticipantId: actor.id,
+    declaredAt: at,
+    contentHash: contentHash({
+      decisionRecordId: options.decision,
+      metric: options.metric,
+      operator: options.operator,
+      target: scalarOption(options.target),
+      reviewDate: options.reviewDate,
+      assumptionIds: parseList(options.assumptions),
+      evidenceIds: parseList(options.evidence),
+      description: options.description
+    })
+  };
+  stripUndefined(expectedOutcome);
+  const event = createEvent({
+    type: "ExpectedOutcomeDeclared",
+    threadId: expectedOutcome.threadId,
+    actorId: actor.id,
+    at,
+    payload: { expectedOutcome }
+  });
+  appendEvent(event, cwd);
+  return print({ expectedOutcome, event });
+}
+
+function outcomeAudit(options, cwd) {
+  requireOption(options, "thread");
+  requireOption(options, "expected");
+  requireOption(options, "actual");
+  requireOption(options, "result");
+  requireOption(options, "summary");
+  requireOption(options, "auditor");
+  const projection = projectEvents(readEvents(cwd));
+  const expectedOutcome = projection.expectedOutcomes[options.expected];
+  const decisionRecordId = options.decision || expectedOutcome?.decisionRecordId;
+  if (!decisionRecordId) {
+    throw new Error(`Decision record not found for expected outcome: ${options.expected}`);
+  }
+  const auditor = participantFrom(options.auditor, options.role || "auditor", options.kind || "human");
+  appendParticipant(auditor, cwd, options.thread);
+  const at = nowIso();
+  const id = options.id || options.outcomeAuditId || newId("out", options.expected);
+  const outcomeAudit = {
+    id,
+    outcomeAuditId: id,
+    object: "outcomeAudit",
+    threadId: options.thread,
+    decisionRecordId,
+    expectedOutcomeId: options.expected,
+    actual: scalarOption(options.actual),
+    result: options.result,
+    summary: options.summary,
+    failedAssumptionIds: parseList(options.failedAssumptions || options.failedAssumptionIds),
+    failedEvidenceIds: parseList(options.failedEvidence || options.failedEvidenceIds),
+    auditedBy: auditor.id,
+    auditedByParticipantId: auditor.id,
+    auditedAt: at,
+    contentHash: contentHash({
+      decisionRecordId,
+      expectedOutcomeId: options.expected,
+      actual: scalarOption(options.actual),
+      result: options.result,
+      summary: options.summary,
+      failedAssumptionIds: parseList(options.failedAssumptions || options.failedAssumptionIds),
+      failedEvidenceIds: parseList(options.failedEvidence || options.failedEvidenceIds),
+      auditedBy: auditor.id
+    })
+  };
+  stripUndefined(outcomeAudit);
+  const event = createEvent({
+    type: "OutcomeAudited",
+    threadId: outcomeAudit.threadId,
+    actorId: auditor.id,
+    at,
+    payload: { outcomeAudit }
+  });
+  appendEvent(event, cwd);
+  return print({ outcomeAudit, event });
+}
+
+function decisionScore(options, cwd) {
+  requireOption(options, "thread");
+  requireOption(options, "decision");
+  requireOption(options, "score");
+  requireOption(options, "status");
+  requireOption(options, "rationale");
+  requireOption(options, "audits");
+  const scorer = participantFrom(options.scorer || options.actor || "Evaluator", options.role || "auditor", options.kind || "human");
+  appendParticipant(scorer, cwd, options.thread);
+  const at = nowIso();
+  const decisionScore = {
+    id: options.id || newId("dsc", options.decision),
+    object: "decisionScore",
+    threadId: options.thread,
+    decisionRecordId: options.decision,
+    score: numberOption(options.score),
+    status: options.status,
+    rationale: options.rationale,
+    basedOnOutcomeAuditIds: parseList(options.audits || options.basedOnOutcomeAuditIds),
+    scoredByParticipantId: scorer.id,
+    scoredAt: at,
+    contentHash: contentHash({
+      decisionRecordId: options.decision,
+      score: numberOption(options.score),
+      status: options.status,
+      rationale: options.rationale,
+      basedOnOutcomeAuditIds: parseList(options.audits || options.basedOnOutcomeAuditIds)
+    })
+  };
+  stripUndefined(decisionScore);
+  const event = createEvent({
+    type: "DecisionScored",
+    threadId: decisionScore.threadId,
+    actorId: scorer.id,
+    at,
+    payload: { decisionScore }
+  });
+  appendEvent(event, cwd);
+  return print({ decisionScore, event });
 }
 
 function stateShow(options, cwd) {
@@ -580,6 +762,34 @@ function numberOption(value) {
   return number;
 }
 
+function scalarOption(value) {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+  const text = String(value).trim();
+  if (/^-?\d+(\.\d+)?$/.test(text)) {
+    return Number(text);
+  }
+  return value;
+}
+
+function booleanOption(value, defaultValue) {
+  if (value === undefined || value === null || value === "") {
+    return defaultValue;
+  }
+  if (value === true || value === false) {
+    return value;
+  }
+  const normalized = String(value).trim().toLowerCase();
+  if (["true", "1", "yes", "y"].includes(normalized)) {
+    return true;
+  }
+  if (["false", "0", "no", "n"].includes(normalized)) {
+    return false;
+  }
+  throw new Error(`Expected boolean, got ${value}`);
+}
+
 function stripUndefined(object) {
   for (const key of Object.keys(object)) {
     if (object[key] === undefined) {
@@ -617,8 +827,12 @@ function usage() {
   clista position take --thread <threadId> --participant <name|id> --stance <support|oppose|conditional|neutral|abstain>
   clista objection raise --thread <threadId> --participant <name|id> --target <objectId> --text <objection>
   clista decision open --thread <threadId> --proposal <proposal>
+  clista decision eligibility --request <decisionRequestId> [--events <path>]
   clista review submit --thread <threadId> --request <requestId> --reviewer <name|id> --status <status>
   clista decision merge --thread <threadId> --request <requestId> --decider <name|id>
+  clista outcome expect --thread <threadId> --decision <decisionRecordId> --metric <metric> --operator <operator> --target <target> --review-date <YYYY-MM-DD>
+  clista outcome audit --thread <threadId> --expected <expectedOutcomeId> --actual <actual> --result <result> --summary <summary> --auditor <name|id>
+  clista decision score --thread <threadId> --decision <decisionRecordId> --score <score> --status <status> --rationale <text> --audits <outcomeAuditIds>
   clista validate [--events <path>]
   clista state show [--thread <threadId>] [--events <path>]
   clista audit show [--thread <threadId>] [--events <path>]
