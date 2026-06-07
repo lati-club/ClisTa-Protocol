@@ -1,6 +1,10 @@
 # ClisTa Quickstart
 
-This guide is for a fresh local checkout. It proves the released artifact is usable without relying on roadmap-thread context.
+Here’s a yes — now trace its shape.
+
+This guide is for a fresh local checkout. It shows how to reproduce the documented workflow and replay the scenario where ClisTa turns a limited beta approval into accountable decision state.
+
+The scenario proof is concrete: the approval carries evidence, assumptions, a preserved privacy objection, a minority report, authority context, provenance, and bounded scope. The quickstart uses existing commands only.
 
 ```text
 release_quickstart = reproduce(first_successful_workflow, from_docs_alone)
@@ -41,13 +45,13 @@ npm run clista -- state show
 npm run clista -- export
 npm run clista -- continuity export --out continuity.json
 npm run clista -- continuity verify --packet continuity.json
-npm run clista -- release verify --tag v0.28.1-replay-hygiene
-npm run clista -- release manifest --out .clista/release-manifest.json --tag v0.28.1-replay-hygiene
+npm run clista -- release verify --tag v0.29.0-product-narrative-pass
+npm run clista -- release manifest --out .clista/release-manifest.json --tag v0.29.0-product-narrative-pass
 npm run clista -- runtime verify --manifest .clista/release-manifest.json
 npm run clista -- runtime audit --manifest .clista/release-manifest.json
 ```
 
-To replay the scenario demo:
+To replay the scenario demo and trace the yes shape:
 
 ```sh
 node src/cli.js validate --events examples/scenario-demo/events.ndjson
@@ -64,12 +68,34 @@ This is the minimum release usage path:
 3. Export portable protocol state.
 4. Produce a continuity packet.
 5. Verify the continuity packet.
-6. Verify the release artifact against the published patch tag.
+6. Verify the release artifact against the published milestone tag.
 7. Write a local release manifest for the same tag.
 8. Verify the runtime against that existing manifest.
 9. Audit that a fresh user can discover and execute runtime verification without insider context.
 
-The scenario demo is a separate M27 replay path. M28 audits that a non-builder can reproduce that scenario from public docs and repo-relative files without hidden builder state.
+The scenario demo is a separate M27 replay path. M28 audits that a non-builder can reproduce that scenario from public docs and repo-relative files without hidden builder state. M29 changes the product narrative around that existing proof; it does not change protocol behavior.
+
+## Reading The Scenario
+
+The limited beta approval is the proof case:
+
+```text
+Run a bounded support assistant beta using redacted sample tickets only.
+```
+
+The approval is not just `approved`. It carries:
+
+- 4 evidence items
+- 2 assumptions
+- 3 claims
+- a privacy objection that survived the yes
+- 2 governance reviews
+- a minority report
+- provenance
+- authority context
+- bounded scope
+
+That is ClisTa's product shape: raw decision becomes accountable state.
 
 ## Reading Success
 
@@ -98,7 +124,7 @@ Generating `.clista/release-manifest.json` is useful for local practice. Indepen
 
 `runtime audit` succeeds when it returns `valid: true` and `runtimeUsable: true`. It checks that README, quickstart, protocol docs, CLI help, missing-manifest behavior, valid-manifest behavior, and runtime verification boundaries are clear enough for a fresh user.
 
-The scenario demo succeeds when `examples/scenario-demo/events.ndjson` validates, `state show` reconstructs thread `thd_scenario_demo`, and `export` serializes the resulting protocol state. External replay succeeds when those commands, plus `attribution list` and `provenance trace dcr_limited_beta`, work from a clean checkout using only repo-relative public files. Inspect `examples/scenario-demo/expected-state.json` manually for the compact expected decision, evidence, assumptions, claims, positions, objection, reviews, and minority report; there is no comparator command in M28.1.
+The scenario demo succeeds when `examples/scenario-demo/events.ndjson` validates, `state show` reconstructs thread `thd_scenario_demo`, and `export` serializes the resulting protocol state. External replay succeeds when those commands, plus `attribution list` and `provenance trace dcr_limited_beta`, work from a clean checkout using only repo-relative public files. Inspect `examples/scenario-demo/expected-state.json` manually for the compact expected decision, evidence, assumptions, claims, positions, objection, reviews, and minority report; there is no comparator command in M29.
 
 ## Reading Failures
 
@@ -110,7 +136,7 @@ The scenario demo succeeds when `examples/scenario-demo/events.ndjson` validates
 | Integrity failure | Event hashes or chain links do not match. | Integrity reasons and head hash. | `npm run clista -- integrity verify --events <path>` |
 | Continuity degraded | The packet is valid only under explicit compatibility mode. | `verificationMode`, `resumeStatus`, and `reasons`. | `npm run clista -- continuity verify --packet continuity.json` |
 | Release manifest missing | The manifest path is absent. | The manifest path or whether a manifest should be generated. | `npm run clista -- release manifest --out .clista/release-manifest.json` |
-| Release verify failed | Manifest, source, tag, package, hash, verifier, or boundary checks failed. | `reasons` and `violations`. | `npm run clista -- release verify --tag v0.28.1-replay-hygiene` |
+| Release verify failed | Manifest, source, tag, package, hash, verifier, or boundary checks failed. | `reasons` and `violations`. | `npm run clista -- release verify --tag v0.29.0-product-narrative-pass` |
 | Package/tag/version mismatch | `package.json` version and release tag version disagree, or the tag points to a different commit. | `package.json`, `git tag`, and `git rev-parse HEAD`. | `npm run clista -- release verify --tag <tag>` |
 | Runtime verify failed | The local runtime does not match the supplied manifest. | `drift`, `warnings`, and `violations`. | `npm run clista -- runtime verify --manifest .clista/release-manifest.json` |
 | Runtime audit failed | The documented runtime verification path is missing, unclear, not executable, or overclaims. | `checks` and `violations`. | `npm run clista -- runtime audit --manifest .clista/release-manifest.json` |
@@ -153,7 +179,7 @@ The M27 scenario demo makes protocol state understandable, but it is not a produ
 
 The M28 external replay audit proves reproducibility of the existing scenario from public docs and files. It does not prove product readiness.
 
-The scenario demo and external replay audit do not implement distribution, artifact installation, network behavior, UI, agents, pitch cleanup, external user testing, M29, product readiness, trust, protocol authority, governance approval, amendment approval, or compatibility proof.
+The M29 product narrative pass proves the public explanation can lead with the verified scenario's affirmative value. It does not change runtime behavior, validation, projection, export, attribution, provenance, trust, protocol authority, governance approval, amendment approval, or compatibility proof.
 
 ## Release Versus Reasoning State
 
@@ -178,9 +204,9 @@ Continuity may report:
 }
 ```
 
-while `package.json` reports `0.25.0` or a later package release such as `0.28.1`.
+while `package.json` reports `0.25.0` or a later package release such as `0.29.0`.
 
-That is expected. Continuity reflects the latest reasoning-state portability boundary. Package and release versions reflect repository artifact releases. M25 verifies the release artifact, M26 verifies the local runtime, M26.1 audits runtime verification usability, M27 adds a documented scenario fixture, and M28 audits external replay of that fixture. They do not add a new continuity state layer.
+That is expected. Continuity reflects the latest reasoning-state portability boundary. Package and release versions reflect repository artifact releases. M25 verifies the release artifact, M26 verifies the local runtime, M26.1 audits runtime verification usability, M27 adds a documented scenario fixture, M28 audits external replay of that fixture, and M29 updates product narrative. They do not add a new continuity state layer.
 
 ## Next Useful Commands
 
