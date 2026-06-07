@@ -41,6 +41,7 @@ Status:
 
 - M28 complete
 - M29 not started
+- Next decision: pause for real external replay before selecting M29
 
 M28 audited the existing M27 scenario. It did not expand the product surface.
 
@@ -77,9 +78,19 @@ Explicitly out of scope:
 - external testing program
 - M29
 
-M27 proved that a realistic demo workflow exists. M28 proved that a non-builder can reproduce that workflow from the public artifact and understand the state it produces.
+M27 proved that a realistic demo workflow exists. M28 proved, by repository tests, that a non-builder can reproduce that workflow from the public artifact and understand the state it produces.
 
-The next milestone should remain narrow and should not begin product-surface work before the protocol spine requires it.
+Before M29, the next useful step is a real external replay observation: one actual non-builder should run the M28 path from the GitHub-visible artifact and report the friction. This is a decision pause, not a new protocol milestone and not an external testing program.
+
+Candidate next milestones remain unselected:
+
+| Candidate | What it would prove |
+| --- | --- |
+| M29 Artifact Installation | A fresh user can install and use the artifact path. |
+| M29 Protocol Distribution | Verified state can move across environments. |
+| M29 Product Narrative Pass | The public explanation matches the verified artifact. |
+
+If real replay exposes installation friction, M29 should be a very narrow Artifact Installation milestone. If replay succeeds cleanly, the protocol should choose the next milestone from observed friction rather than starting distribution, narrative, UI, agents, or platform work.
 
 ## Phase 0: Protocol Spike
 
