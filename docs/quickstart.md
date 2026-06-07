@@ -22,7 +22,7 @@ node --version
 ## Setup
 
 ```sh
-git clone https://github.com/lati-cooki/clista-protocol.git
+git clone https://github.com/lati-club/clista-protocol.git
 cd clista-protocol
 npm install
 ```
