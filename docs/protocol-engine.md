@@ -37,6 +37,7 @@ that another human or agent can reload later.
 23. Protocol review
 24. Protocol recovery
 25. Protocol release
+26. Protocol runtime verification
 
 The compressed primitive map for M0-M25 is:
 
@@ -206,6 +207,8 @@ Supported events:
 
 M25 release manifests are repository artifacts, not event-log records. They do not add release approval events.
 
+M26 runtime verification is a local artifact/runtime check. It does not add event-log records.
+
 The local store lives at:
 
 ```text
@@ -252,9 +255,10 @@ npm run clista -- recovery plan --recovery rcv_example --plan "Quarantine invali
 npm run clista -- recovery quarantine --recovery rcv_example --reason "Invalid event remains visible but not trusted."
 npm run clista -- recovery apply --recovery rcv_example --summary "Applied reviewed repair marker without rewriting history."
 npm run clista -- recovery verify --recovery rcv_example
-npm run clista -- release manifest --tag v0.25.0-protocol-release --out .clista/release-manifest.json
+npm run clista -- release manifest --tag v0.26.0-protocol-runtime-verification --out .clista/release-manifest.json
 npm run clista -- release verify --manifest .clista/release-manifest.json
 npm run clista -- release show --manifest .clista/release-manifest.json
+npm run clista -- runtime verify --manifest .clista/release-manifest.json
 npm run clista -- merge open --source thd_example_alt --target thd_example --summary "Integrate useful fork reasoning."
 npm run clista -- merge eligibility --request mrg_example
 npm run clista -- merge complete --request mrg_example --merged-by "Troy"
@@ -277,6 +281,7 @@ npm run clista -- execution verify
 npm run clista -- review verify
 npm run clista -- recovery verify
 npm run clista -- release verify
+npm run clista -- runtime verify --manifest .clista/release-manifest.json
 npm run clista -- outcome verify
 npm run clista -- outcome-learning verify
 npm run clista -- identity show --participant par_troy

@@ -286,7 +286,7 @@ The names overlap because M21 reuses the CLI namespace for a narrower execution-
 
 Layer protocol versions mark capability boundaries. For example, delegation remains `0.19.0`, execution remains `0.20.0`, outcome remains `0.21.0`, outcome learning remains `0.22.0`, review remains `0.23.0`, and recovery is `0.24.0` until those layer behaviors change.
 
-Package and release versions mark repository releases. A feature release can advance to `v0.25.0` while unchanged M19-M24 layer versions stay at their original capability boundaries.
+Package and release versions mark repository releases. A feature release can advance to `v0.26.0` while unchanged M19-M24 layer versions stay at their original capability boundaries.
 
 M25 Protocol Release has its own `release_protocol_version: "0.25.0"` because release manifests are repository artifacts, not projected reasoning-state layers.
 

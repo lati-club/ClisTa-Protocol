@@ -82,6 +82,7 @@ const {
   verifyReleaseManifest,
   writeReleaseManifest
 } = require("./release");
+const { verifyRuntime } = require("./runtime");
 const {
   summarizeProtocolCompatibility,
   verifyProtocolCompatibility
@@ -257,6 +258,8 @@ function main(argv = process.argv.slice(2), cwd = process.cwd()) {
         return releaseVerify(options, cwd);
       case "release show":
         return releaseShow(options, cwd);
+      case "runtime verify":
+        return runtimeVerify(options, cwd);
       case "decision merge":
         return decisionMerge(options, cwd);
       case "outcome expect":
@@ -1777,6 +1780,18 @@ function releaseShow(options, cwd) {
     trusted: false,
     manifest
   });
+}
+
+function runtimeVerify(options, cwd) {
+  const result = verifyRuntime({
+    cwd,
+    manifestPath: options.manifest || options.file,
+    cliPath: __filename
+  });
+  print(result);
+  if (!result.valid) {
+    process.exitCode = 1;
+  }
 }
 
 function decisionMerge(options, cwd) {
@@ -4205,6 +4220,15 @@ function normalizeCommand(command, options) {
       };
     }
   }
+  if (command.startsWith("runtime verify ")) {
+    return {
+      command: "runtime verify",
+      options: {
+        ...options,
+        manifest: options.manifest || command.slice("runtime verify ".length).trim()
+      }
+    };
+  }
   return { command, options };
 }
 
@@ -4489,6 +4513,7 @@ function usage() {
   npm run clista -- export
   npm run clista -- continuity verify --packet continuity.json
   npm run clista -- release verify
+  npm run clista -- runtime verify --manifest .clista/release-manifest.json
 
   # Installed binary command list
   clista init
@@ -4550,6 +4575,8 @@ function usage() {
   clista release manifest [--tag <tag>] [--out <path>]
   clista release verify [--manifest <path>] [--tag <tag>]
   clista release show [--manifest <path>]
+  # M26 protocol runtime commands (runtime verifies local execution; running is not verified)
+  clista runtime verify [--manifest <path>]
   clista decision merge --thread <threadId> --request <requestId> --decider <name|id>
   # M3 decision outcome commands
   clista outcome expect --thread <threadId> --decision <decisionRecordId> --metric <metric> --operator <operator> --target <target> --review-date <YYYY-MM-DD>

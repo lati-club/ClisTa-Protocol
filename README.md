@@ -46,6 +46,8 @@ npm run clista -- export
 npm run clista -- continuity export --out continuity.json
 npm run clista -- continuity verify --packet continuity.json
 npm run clista -- release verify
+npm run clista -- release manifest --out .clista/release-manifest.json
+npm run clista -- runtime verify --manifest .clista/release-manifest.json
 ```
 
 Success means:
@@ -57,6 +59,7 @@ Success means:
 | `export` | Projected protocol state can be serialized for portability. | The export grants trust, governance, or approval. |
 | `continuity verify` | A continuity packet matches its event log, projection, state hash, and required verification layers. | Context transfer is trusted memory or central authority. |
 | `release verify` | The release artifact binds source, tag, package version, CLI, schema, hashes, and verifier results. | The release is trusted, approved, compatible by itself, or authorized as governance. |
+| `runtime verify` | The local runtime matches an existing release manifest. | Running ClisTa is trust, OS attestation, CI trust, or remote runtime trust. |
 
 Failure triage:
 
@@ -70,12 +73,15 @@ Failure triage:
 | Release manifest missing | A supplied manifest path is absent. | The manifest path or whether one should be generated. | `npm run clista -- release manifest --out .clista/release-manifest.json` |
 | Release verify failed | The release artifact does not match its manifest or boundary rules. | `reasons` and `violations`. | `npm run clista -- release verify` |
 | Package/tag/version mismatch | `package.json` version and the release tag disagree, or the tag points elsewhere. | `package.json`, `git tag`, and `git rev-parse HEAD`. | `npm run clista -- release verify --tag <tag>` |
+| Runtime verify failed | The current runtime drifted from the supplied manifest. | `drift`, `warnings`, and `violations`. | `npm run clista -- runtime verify --manifest .clista/release-manifest.json` |
 
 Release exists does not mean release is trusted. `clista release verify` keeps `trusted: false` by design and does not create protocol authority, governance approval, amendment approval, publishing verification, or compatibility proof.
 
+Runtime verification requires an existing release manifest. It does not silently generate a fresh manifest, because generated proof can describe the current drifted runtime. `clista runtime verify` keeps `trusted: false` by design and does not create protocol authority, governance approval, amendment approval, compatibility proof, package publishing trust, OS attestation, CI trust, or remote runtime trust.
+
 M25 release manifests are repository artifacts, not reasoning-state events. `state show` and `export` may omit release state by design: conversation is input, reasoning state is output, and release verification proves the artifact boundary rather than the conversation state.
 
-Continuity may report `protocolVersion: "0.24.0"` while the package release is `0.25.0` or a later `0.25.x` cleanup release. Continuity reflects the latest reasoning-state portability boundary; the package version reflects the current released artifact. M25 binds the package artifact without adding a new continuity state layer.
+Continuity may report `protocolVersion: "0.24.0"` while the package release is `0.25.0` or a later artifact release such as `0.26.0`. Continuity reflects the latest reasoning-state portability boundary; the package version reflects the current released artifact. M25 binds the package artifact and M26 verifies the local runtime without adding a new continuity state layer.
 
 For the expanded first-run guide, see:
 
@@ -220,6 +226,16 @@ clista release verify
 If it verifies a release manifest, ClisTa can bind package version, Git commit, Git tag, CLI entrypoint, schema hashes, source hashes, capability declarations, verifier results, and export shape without treating the release itself as trust.
 
 M25 release manifests are repository artifacts, not reasoning-state events. Release is not trust, protocol authority, governance approval, amendment approval, publishing verification, or compatibility proof by itself.
+
+The protocol runtime command is:
+
+```text
+clista runtime verify --manifest .clista/release-manifest.json
+```
+
+If it verifies the local execution environment against an existing release manifest, ClisTa can detect runtime drift without treating running code as verified by default.
+
+M26 runtime verification is not trust, protocol authority, governance approval, amendment approval, compatibility proof, package publishing trust, OS security attestation, CI trust, or remote runtime trust. It does not mutate the event log or projected reasoning state.
 
 The identity command is:
 

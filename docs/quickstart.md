@@ -42,6 +42,8 @@ npm run clista -- export
 npm run clista -- continuity export --out continuity.json
 npm run clista -- continuity verify --packet continuity.json
 npm run clista -- release verify
+npm run clista -- release manifest --out .clista/release-manifest.json
+npm run clista -- runtime verify --manifest .clista/release-manifest.json
 ```
 
 This is the minimum release usage path:
@@ -52,6 +54,8 @@ This is the minimum release usage path:
 4. Produce a continuity packet.
 5. Verify the continuity packet.
 6. Verify the release artifact.
+7. Write a local release manifest.
+8. Verify the runtime against that existing manifest.
 
 ## Reading Success
 
@@ -74,6 +78,10 @@ This means the event log passed protocol validation. It does not mean every clai
 
 `release verify` succeeds when it returns `valid: true` and `releaseVerified: true`. It binds source, Git tag, package version, CLI entrypoint, schema hashes, source hashes, verifier results, and export expectations.
 
+`runtime verify` succeeds when it returns `valid: true` and `runtimeVerified: true`. It compares the current Node version, package metadata, CLI entrypoint, source hashes, schema hashes, Git binding, worktree status, and verifier reproduction against an existing release manifest.
+
+Generating `.clista/release-manifest.json` is useful for local practice. Independent runtime proof depends on comparing against a manifest produced at the release boundary, not silently generating one inside runtime verification.
+
 ## Reading Failures
 
 | Failure | Meaning | Inspect next | Likely next command |
@@ -86,6 +94,7 @@ This means the event log passed protocol validation. It does not mean every clai
 | Release manifest missing | The manifest path is absent. | The manifest path or whether a manifest should be generated. | `npm run clista -- release manifest --out .clista/release-manifest.json` |
 | Release verify failed | Manifest, source, tag, package, hash, verifier, or boundary checks failed. | `reasons` and `violations`. | `npm run clista -- release verify` |
 | Package/tag/version mismatch | `package.json` version and release tag version disagree, or the tag points to a different commit. | `package.json`, `git tag`, and `git rev-parse HEAD`. | `npm run clista -- release verify --tag <tag>` |
+| Runtime verify failed | The local runtime does not match the supplied manifest. | `drift`, `warnings`, and `violations`. | `npm run clista -- runtime verify --manifest .clista/release-manifest.json` |
 
 ## Release Verification Boundary
 
@@ -102,6 +111,16 @@ compatibilityProof
 ```
 
 Release verification does not create protocol authority, approve governance, approve amendments, publish trust, or prove compatibility by itself.
+
+## Runtime Verification Boundary
+
+Running ClisTa does not mean the runtime is verified.
+
+`clista runtime verify` requires an existing release manifest and compares the current local runtime against it. It does not silently generate a manifest, because that would turn the current runtime into circular proof.
+
+Runtime verification does not create runtime trust, protocol authority, governance approval, amendment approval, compatibility proof, package publishing trust, OS security attestation, CI trust, or remote runtime trust.
+
+Runtime verification does not touch reasoning state, append events, or change projected state.
 
 ## Release Versus Reasoning State
 
@@ -126,7 +145,7 @@ Continuity may report:
 }
 ```
 
-while `package.json` reports `0.25.0` or a later `0.25.x` cleanup release.
+while `package.json` reports `0.25.0` or a later package release such as `0.26.0`.
 
 That is expected. Continuity reflects the latest reasoning-state portability boundary. Package and release versions reflect repository artifact releases. M25 verifies the release artifact; it does not add a new continuity state layer.
 
