@@ -31,24 +31,55 @@ None of those systems should define the protocol.
 
 Verified baseline:
 
-- M22: Protocol Outcome Learning
-- M22.1: Roadmap Compression Cleanup
-- M23: Protocol Review
-- M24: Protocol Recovery
+- Completed through M27: Protocol Scenario / Demo Workflow
+- M27 documentation cleanup complete
 
-Current milestone:
+Next selected milestone:
 
-- M25: Protocol Release
+- M28: External Replay Audit
 
-M25 adds release manifest generation and verification for the repository artifact.
+Status:
+
+- Selected, not started
+
+M28 should audit the existing M27 scenario. It should not expand the product surface.
+
+The theorem is:
+
+```text
+external_replay = verify(non_builder_can_reproduce_scenario, from_public_artifact_and_docs)
+```
 
 Hard law:
 
 ```text
-release != trust
+scenario_exists != externally_reproducible_scenario
 ```
 
-Next candidates remain separate and must be selected by inspection.
+Allowed scope:
+
+- `examples/scenario-demo/`
+- README scenario instructions
+- documented commands
+- expected state/export
+- attribution/provenance traceability
+- GitHub-visible artifact path
+- fresh non-builder assumptions
+
+Explicitly out of scope:
+
+- installer
+- distribution layer
+- network behavior
+- UI
+- agents
+- product pitch cleanup
+- external testing program
+- M29
+
+M27 proved that a realistic demo workflow exists. M28 should prove that a non-builder can reproduce that workflow from the public artifact and understand the state it produces.
+
+The next Codex thread should begin M28 only when ready to test public reproducibility, not when ready to add features.
 
 ## Phase 0: Protocol Spike
 
