@@ -44,6 +44,7 @@ npm run clista -- continuity verify --packet continuity.json
 npm run clista -- release verify
 npm run clista -- release manifest --out .clista/release-manifest.json
 npm run clista -- runtime verify --manifest .clista/release-manifest.json
+npm run clista -- runtime audit --manifest .clista/release-manifest.json
 ```
 
 This is the minimum release usage path:
@@ -56,6 +57,7 @@ This is the minimum release usage path:
 6. Verify the release artifact.
 7. Write a local release manifest.
 8. Verify the runtime against that existing manifest.
+9. Audit that a fresh user can discover and execute runtime verification without insider context.
 
 ## Reading Success
 
@@ -82,6 +84,8 @@ This means the event log passed protocol validation. It does not mean every clai
 
 Generating `.clista/release-manifest.json` is useful for local practice. Independent runtime proof depends on comparing against a manifest produced at the release boundary, not silently generating one inside runtime verification.
 
+`runtime audit` succeeds when it returns `valid: true` and `runtimeUsable: true`. It checks that README, quickstart, protocol docs, CLI help, missing-manifest behavior, valid-manifest behavior, and runtime verification boundaries are clear enough for a fresh user.
+
 ## Reading Failures
 
 | Failure | Meaning | Inspect next | Likely next command |
@@ -95,6 +99,7 @@ Generating `.clista/release-manifest.json` is useful for local practice. Indepen
 | Release verify failed | Manifest, source, tag, package, hash, verifier, or boundary checks failed. | `reasons` and `violations`. | `npm run clista -- release verify` |
 | Package/tag/version mismatch | `package.json` version and release tag version disagree, or the tag points to a different commit. | `package.json`, `git tag`, and `git rev-parse HEAD`. | `npm run clista -- release verify --tag <tag>` |
 | Runtime verify failed | The local runtime does not match the supplied manifest. | `drift`, `warnings`, and `violations`. | `npm run clista -- runtime verify --manifest .clista/release-manifest.json` |
+| Runtime audit failed | The documented runtime verification path is missing, unclear, not executable, or overclaims. | `checks` and `violations`. | `npm run clista -- runtime audit --manifest .clista/release-manifest.json` |
 
 ## Release Verification Boundary
 
@@ -122,6 +127,10 @@ Runtime verification does not create runtime trust, protocol authority, governan
 
 Runtime verification does not touch reasoning state, append events, or change projected state.
 
+`clista runtime audit` verifies the usability of that path. It confirms runtime verification is discoverable and bounded, missing manifest failure is clear and actionable, valid manifest success is clear but does not overclaim, and docs explain what runtime verification does and does not prove.
+
+Runtime usage audit does not create trusted release status, runtime trust, protocol authority, governance approval, amendment approval, compatibility proof, or any new reasoning-state record.
+
 ## Release Versus Reasoning State
 
 M25 release manifests are repository artifacts, not append-only reasoning events.
@@ -145,9 +154,9 @@ Continuity may report:
 }
 ```
 
-while `package.json` reports `0.25.0` or a later package release such as `0.26.0`.
+while `package.json` reports `0.25.0` or a later package release such as `0.26.1`.
 
-That is expected. Continuity reflects the latest reasoning-state portability boundary. Package and release versions reflect repository artifact releases. M25 verifies the release artifact; it does not add a new continuity state layer.
+That is expected. Continuity reflects the latest reasoning-state portability boundary. Package and release versions reflect repository artifact releases. M25 verifies the release artifact, M26 verifies the local runtime, and M26.1 audits runtime verification usability. They do not add a new continuity state layer.
 
 ## Next Useful Commands
 

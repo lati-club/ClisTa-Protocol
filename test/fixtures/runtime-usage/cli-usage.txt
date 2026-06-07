@@ -1,0 +1,5 @@
+Usage:
+  # M26 protocol runtime commands (runtime verifies local execution; running is not verified)
+  clista runtime verify [--manifest <path>]
+  # M26.1 runtime usage command (runtime audit verifies usability; verified runtime is not usable runtime)
+  clista runtime audit [--manifest <path>]

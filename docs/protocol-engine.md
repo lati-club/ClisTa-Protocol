@@ -38,6 +38,7 @@ that another human or agent can reload later.
 24. Protocol recovery
 25. Protocol release
 26. Protocol runtime verification
+26.1. Runtime usage audit
 
 The compressed primitive map for M0-M25 is:
 

@@ -82,7 +82,7 @@ const {
   verifyReleaseManifest,
   writeReleaseManifest
 } = require("./release");
-const { verifyRuntime } = require("./runtime");
+const { auditRuntimeUsage, verifyRuntime } = require("./runtime");
 const {
   summarizeProtocolCompatibility,
   verifyProtocolCompatibility
@@ -260,6 +260,8 @@ function main(argv = process.argv.slice(2), cwd = process.cwd()) {
         return releaseShow(options, cwd);
       case "runtime verify":
         return runtimeVerify(options, cwd);
+      case "runtime audit":
+        return runtimeAudit(options, cwd);
       case "decision merge":
         return decisionMerge(options, cwd);
       case "outcome expect":
@@ -1787,6 +1789,19 @@ function runtimeVerify(options, cwd) {
     cwd,
     manifestPath: options.manifest || options.file,
     cliPath: __filename
+  });
+  print(result);
+  if (!result.valid) {
+    process.exitCode = 1;
+  }
+}
+
+function runtimeAudit(options, cwd) {
+  const result = auditRuntimeUsage({
+    cwd,
+    manifestPath: options.manifest || options.file,
+    cliPath: __filename,
+    usageText: usage()
   });
   print(result);
   if (!result.valid) {
@@ -4229,6 +4244,15 @@ function normalizeCommand(command, options) {
       }
     };
   }
+  if (command.startsWith("runtime audit ")) {
+    return {
+      command: "runtime audit",
+      options: {
+        ...options,
+        manifest: options.manifest || command.slice("runtime audit ".length).trim()
+      }
+    };
+  }
   return { command, options };
 }
 
@@ -4514,6 +4538,7 @@ function usage() {
   npm run clista -- continuity verify --packet continuity.json
   npm run clista -- release verify
   npm run clista -- runtime verify --manifest .clista/release-manifest.json
+  npm run clista -- runtime audit --manifest .clista/release-manifest.json
 
   # Installed binary command list
   clista init
@@ -4577,6 +4602,8 @@ function usage() {
   clista release show [--manifest <path>]
   # M26 protocol runtime commands (runtime verifies local execution; running is not verified)
   clista runtime verify [--manifest <path>]
+  # M26.1 runtime usage command (runtime audit verifies usability; verified runtime is not usable runtime)
+  clista runtime audit [--manifest <path>]
   clista decision merge --thread <threadId> --request <requestId> --decider <name|id>
   # M3 decision outcome commands
   clista outcome expect --thread <threadId> --decision <decisionRecordId> --metric <metric> --operator <operator> --target <target> --review-date <YYYY-MM-DD>

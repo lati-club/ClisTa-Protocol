@@ -9,8 +9,13 @@ const {
 } = require("./release");
 
 const RUNTIME_VERIFY_SCHEMA = "clista.runtime.verify.v0";
+const RUNTIME_AUDIT_SCHEMA = "clista.runtime.audit.v0";
 const RUNTIME_THEOREM = "protocol_runtime = verify(execution_environment, against_release_manifest)";
 const RUNTIME_HARD_LAW = "running != verified";
+const RUNTIME_USAGE_THEOREM = "runtime_usability = verify(user_can_execute_runtime_verification, without_protocol_insider_context)";
+const RUNTIME_USAGE_HARD_LAW = "verified_runtime != usable_runtime";
+const RUNTIME_AUDIT_COMMAND = "clista runtime audit";
+const RUNTIME_VERIFY_COMMAND = "clista runtime verify --manifest .clista/release-manifest.json";
 
 const DOES_NOT_PROVE = [
   "runtime trust",
@@ -40,6 +45,32 @@ const RUNTIME_GUARD_FIELDS = new Set([
   "amendmentApproval",
   "compatibilityProof"
 ]);
+
+const USAGE_DOC_PATHS = [
+  "README.md",
+  "docs/quickstart.md",
+  "docs/protocol/v0/milestone-26.md",
+  "docs/protocol/v0/milestone-26.1.md"
+];
+
+const STATE_SNAPSHOT_PATHS = [
+  ".clista/events.ndjson",
+  ".clista/projected-state.json",
+  "projected-state.json",
+  ".clista/protocol-export.json",
+  "protocol-export.json",
+  "clista-export.json",
+  "continuity.json",
+  ".clista/continuity.json"
+];
+
+const REQUIRED_BOUNDARY_TERMS = [
+  "runtime trust",
+  "protocol authority",
+  "governance approval",
+  "amendment approval",
+  "compatibility proof"
+];
 
 function verifyRuntime(options = {}) {
   const cwd = options.cwd || process.cwd();
@@ -92,6 +123,293 @@ function verifyRuntime(options = {}) {
   verifyRuntimeBoundary(result);
 
   return finalize(result);
+}
+
+function auditRuntimeUsage(options = {}) {
+  const cwd = options.cwd || process.cwd();
+  const manifestPath = options.manifestPath || options.manifest || DEFAULT_MANIFEST_PATH;
+  const cliPath = options.cliPath || path.join(cwd, "src", "cli.js");
+  const result = baseAuditResult(manifestPath, options);
+  const snapshots = captureSnapshots(cwd, options.snapshotPaths || STATE_SNAPSHOT_PATHS);
+
+  verifyUsageDocumentation(cwd, options, result);
+  verifyRuntimeDiscoverability(cwd, options, result);
+  verifyMissingManifestPath(cwd, cliPath, options, result);
+  verifyDocumentedRuntimePath(cwd, manifestPath, cliPath, result);
+  verifyStateSnapshots(cwd, snapshots, result);
+  verifyAuditBoundary(result);
+
+  return finalizeAudit(result);
+}
+
+function baseAuditResult(manifestPath, options) {
+  return {
+    schema: RUNTIME_AUDIT_SCHEMA,
+    valid: false,
+    runtimeUsable: false,
+    theorem: RUNTIME_USAGE_THEOREM,
+    hardLaw: RUNTIME_USAGE_HARD_LAW,
+    command: RUNTIME_AUDIT_COMMAND,
+    runtimeVerifyCommand: RUNTIME_VERIFY_COMMAND,
+    manifestPath,
+    docsPath: options.docPaths || USAGE_DOC_PATHS,
+    runtimeVerifyDiscoverable: false,
+    runtimeAuditDiscoverable: false,
+    runtimeVerificationBounded: false,
+    missingManifestFailureClear: false,
+    missingManifestFailureActionable: false,
+    validManifestSuccessClear: false,
+    validManifestSuccessBounded: false,
+    docsExplainRuntimeVerification: false,
+    docsExplainRuntimeBoundary: false,
+    mutation: {
+      eventLogUnchanged: true,
+      projectedStateUnchanged: true,
+      exportStateUnchanged: true,
+      snapshotPaths: []
+    },
+    trusted: false,
+    protocolAuthority: false,
+    governanceApproval: false,
+    amendmentApproval: false,
+    compatibilityProof: false,
+    proves: [
+      "runtime verification has a documented, discoverable, executable path for a fresh user"
+    ],
+    doesNotProve: [
+      ...DOES_NOT_PROVE,
+      "release trust",
+      "fresh-user expertise",
+      "general product usability"
+    ],
+    documents: [],
+    checks: [],
+    warnings: [],
+    violations: []
+  };
+}
+
+function verifyUsageDocumentation(cwd, options, result) {
+  const docPaths = options.docPaths || USAGE_DOC_PATHS;
+  const documents = docPaths.map((docPath) => {
+    const text = safeReadText(path.join(cwd, docPath));
+    return {
+      path: docPath,
+      present: text !== null,
+      text: text || ""
+    };
+  });
+  result.documents = documents.map((document) => ({
+    path: document.path,
+    present: document.present,
+    mentionsRuntimeVerify: contains(document.text, "runtime verify"),
+    mentionsRuntimeAudit: contains(document.text, "runtime audit"),
+    mentionsRuntimeBoundary: REQUIRED_BOUNDARY_TERMS.every((term) => contains(document.text, term))
+  }));
+
+  for (const document of documents) {
+    addAuditCheck(result, `doc_present_${checkId(document.path)}`, document.present, `${document.path} exists`);
+  }
+
+  const readme = documentText(documents, "README.md");
+  const quickstart = documentText(documents, "docs/quickstart.md");
+  const protocolDocs = [
+    documentText(documents, "docs/protocol/v0/milestone-26.md"),
+    documentText(documents, "docs/protocol/v0/milestone-26.1.md")
+  ].join("\n");
+  const aggregate = documents.map((document) => document.text).join("\n");
+
+  addAuditCheck(
+    result,
+    "readme_documents_runtime_path",
+    contains(readme, "release manifest --out .clista/release-manifest.json")
+      && contains(readme, "runtime verify --manifest .clista/release-manifest.json"),
+    "README documents the release-manifest-to-runtime-verify path"
+  );
+  addAuditCheck(
+    result,
+    "quickstart_documents_runtime_path",
+    orderedTerms(quickstart, [
+      "release verify",
+      "release manifest --out .clista/release-manifest.json",
+      "runtime verify --manifest .clista/release-manifest.json"
+    ]),
+    "quickstart orders release verification before runtime verification"
+  );
+  addAuditCheck(
+    result,
+    "protocol_docs_define_usage_audit",
+    contains(protocolDocs, RUNTIME_USAGE_THEOREM)
+      && contains(protocolDocs, RUNTIME_USAGE_HARD_LAW)
+      && contains(protocolDocs, RUNTIME_AUDIT_COMMAND),
+    "protocol docs define M26.1 runtime usage audit"
+  );
+
+  result.docsExplainRuntimeVerification = contains(aggregate, "existing release manifest")
+    && contains(aggregate, "compares")
+    && contains(aggregate, "runtimeverified");
+  result.docsExplainRuntimeBoundary = REQUIRED_BOUNDARY_TERMS.every((term) => contains(aggregate, term))
+    && contains(aggregate, "does not");
+
+  addAuditCheck(
+    result,
+    "docs_explain_runtime_verification",
+    result.docsExplainRuntimeVerification,
+    "docs explain what runtime verification checks"
+  );
+  addAuditCheck(
+    result,
+    "docs_explain_runtime_boundary",
+    result.docsExplainRuntimeBoundary,
+    "docs explain what runtime verification does not prove"
+  );
+}
+
+function verifyRuntimeDiscoverability(cwd, options, result) {
+  const usageText = options.usageText || safeReadText(path.join(cwd, "src", "cli.js")) || "";
+  result.runtimeVerifyDiscoverable = contains(usageText, "clista runtime verify [--manifest <path>]")
+    || contains(usageText, "clista runtime verify --manifest .clista/release-manifest.json");
+  result.runtimeAuditDiscoverable = contains(usageText, "clista runtime audit [--manifest <path>]")
+    || contains(usageText, "clista runtime audit --manifest .clista/release-manifest.json");
+  result.runtimeVerificationBounded = contains(usageText, "running is not verified")
+    && contains(usageText, "verified runtime is not usable runtime")
+    && !contains(usageText, "clista runtime show");
+
+  addAuditCheck(
+    result,
+    "runtime_verify_discoverable",
+    result.runtimeVerifyDiscoverable,
+    "CLI help exposes runtime verify"
+  );
+  addAuditCheck(
+    result,
+    "runtime_audit_discoverable",
+    result.runtimeAuditDiscoverable,
+    "CLI help exposes runtime audit"
+  );
+  addAuditCheck(
+    result,
+    "runtime_verification_bounded_in_help",
+    result.runtimeVerificationBounded,
+    "CLI help bounds runtime verification and runtime usage audit"
+  );
+}
+
+function verifyMissingManifestPath(cwd, cliPath, options, result) {
+  const missingManifestPath = options.missingManifestPath || ".clista/runtime-audit-missing-manifest.json";
+  const missing = verifyRuntime({ cwd, manifestPath: missingManifestPath, cliPath });
+  const hasMissingViolation = hasFinding(missing.violations, "release_manifest_missing");
+  const missingReason = firstFindingReason(missing.violations, "release_manifest_missing");
+
+  result.missingManifest = {
+    manifestPath: missingManifestPath,
+    clear: missing.valid === false && hasMissingViolation && contains(missingReason, "release manifest missing"),
+    actionable: false,
+    actionableCommand: "clista release manifest --out .clista/release-manifest.json",
+    runtimeResult: summarizeRuntimeResult(missing)
+  };
+  result.missingManifest.actionable = result.missingManifest.clear
+    && contains(result.missingManifest.actionableCommand, "release manifest --out");
+  result.missingManifestFailureClear = result.missingManifest.clear;
+  result.missingManifestFailureActionable = result.missingManifest.actionable;
+
+  addAuditCheck(
+    result,
+    "missing_manifest_failure_clear",
+    result.missingManifestFailureClear,
+    "runtime verify reports release_manifest_missing with the missing path"
+  );
+  addAuditCheck(
+    result,
+    "missing_manifest_failure_actionable",
+    result.missingManifestFailureActionable,
+    "runtime audit names the next command for creating a local manifest"
+  );
+}
+
+function verifyDocumentedRuntimePath(cwd, manifestPath, cliPath, result) {
+  const runtime = verifyRuntime({ cwd, manifestPath, cliPath });
+  const boundaryFieldsFalse = runtimeBoundaryFieldsFalse(runtime);
+  result.runtimeVerification = {
+    manifestPath,
+    clear: runtime.valid === true
+      && runtime.runtimeVerified === true
+      && runtime.schema === RUNTIME_VERIFY_SCHEMA,
+    bounded: runtime.valid === true
+      && boundaryFieldsFalse
+      && REQUIRED_BOUNDARY_TERMS.every((term) => runtime.doesNotProve.includes(term)),
+    runtimeResult: summarizeRuntimeResult(runtime)
+  };
+  result.validManifestSuccessClear = result.runtimeVerification.clear;
+  result.validManifestSuccessBounded = result.runtimeVerification.bounded;
+
+  addAuditCheck(
+    result,
+    "valid_manifest_success_clear",
+    result.validManifestSuccessClear,
+    "runtime verify returns valid true and runtimeVerified true for the documented manifest path",
+    { violationTypes: runtime.violations.map((violation) => violation.violationType) }
+  );
+  addAuditCheck(
+    result,
+    "valid_manifest_success_bounded",
+    result.validManifestSuccessBounded,
+    "runtime verify success keeps trust and authority boundary fields false"
+  );
+}
+
+function verifyStateSnapshots(cwd, snapshots, result) {
+  const current = captureSnapshots(cwd, snapshots.map((snapshot) => snapshot.path));
+  const byPath = new Map(current.map((snapshot) => [snapshot.path, snapshot]));
+  const mutationRecords = snapshots.map((snapshot) => {
+    const after = byPath.get(snapshot.path);
+    return {
+      path: snapshot.path,
+      existedBefore: snapshot.exists,
+      existsAfter: after?.exists || false,
+      unchanged: snapshot.exists === Boolean(after?.exists) && snapshot.hash === (after?.hash || null)
+    };
+  });
+  result.mutation.snapshotPaths = mutationRecords;
+  result.mutation.eventLogUnchanged = mutationRecords
+    .filter((record) => record.path === ".clista/events.ndjson")
+    .every((record) => record.unchanged);
+  result.mutation.projectedStateUnchanged = mutationRecords
+    .filter((record) => record.path.includes("projected-state"))
+    .every((record) => record.unchanged);
+  result.mutation.exportStateUnchanged = mutationRecords
+    .filter((record) => record.path.includes("export") || record.path.includes("continuity"))
+    .every((record) => record.unchanged);
+
+  addAuditCheck(
+    result,
+    "event_log_not_mutated",
+    result.mutation.eventLogUnchanged,
+    "runtime usage audit does not mutate .clista/events.ndjson"
+  );
+  addAuditCheck(
+    result,
+    "projected_state_not_mutated",
+    result.mutation.projectedStateUnchanged,
+    "runtime usage audit does not mutate projected state artifacts"
+  );
+  addAuditCheck(
+    result,
+    "export_state_not_mutated",
+    result.mutation.exportStateUnchanged,
+    "runtime usage audit does not mutate export state artifacts"
+  );
+}
+
+function verifyAuditBoundary(result) {
+  for (const field of RUNTIME_GUARD_FIELDS) {
+    addAuditCheck(
+      result,
+      `${field}_not_created`,
+      result[field] === false,
+      `runtime usage audit does not create ${field}`
+    );
+  }
 }
 
 function baseResult(cwd, manifestPath, options) {
@@ -422,6 +740,13 @@ function finalize(result) {
   return result;
 }
 
+function finalizeAudit(result) {
+  const valid = result.violations.length === 0;
+  result.valid = valid;
+  result.runtimeUsable = valid;
+  return result;
+}
+
 function runVerifier(cwd, cliPath, verifier) {
   const args = Array.isArray(verifier.args) ? verifier.args : [];
   const spawned = spawnSync(process.execPath, [cliPath, ...args], {
@@ -448,6 +773,109 @@ function addFinding(result, bucket, violationType, reason, extra = {}) {
     reason,
     ...extra
   });
+}
+
+function addAuditCheck(result, id, valid, reason, extra = {}) {
+  const check = {
+    id,
+    valid: Boolean(valid),
+    reason,
+    ...extra
+  };
+  result.checks.push(check);
+  if (!check.valid) {
+    addFinding(result, "violations", id, reason, extra);
+  }
+  return check;
+}
+
+function captureSnapshots(cwd, snapshotPaths) {
+  return snapshotPaths.map((snapshotPath) => {
+    const absolutePath = path.resolve(cwd, snapshotPath);
+    if (!fs.existsSync(absolutePath)) {
+      return {
+        path: snapshotPath,
+        exists: false,
+        hash: null
+      };
+    }
+    return {
+      path: snapshotPath,
+      exists: true,
+      hash: safeFileHash(absolutePath)
+    };
+  });
+}
+
+function summarizeRuntimeResult(result) {
+  return {
+    schema: result.schema,
+    valid: result.valid,
+    runtimeVerified: result.runtimeVerified,
+    releaseManifestVerified: result.releaseManifestVerified,
+    manifestPath: result.manifestPath,
+    packageVersion: result.packageVersion,
+    manifestPackageVersion: result.manifestPackageVersion,
+    gitCommit: result.gitCommit,
+    manifestGitCommit: result.manifestGitCommit,
+    gitTag: result.gitTag,
+    manifestGitTag: result.manifestGitTag,
+    sourceHashesMatch: result.sourceHashesMatch,
+    schemaHashesMatch: result.schemaHashesMatch,
+    verifierCommandsAvailable: result.verifierCommandsAvailable,
+    verifierResultsReproduced: result.verifierResultsReproduced,
+    workingTreeClean: result.workingTreeClean,
+    trusted: result.trusted,
+    protocolAuthority: result.protocolAuthority,
+    governanceApproval: result.governanceApproval,
+    amendmentApproval: result.amendmentApproval,
+    compatibilityProof: result.compatibilityProof,
+    proves: result.proves,
+    doesNotProve: result.doesNotProve,
+    drift: result.drift,
+    warnings: result.warnings,
+    violations: result.violations
+  };
+}
+
+function runtimeBoundaryFieldsFalse(result) {
+  return Array.from(RUNTIME_GUARD_FIELDS).every((field) => result[field] === false);
+}
+
+function documentText(documents, docPath) {
+  return documents.find((document) => document.path === docPath)?.text || "";
+}
+
+function orderedTerms(text, terms) {
+  const lowered = String(text || "").toLowerCase();
+  let cursor = 0;
+  for (const term of terms) {
+    const index = lowered.indexOf(String(term).toLowerCase(), cursor);
+    if (index === -1) {
+      return false;
+    }
+    cursor = index + String(term).length;
+  }
+  return true;
+}
+
+function contains(text, term) {
+  return String(text || "").toLowerCase().includes(String(term || "").toLowerCase());
+}
+
+function checkId(value) {
+  return String(value || "unknown")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase();
+}
+
+function hasFinding(findings, violationType) {
+  return findings.some((finding) => finding.violationType === violationType);
+}
+
+function firstFindingReason(findings, violationType) {
+  return findings.find((finding) => finding.violationType === violationType)?.reason || "";
 }
 
 function satisfiesNodeRange(version, range) {
@@ -528,6 +956,14 @@ function safeReadJson(filePath) {
   }
 }
 
+function safeReadText(filePath) {
+  try {
+    return fs.readFileSync(filePath, "utf8");
+  } catch (_) {
+    return null;
+  }
+}
+
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
@@ -561,8 +997,13 @@ function normalizePath(value) {
 }
 
 module.exports = {
+  RUNTIME_AUDIT_SCHEMA,
+  RUNTIME_AUDIT_COMMAND,
   RUNTIME_HARD_LAW,
   RUNTIME_THEOREM,
+  RUNTIME_USAGE_HARD_LAW,
+  RUNTIME_USAGE_THEOREM,
   RUNTIME_VERIFY_SCHEMA,
+  auditRuntimeUsage,
   verifyRuntime
 };

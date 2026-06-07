@@ -70,6 +70,8 @@ Change a layer version only when that layer's protocol behavior changes. Change 
 
 M25 Protocol Release uses `release_protocol_version: "0.25.0"` in the release manifest. It does not add release records to projected reasoning state, so `schemas/clista-protocol.schema.json` remains the reasoning-state export schema and `schemas/clista-release-manifest.schema.json` describes the release artifact.
 
+M26 Protocol Runtime Verification and M26.1 Runtime Usage Audit are repository/runtime verifiers. They do not add event types, projected release state, protocol authority, governance approval, amendment approval, or compatibility proof.
+
 ## Core Events
 
 - `ThreadCreated`
