@@ -40,8 +40,9 @@ that another human or agent can reload later.
 26. Protocol runtime verification
 26.1. Runtime usage audit
 27. Protocol scenario/demo workflow
+28. External replay audit
 
-The compressed primitive map for M0-M27 is:
+The compressed primitive map for M0-M28 is:
 
 ```text
 docs/protocol/v0/primitive-map.md
@@ -259,7 +260,7 @@ npm run clista -- recovery plan --recovery rcv_example --plan "Quarantine invali
 npm run clista -- recovery quarantine --recovery rcv_example --reason "Invalid event remains visible but not trusted."
 npm run clista -- recovery apply --recovery rcv_example --summary "Applied reviewed repair marker without rewriting history."
 npm run clista -- recovery verify --recovery rcv_example
-npm run clista -- release manifest --tag v0.27.0-protocol-scenario-demo --out .clista/release-manifest.json
+npm run clista -- release manifest --tag v0.28.0-external-replay-audit --out .clista/release-manifest.json
 npm run clista -- release verify --manifest .clista/release-manifest.json
 npm run clista -- release show --manifest .clista/release-manifest.json
 npm run clista -- runtime verify --manifest .clista/release-manifest.json

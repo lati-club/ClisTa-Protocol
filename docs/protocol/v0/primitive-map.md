@@ -1,6 +1,6 @@
-# Primitive Map M0-M27
+# Primitive Map M0-M28
 
-This map compresses the verified M0-M27 surface into protocol primitives.
+This map compresses the verified M0-M28 surface into protocol primitives.
 
 ```text
 Conversation is input.
@@ -273,13 +273,15 @@ Provides a realistic fixture replay so a fresh user can validate, project, expor
 Milestones:
 
 - M27 Protocol Scenario / Demo Workflow
+- M28 External Replay Audit
 
 Preserved laws:
 
 - Demo workflow is not product.
+- Scenario exists is not externally reproducible scenario.
 - Scenario replay is not distribution.
 - Scenario replay is not artifact installation.
-- Scenario replay does not add protocol primitives, event types, validation rules, projection behavior, export behavior, network behavior, UI, agents, trust, protocol authority, governance approval, amendment approval, compatibility proof, or product readiness.
+- Scenario replay and external replay audit do not add protocol primitives, event types, validation rules, projection behavior, export behavior, network behavior, UI, agents, trust, protocol authority, governance approval, amendment approval, compatibility proof, or product readiness.
 
 ## Decision Outcomes And Protocol Outcomes
 
@@ -321,7 +323,7 @@ The names overlap because M21 reuses the CLI namespace for a narrower execution-
 
 Layer protocol versions mark capability boundaries. For example, delegation remains `0.19.0`, execution remains `0.20.0`, outcome remains `0.21.0`, outcome learning remains `0.22.0`, review remains `0.23.0`, and recovery is `0.24.0` until those layer behaviors change.
 
-Package and release versions mark repository releases. A feature release can advance to `v0.27.0` while unchanged M19-M24 layer versions stay at their original capability boundaries.
+Package and release versions mark repository releases. A feature release can advance to `v0.28.0` while unchanged M19-M24 layer versions stay at their original capability boundaries.
 
 M25 Protocol Release has its own `release_protocol_version: "0.25.0"` because release manifests are repository artifacts, not projected reasoning-state layers.
 

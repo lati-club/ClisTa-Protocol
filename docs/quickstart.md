@@ -53,6 +53,8 @@ To replay the scenario demo:
 node src/cli.js validate --events examples/scenario-demo/events.ndjson
 node src/cli.js state show --thread thd_scenario_demo --events examples/scenario-demo/events.ndjson
 node src/cli.js export --events examples/scenario-demo/events.ndjson
+node src/cli.js attribution list --thread thd_scenario_demo --events examples/scenario-demo/events.ndjson
+node src/cli.js provenance trace dcr_limited_beta --events examples/scenario-demo/events.ndjson
 ```
 
 This is the minimum release usage path:
@@ -67,7 +69,7 @@ This is the minimum release usage path:
 8. Verify the runtime against that existing manifest.
 9. Audit that a fresh user can discover and execute runtime verification without insider context.
 
-The scenario demo is a separate M27 replay path. It proves that a realistic reasoning lifecycle can be understood from documented commands and projected state.
+The scenario demo is a separate M27 replay path. M28 audits that a non-builder can reproduce that scenario from public docs and repo-relative files without hidden builder state.
 
 ## Reading Success
 
@@ -96,7 +98,7 @@ Generating `.clista/release-manifest.json` is useful for local practice. Indepen
 
 `runtime audit` succeeds when it returns `valid: true` and `runtimeUsable: true`. It checks that README, quickstart, protocol docs, CLI help, missing-manifest behavior, valid-manifest behavior, and runtime verification boundaries are clear enough for a fresh user.
 
-The scenario demo succeeds when `examples/scenario-demo/events.ndjson` validates, `state show` reconstructs thread `thd_scenario_demo`, and `export` serializes the resulting protocol state. Inspect `examples/scenario-demo/expected-state.json` for the compact expected decision, evidence, assumptions, claims, positions, objection, reviews, and minority report.
+The scenario demo succeeds when `examples/scenario-demo/events.ndjson` validates, `state show` reconstructs thread `thd_scenario_demo`, and `export` serializes the resulting protocol state. External replay succeeds when those commands, plus `attribution list` and `provenance trace dcr_limited_beta`, work from a clean checkout using only repo-relative public files. Inspect `examples/scenario-demo/expected-state.json` for the compact expected decision, evidence, assumptions, claims, positions, objection, reviews, and minority report.
 
 ## Reading Failures
 
@@ -147,7 +149,9 @@ Runtime usage audit does not create trusted release status, runtime trust, proto
 
 The M27 scenario demo makes protocol state understandable, but it is not a product platform.
 
-It does not implement distribution, artifact installation, network behavior, UI, agents, pitch cleanup, external user testing, product readiness, trust, protocol authority, governance approval, amendment approval, or compatibility proof.
+The M28 external replay audit proves reproducibility of the existing scenario from public docs and files. It does not prove product readiness.
+
+The scenario demo and external replay audit do not implement distribution, artifact installation, network behavior, UI, agents, pitch cleanup, external user testing, M29, product readiness, trust, protocol authority, governance approval, amendment approval, or compatibility proof.
 
 ## Release Versus Reasoning State
 
@@ -172,9 +176,9 @@ Continuity may report:
 }
 ```
 
-while `package.json` reports `0.25.0` or a later package release such as `0.27.0`.
+while `package.json` reports `0.25.0` or a later package release such as `0.28.0`.
 
-That is expected. Continuity reflects the latest reasoning-state portability boundary. Package and release versions reflect repository artifact releases. M25 verifies the release artifact, M26 verifies the local runtime, M26.1 audits runtime verification usability, and M27 adds a documented scenario fixture. They do not add a new continuity state layer.
+That is expected. Continuity reflects the latest reasoning-state portability boundary. Package and release versions reflect repository artifact releases. M25 verifies the release artifact, M26 verifies the local runtime, M26.1 audits runtime verification usability, M27 adds a documented scenario fixture, and M28 audits external replay of that fixture. They do not add a new continuity state layer.
 
 ## Next Useful Commands
 

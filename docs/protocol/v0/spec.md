@@ -74,6 +74,8 @@ M26 Protocol Runtime Verification and M26.1 Runtime Usage Audit are repository/r
 
 M27 Protocol Scenario / Demo Workflow is a documented fixture replay. It does not add event types, validation rules, projection behavior, export behavior, distribution proof, installation proof, product readiness, trust, protocol authority, governance approval, amendment approval, or compatibility proof.
 
+M28 External Replay Audit verifies that the existing M27 scenario can be reproduced from public docs and repo-relative files by a non-builder. It does not add event types, validation rules, projection behavior, export behavior, installation, distribution, network behavior, UI, agents, product readiness, trust, protocol authority, governance approval, amendment approval, or compatibility proof.
+
 ## Core Events
 
 - `ThreadCreated`

@@ -31,18 +31,18 @@ None of those systems should define the protocol.
 
 Verified baseline:
 
-- Completed through M27: Protocol Scenario / Demo Workflow
-- M27 documentation cleanup complete
+- Completed through M28: External Replay Audit
 
 Next selected milestone:
 
-- M28: External Replay Audit
+- Not selected
 
 Status:
 
-- Selected, not started
+- M28 complete
+- M29 not started
 
-M28 should audit the existing M27 scenario. It should not expand the product surface.
+M28 audited the existing M27 scenario. It did not expand the product surface.
 
 The theorem is:
 
@@ -77,9 +77,9 @@ Explicitly out of scope:
 - external testing program
 - M29
 
-M27 proved that a realistic demo workflow exists. M28 should prove that a non-builder can reproduce that workflow from the public artifact and understand the state it produces.
+M27 proved that a realistic demo workflow exists. M28 proved that a non-builder can reproduce that workflow from the public artifact and understand the state it produces.
 
-The next Codex thread should begin M28 only when ready to test public reproducibility, not when ready to add features.
+The next milestone should remain narrow and should not begin product-surface work before the protocol spine requires it.
 
 ## Phase 0: Protocol Spike
 
