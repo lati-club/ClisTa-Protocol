@@ -1,25 +1,25 @@
 {
   "schema": "clista.protocol.v0",
   "protocolVersion": "clista.protocol.v0",
-  "exportedAt": "2026-06-08T14:21:59.654744Z",
+  "exportedAt": "2026-06-08T15:55:48.518366Z",
   "threads": [
     {
-      "id": "thd_0455db0961af",
+      "id": "thd_ba2dbbbabf76",
       "object_type": "thread",
       "title": "Hermes Session: We need to decide whether to run a limited beta of the AI su...",
       "problem_statement": "We need to decide whether to run a limited beta of the AI support assistant. The queue pressure is high, but privacy is a concern.",
       "status": "in_deliberation",
-      "created_by_participant_id": "par_fc6ed5b62526",
+      "created_by_participant_id": "par_7a1418da3b96",
       "participant_ids": [
-        "par_fc6ed5b62526",
-        "par_6b642999a5c9"
+        "par_7a1418da3b96",
+        "par_e923e7ce33dd"
       ],
       "role_bindings": [],
       "evidence_ids": [
-        "evd_6fc5f8a4bb1c"
+        "evd_f0cdc747da36"
       ],
       "claim_ids": [
-        "clm_6b0a9a807b26"
+        "clm_357bb04693ca"
       ],
       "position_ids": [],
       "objection_ids": [],
@@ -29,13 +29,13 @@
       "fork_ids": [],
       "parent_thread_id": null,
       "visibility": "private",
-      "created_at": "2026-06-08T14:21:59.654744Z",
-      "updated_at": "2026-06-08T14:21:59.654744Z"
+      "created_at": "2026-06-08T15:55:48.518366Z",
+      "updated_at": "2026-06-08T15:55:48.518366Z"
     }
   ],
   "participants": [
     {
-      "id": "par_fc6ed5b62526",
+      "id": "par_7a1418da3b96",
       "object_type": "participant",
       "display_name": "Human User",
       "type": "human",
@@ -43,10 +43,10 @@
       "identity_ref": "hermes_user",
       "agent_model_ref": null,
       "public_key": null,
-      "created_at": "2026-06-08T14:21:59.654744Z"
+      "created_at": "2026-06-08T15:55:48.518366Z"
     },
     {
-      "id": "par_6b642999a5c9",
+      "id": "par_e923e7ce33dd",
       "object_type": "participant",
       "display_name": "Hermes Agent",
       "type": "ai_agent",
@@ -54,15 +54,15 @@
       "identity_ref": "hermes_gateway",
       "agent_model_ref": "qwen3.7-plus",
       "public_key": null,
-      "created_at": "2026-06-08T14:21:59.654744Z"
+      "created_at": "2026-06-08T15:55:48.518366Z"
     }
   ],
   "claims": [
     {
-      "id": "clm_6b0a9a807b26",
+      "id": "clm_357bb04693ca",
       "object_type": "claim",
-      "thread_id": "thd_0455db0961af",
-      "author_participant_id": "par_fc6ed5b62526",
+      "thread_id": "thd_ba2dbbbabf76",
+      "author_participant_id": "par_7a1418da3b96",
       "content": "We need to decide whether to run a limited beta of the AI support assistant. The queue pressure is high, but privacy is a concern.",
       "claim_type": "interpretive",
       "evidence_ids": [],
@@ -72,68 +72,68 @@
   ],
   "evidence": [
     {
-      "id": "evd_6fc5f8a4bb1c",
+      "id": "evd_f0cdc747da36",
       "object_type": "evidence",
-      "thread_id": "thd_0455db0961af",
+      "thread_id": "thd_ba2dbbbabf76",
       "title": "Tool Execution: web_search",
-      "source_type": "hermes_tool_call",
+      "source_type": "hermes_tool_output",
       "source_url": null,
       "source_ref": "{\"tool\": \"web_search\", \"args\": \"{\\\"query\\\": \\\"support queue metrics Q2 2026\\\"}\"}",
-      "summary": "Agent executed web_search to gather information.",
-      "content_hash": "sha256:bc70884a22ddd18dcdc52074d9d288a856dee65ffad6fa3a230a5ba9db10d809",
+      "summary": "{\"results\": [{\"title\": \"Q2 Queue Report\", \"description\": \"Median wait time is 45 minutes, exceeding the 15-minute target.\"}]}",
+      "content_hash": "sha256:ddfafed6d195ea05505b777f9f0386bab271a172a2c89b84da4fab6f09a5f2d1",
       "category": "tool_execution",
       "credibility_score": 0.9,
-      "added_by_participant_id": "par_6b642999a5c9",
+      "added_by_participant_id": "par_e923e7ce33dd",
       "created_at": "2026-06-08T10:00:05.000Z"
     }
   ],
   "audit_events": [
     {
-      "id": "evt_9c9a923ac972",
+      "id": "evt_4e241960ce48",
       "object_type": "audit_event",
-      "thread_id": "thd_0455db0961af",
-      "actor_participant_id": "par_fc6ed5b62526",
+      "thread_id": "thd_ba2dbbbabf76",
+      "actor_participant_id": "par_7a1418da3b96",
       "action_type": "message_sent",
       "target_object_type": "thread",
-      "target_object_id": "thd_0455db0961af",
-      "payload_hash": "sha256:e6ce0d8c06af13abe7e2b970fc04b9fe85487767927096cef93951893cbd4afe",
+      "target_object_id": "thd_ba2dbbbabf76",
+      "payload_hash": "sha256:8a4dc4b5f182ea926fc1e3caf9639129c1c23734f4bfdd81a76505e7763a2f0a",
       "previous_event_id": null,
       "created_at": "2026-06-08T10:00:00.000Z"
     },
     {
-      "id": "evt_3f8487141892",
+      "id": "evt_f11fdf39fb53",
       "object_type": "audit_event",
-      "thread_id": "thd_0455db0961af",
-      "actor_participant_id": "par_6b642999a5c9",
+      "thread_id": "thd_ba2dbbbabf76",
+      "actor_participant_id": "par_e923e7ce33dd",
       "action_type": "message_sent",
       "target_object_type": "thread",
-      "target_object_id": "thd_0455db0961af",
-      "payload_hash": "sha256:08bbb204c2546ab5a9ec816f8e54f2d7f4b95ca0fc115fed6b1fceefad6df8e4",
-      "previous_event_id": "evt_9c9a923ac972",
+      "target_object_id": "thd_ba2dbbbabf76",
+      "payload_hash": "sha256:3638c2bb5a5e325c932e9de82d1d568dfeeab13ab2a173a1eb5d56af937850f1",
+      "previous_event_id": "evt_4e241960ce48",
       "created_at": "2026-06-08T10:00:05.000Z"
     },
     {
-      "id": "evt_47ceadb1b749",
+      "id": "evt_c4d6df84968f",
       "object_type": "audit_event",
-      "thread_id": "thd_0455db0961af",
-      "actor_participant_id": "par_fc6ed5b62526",
-      "action_type": "system_event",
+      "thread_id": "thd_ba2dbbbabf76",
+      "actor_participant_id": "par_e923e7ce33dd",
+      "action_type": "tool_execution",
       "target_object_type": "thread",
-      "target_object_id": "thd_0455db0961af",
-      "payload_hash": "sha256:b1935c24162c5109a732a8bc23c6e91cfd101e03847f6c1640ede97e17d6e365",
-      "previous_event_id": "evt_3f8487141892",
+      "target_object_id": "thd_ba2dbbbabf76",
+      "payload_hash": "sha256:7b6da6cddf7756b8b767f0604dd4550e382d86c035764b6bb6a1e65ac284c97d",
+      "previous_event_id": "evt_f11fdf39fb53",
       "created_at": "2026-06-08T10:00:06.000Z"
     },
     {
-      "id": "evt_d03f192b34a5",
+      "id": "evt_cf83acf78409",
       "object_type": "audit_event",
-      "thread_id": "thd_0455db0961af",
-      "actor_participant_id": "par_6b642999a5c9",
+      "thread_id": "thd_ba2dbbbabf76",
+      "actor_participant_id": "par_e923e7ce33dd",
       "action_type": "message_sent",
       "target_object_type": "thread",
-      "target_object_id": "thd_0455db0961af",
-      "payload_hash": "sha256:c0de21afb693611b671aa45134de840eaf9f11890f69fdace3ee7eec56610da5",
-      "previous_event_id": "evt_47ceadb1b749",
+      "target_object_id": "thd_ba2dbbbabf76",
+      "payload_hash": "sha256:a0f76f95b1e6195e53d2edd9ca70c465d8671873d0b571b750853defd77d85eb",
+      "previous_event_id": "evt_c4d6df84968f",
       "created_at": "2026-06-08T10:00:10.000Z"
     }
   ]

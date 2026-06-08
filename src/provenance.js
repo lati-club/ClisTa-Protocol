@@ -714,28 +714,18 @@ function isKnownContribution(projection, contributionId) {
   if (!projection || !contributionId) {
     return false;
   }
-  const collections = [
-    projection.threads,
-    projection.forks,
-    projection.evidence,
-    projection.assumptions,
-    projection.claims,
-    projection.positions,
-    projection.objections,
-    projection.decisionRequests,
-    projection.reviews,
-    projection.decisionRecords,
-    projection.minorityReports,
-    projection.mergeRequests,
-    projection.mergeReviews,
-    projection.mergeConflicts,
-    projection.mergeConflictResolutions,
-    projection.mergeCompletions,
-    projection.expectedOutcomes,
-    projection.outcomeAudits,
-    projection.decisionScores
+  // Source of truth is the attribution/provenance ledgers themselves, not the
+  // keyed object collections. Some attributable contributions (e.g.
+  // objection_resolution, whose id is a synthetic `obr_<objectionId>_<eventId>`)
+  // never land in a projection collection, so re-deriving an allowlist of
+  // collections would fail-closed on legitimate ids.
+  const indexes = [
+    projection.provenance && projection.provenance.byContribution,
+    projection.attribution && projection.attribution.byContribution
   ];
-  return collections.some(collection => collection && collection[contributionId] !== undefined);
+  return indexes.some(
+    (index) => index && Object.prototype.hasOwnProperty.call(index, contributionId)
+  );
 }
 
 module.exports = {

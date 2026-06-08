@@ -80,32 +80,70 @@ class ClisTaEngine:
     def validate_audit_chain(self, thread_id: str) -> Dict[str, Any]:
         """Validate the append-only audit chain for a specific thread."""
         events = [
-            ev for ev in self.index["audit_events"].values() 
+            ev for ev in self.index["audit_events"].values()
             if ev.get("thread_id") == thread_id
         ]
-        
-        # Sort by created_at to ensure chronological order
-        events.sort(key=lambda x: x.get("created_at", ""))
-        
+
         errors = []
-        expected_prev_id = None
-        
+
+        # The chain is defined by previous_event_id links, not by created_at:
+        # timestamps can tie or skew, so sorting by them would reorder events
+        # away from their linkage and report spurious breaks. Walk the links
+        # from the root (previous_event_id is None) instead.
+        by_id = {ev.get("id"): ev for ev in events}
+        by_prev: Dict[Optional[str], List[Dict[str, Any]]] = {}
         for ev in events:
-            ev_id = ev.get("id")
-            prev_id = ev.get("previous_event_id")
-            
-            if prev_id != expected_prev_id:
+            by_prev.setdefault(ev.get("previous_event_id"), []).append(ev)
+
+        roots = by_prev.get(None, [])
+        if not events:
+            return {"valid": True, "event_count": 0, "head_event_id": None, "errors": []}
+        if len(roots) != 1:
+            errors.append(
+                f"Audit chain must have exactly one root event "
+                f"(previous_event_id=null), found {len(roots)}"
+            )
+
+        ordered = []
+        seen = set()
+        current = roots[0] if roots else None
+        while current is not None:
+            ev_id = current.get("id")
+            if ev_id in seen:
+                errors.append(f"Audit chain cycle detected at {ev_id}")
+                break
+            seen.add(ev_id)
+            ordered.append(current)
+
+            successors = by_prev.get(ev_id, [])
+            if len(successors) > 1:
+                successor_ids = [s.get("id") for s in successors]
                 errors.append(
-                    f"Audit chain broken at {ev_id}: expected previous_event_id "
-                    f"'{expected_prev_id}', got '{prev_id}'"
+                    f"Audit chain forks at {ev_id}: multiple events claim it as "
+                    f"previous_event_id ({successor_ids})"
                 )
-            
-            expected_prev_id = ev_id
+            current = successors[0] if successors else None
+
+        # Any event not reachable from the root has a dangling previous_event_id.
+        for ev in events:
+            prev_id = ev.get("previous_event_id")
+            if ev.get("id") not in seen:
+                errors.append(
+                    f"Audit chain broken at {ev.get('id')}: previous_event_id "
+                    f"'{prev_id}' does not link to the chain"
+                )
+            elif prev_id is not None and prev_id not in by_id:
+                errors.append(
+                    f"Audit event {ev.get('id')} references unknown "
+                    f"previous_event_id '{prev_id}'"
+                )
+
+        head_event_id = ordered[-1].get("id") if ordered else None
 
         return {
             "valid": len(errors) == 0,
             "event_count": len(events),
-            "head_event_id": expected_prev_id,
+            "head_event_id": head_event_id,
             "errors": errors
         }
 
