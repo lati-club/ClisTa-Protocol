@@ -15,6 +15,7 @@ import argparse
 import datetime
 import json
 import os
+import re
 import uuid
 from typing import List, Dict, Any, Optional
 
@@ -101,6 +102,40 @@ def _detect_recommendation(messages: List[Dict[str, Any]]) -> Optional[Dict[str,
     return found
 
 
+# Explicit concern/risk words that mark a sentence as an objection. Kept narrow
+# so a caveat is only captured when the assistant actually names a concern.
+_OBJECTION_TRIGGERS = (
+    "concern", "risk", "caveat", "downside", "drawback",
+    "limitation", "trade-off", "tradeoff", "must ensure", "on the other hand",
+)
+
+
+def _sentences(text: str) -> List[str]:
+    """Split text into sentences on terminal punctuation (deterministic)."""
+    return [s for s in re.split(r"(?<=[.!?])\s+", str(text).strip()) if s]
+
+
+def _detect_objections(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Extract concern sentences from assistant turns as candidate objections.
+
+    Operates at the sentence level so a caveat inside a recommendation message
+    is captured as its own objection without swallowing the recommendation.
+    Returns [{"text", "timestamp"}] deduplicated by text, in order; the agent is
+    treated as the participant raising them.
+    """
+    objections: List[Dict[str, Any]] = []
+    seen = set()
+    for msg in messages:
+        if msg.get("role") != "assistant":
+            continue
+        for sentence in _sentences(msg.get("content", "")):
+            lowered = sentence.lower()
+            if any(trigger in lowered for trigger in _OBJECTION_TRIGGERS) and sentence not in seen:
+                seen.add(sentence)
+                objections.append({"text": sentence, "timestamp": msg.get("timestamp")})
+    return objections
+
+
 def session_to_events(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Map a Hermes session to an ordered ClisTa event list (unhashed).
 
@@ -111,6 +146,7 @@ def session_to_events(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
       ThreadCreated        (references both participants)
       ClaimCreated         (one per substantive user message)
       EvidenceCommitted    (one per tool output linked to its call)
+      ObjectionRaised      (one per concern the assistant named, non-blocking)
       DecisionRequestOpened + ReviewSubmitted + DecisionMerged
                            (only when the assistant states an explicit
                             recommendation AND evidence exists: the agent
@@ -207,6 +243,27 @@ def session_to_events(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                     "committedAt": tc_info["timestamp"],
                 }}, tc_info["timestamp"])
 
+    # Objections: concerns the assistant named are recorded against the main
+    # claim as non-blocking objections — a logged caveat that did not block the
+    # recommendation (so no preservation or minority report is required). A
+    # blocking objection would imply formal dissent the session did not contain.
+    objection_ids: List[str] = []
+    if claim_ids:
+        for objection in _detect_objections(messages):
+            objection_id = generate_id("obj")
+            objection_ids.append(objection_id)
+            emit("ObjectionRaised", agent_id, {"objection": {
+                "id": objection_id, "object": "objection",
+                "threadId": thread_id,
+                "participantId": agent_id,
+                "targetObjectType": "claim",
+                "targetObjectId": claim_ids[0],
+                "text": objection["text"][:1000],
+                "status": "open",
+                "blocking": False,
+                "raisedAt": objection["timestamp"] or now,
+            }}, objection["timestamp"] or now)
+
     # Decision chain: only when the assistant made an explicit recommendation and
     # there is evidence to back it (the engine rejects an evidence-free merge).
     recommendation = _detect_recommendation(messages)
@@ -241,6 +298,7 @@ def session_to_events(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             "supportingEvidenceIds": evidence_ids,
             "supportingClaimIds": claim_ids,
             "supportingAssumptionIds": [assumption_id],
+            "objectionIds": objection_ids,
             "openedByParticipantId": agent_id,
             "openedAt": ts,
         }}, ts)

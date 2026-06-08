@@ -148,11 +148,20 @@ Mapping realized by the adapter:
 | Session | `ThreadCreated` |
 | Substantive user message | `ClaimCreated` (status `draft`) |
 | Tool output linked to its call | `EvidenceCommitted` |
+| Concern the assistant names ("risk", "concern", "must ensure", …) | `ObjectionRaised` (non-blocking) |
 | Explicit assistant recommendation (with evidence present) | `AssumptionDeclared` + `DecisionRequestOpened` + `ReviewSubmitted` + `DecisionMerged` |
 
 Assistant prose that is *not* an explicit recommendation is preserved as
 conversation, never forced into a claim or an inferred decision — extraction
 stays boring and deterministic, exactly as the sketch above prescribes.
+
+Concerns the assistant names (at the sentence level, so a caveat inside a
+recommendation is captured without swallowing it) are recorded against the main
+claim as **non-blocking** objections: a logged caveat that did not block the
+recommendation. They are referenced by the decision request so the decision is
+shown to have considered them, but — being non-blocking — they need no
+preservation or minority report. A blocking objection would imply formal dissent
+the session did not contain, so the adapter never fabricates one.
 
 A decision is emitted only when the assistant states an explicit recommendation
 (e.g. "I recommend …", "I suggest …", "Recommendation:") **and** the session

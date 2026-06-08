@@ -28,7 +28,9 @@ sys.path.insert(0, os.path.join(REPO_ROOT, "src"))
 
 import clista_events  # noqa: E402
 import ingest_hermes  # noqa: E402
-from ingest_hermes import _match_tool_call, session_to_events  # noqa: E402
+from ingest_hermes import (  # noqa: E402
+    _detect_objections, _match_tool_call, session_to_events,
+)
 
 MOCK_MESSAGES = [
     {"role": "user",
@@ -47,6 +49,14 @@ MOCK_MESSAGES = [
 # decision chain should be emitted.
 NO_RECOMMENDATION_MESSAGES = MOCK_MESSAGES[:-1] + [
     {"role": "assistant", "content": "The median wait time is 45 minutes.",
+     "timestamp": "2026-01-01T00:00:03.000Z"},
+]
+
+# Conclusion names a concern (risk) alongside the recommendation, so an
+# objection should be raised in addition to the decision chain.
+OBJECTION_MESSAGES = MOCK_MESSAGES[:-1] + [
+    {"role": "assistant",
+     "content": "A key risk is user privacy. I recommend a limited, redacted beta.",
      "timestamp": "2026-01-01T00:00:03.000Z"},
 ]
 
@@ -243,6 +253,55 @@ class DecisionExtractionTests(unittest.TestCase):
         self.assertNotIn("EvidenceCommitted", types)
 
 
+class ObjectionExtractionTests(unittest.TestCase):
+    def _objection(self, events):
+        return next(e["payload"]["objection"]
+                    for e in events if e["event_type"] == "ObjectionRaised")
+
+    def test_detect_objections_finds_concern_sentence(self):
+        objs = _detect_objections(OBJECTION_MESSAGES)
+        self.assertEqual(len(objs), 1)
+        self.assertIn("risk", objs[0]["text"].lower())
+
+    def test_no_objection_without_a_concern(self):
+        self.assertEqual(_detect_objections(MOCK_MESSAGES), [])
+
+    def test_objection_event_shape(self):
+        events = session_to_events(OBJECTION_MESSAGES)
+        agent_id = events[1]["payload"]["participant"]["id"]
+        first_claim = next(e["payload"]["claim"]["id"]
+                           for e in events if e["event_type"] == "ClaimCreated")
+        obj = self._objection(events)
+        self.assertEqual(obj["status"], "open")
+        self.assertFalse(obj["blocking"])  # logged caveat, not formal dissent
+        self.assertEqual(obj["participantId"], agent_id)
+        self.assertEqual(obj["targetObjectType"], "claim")
+        self.assertEqual(obj["targetObjectId"], first_claim)
+
+    def test_objection_referenced_by_decision_but_not_preserved(self):
+        events = session_to_events(OBJECTION_MESSAGES)
+        obj_id = self._objection(events)["id"]
+        request = next(e["payload"]["decisionRequest"]
+                       for e in events if e["event_type"] == "DecisionRequestOpened")
+        record = next(e["payload"]["decisionRecord"]
+                      for e in events if e["event_type"] == "DecisionMerged")
+        # Considered by the decision, but non-blocking => not preserved, and the
+        # engine therefore requires no minority report.
+        self.assertIn(obj_id, request["objectionIds"])
+        self.assertNotIn(obj_id, record.get("preservedObjectionIds", []))
+
+    def test_objection_without_recommendation_has_no_decision(self):
+        messages = [
+            {"role": "user", "content": "Should we expand the beta to all users?",
+             "timestamp": "2026-01-01T00:00:00Z"},
+            {"role": "assistant", "content": "A major privacy concern remains unaddressed.",
+             "timestamp": "2026-01-01T00:00:01Z"},
+        ]
+        types = [e["event_type"] for e in session_to_events(messages)]
+        self.assertIn("ObjectionRaised", types)
+        self.assertNotIn("DecisionMerged", types)
+
+
 @unittest.skipUnless(shutil.which("node"), "node not available")
 class EngineRoundTripTests(unittest.TestCase):
     def _write_log(self, tmp, messages):
@@ -274,6 +333,19 @@ class EngineRoundTripTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr or proc.stdout)
         status = json.loads(proc.stdout).get("decisionStatus", {})
         self.assertEqual(status.get("recordStatus"), "approved", status)
+
+    def test_objection_session_validates_and_projects(self):
+        # A session that names a concern must stay engine-valid and surface the
+        # objection in the projection alongside the approved decision.
+        with tempfile.TemporaryDirectory() as tmp:
+            log = self._write_log(tmp, OBJECTION_MESSAGES)
+            valid = self._cli("validate", "--events", log)
+            state = self._cli("state", "show", "--events", log)
+        self.assertEqual(valid.returncode, 0, valid.stderr or valid.stdout)
+        self.assertTrue(json.loads(valid.stdout)["valid"], valid.stdout)
+        projection = json.loads(state.stdout)
+        self.assertEqual(len(projection.get("unresolvedObjections", [])), 1, projection)
+        self.assertEqual(projection.get("decisionStatus", {}).get("recordStatus"), "approved")
 
 
 if __name__ == "__main__":
