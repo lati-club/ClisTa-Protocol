@@ -39,6 +39,13 @@ def _match_tool_call(pending: List[Dict[str, Any]], tool_call_id: Optional[str])
         for i, tc in enumerate(pending):
             if tc.get("id") == tool_call_id:
                 return pending.pop(i)
+    # No id match (Hermes omits the id on the call side while the result carries
+    # one). Fall back to the oldest call that has no id of its own, so we never
+    # steal a call that was explicitly id-tagged for a different result. Only if
+    # every remaining call carries an id do we fall back to plain FIFO.
+    for i, tc in enumerate(pending):
+        if not tc.get("id"):
+            return pending.pop(i)
     return pending.pop(0)
 
 
@@ -66,7 +73,7 @@ def ingest_session(input_path: str, output_path: str):
     if not messages:
         raise ValueError("No messages found in input file.")
 
-    now = datetime.datetime.utcnow().isoformat() + "Z"
+    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
     thread_id = generate_id("thd")
     
     # 1. Initialize Participants
@@ -140,8 +147,8 @@ def ingest_session(input_path: str, output_path: str):
         
         actor_id = participants["hermes_agent"]["id"] if role in ["assistant", "tool"] else participants["human_user"]["id"]
         
-        # Extract Claims from user prompts
-        if role == "user" and len(claims) == 0 and len(str(content)) > 20:
+        # Extract a Claim from each substantive user prompt (not just the first).
+        if role == "user" and len(str(content)) > 20:
             claim = {
                 "id": generate_id("clm"),
                 "object_type": "claim",
