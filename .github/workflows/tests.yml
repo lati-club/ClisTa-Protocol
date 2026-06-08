@@ -21,3 +21,18 @@ jobs:
 
       - name: Run Python unit tests
         run: python -m unittest discover -s tests -v
+
+  js:
+    name: JS tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run JS tests
+        run: npm test
