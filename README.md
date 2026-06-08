@@ -120,7 +120,7 @@ The full capability set, by layer — each command verifies one boundary and fai
 | Layer | Command | Passing proves |
 | --- | --- | --- |
 | Integrity | `integrity verify [--strict]` | The log is verifiable history, not just readable data. |
-| Continuity | `continuity export / resume / verify` | Projected state survives context loss without transcript replay. |
+| Continuity (N2) | `continuity export / resume / verify` | A successor resumes settled state from the verified packet without transcript replay — see [N2: Resumption Without Replay](docs/protocol/v0/n2-resumption-without-replay.md). |
 | Compatibility | `compatibility verify` | Unsupported state fails closed instead of best-effort accepted. |
 | Interoperability | `interoperability verify` | Declared semantics survive transfer; translation isn't reinterpretation. |
 | Federation | `federation verify` | External state can be referenced without importing remote authority. |
