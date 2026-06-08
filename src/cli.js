@@ -2535,7 +2535,73 @@ function auditShow(options, cwd) {
 
 function decisionSummary(options, cwd) {
   const projection = projectEvents(readValidEventsForOptions(options, cwd));
-  return print(selectDecisionSummary(projection, options.thread));
+  const summary = selectDecisionSummary(projection, options.thread);
+  const fmt = (options.format || "").toLowerCase();
+  if (fmt === "text" || fmt === "md" || fmt === "markdown") {
+    const text = formatDecisionSummaryAsText(summary);
+    process.stdout.write(text + (text.endsWith("\n") ? "" : "\n"));
+    return;
+  }
+  return print(summary);
+}
+
+function formatDecisionSummaryAsText(s) {
+  if (s.error) {
+    return `Decision Summary Error: ${s.error} (thread ${s.threadId || "unknown"})`;
+  }
+  const lines = [];
+  lines.push(`# ${s.title || "Decision Summary"}`);
+  lines.push(`Thread: ${s.threadId}`);
+  lines.push(`Question: ${s.question}`);
+  lines.push(`Status: ${s.status}`);
+  lines.push("");
+  if (s.whatWasDecided) {
+    lines.push("## What was decided");
+    if (s.whatWasDecided.status) lines.push(`Status: ${s.whatWasDecided.status}`);
+    if (s.whatWasDecided.summary) lines.push(`Summary: ${s.whatWasDecided.summary}`);
+    if (s.whatWasDecided.decidedBy) lines.push(`Decided by: ${s.whatWasDecided.decidedBy}`);
+    if (s.whatWasDecided.proposal) lines.push(`Proposal: ${s.whatWasDecided.proposal}`);
+    lines.push("");
+  }
+  if (s.why) {
+    lines.push("## Why");
+    if (s.why.rationale) lines.push(`Rationale: ${s.why.rationale}`);
+    if (s.why.supportingEvidence?.length) {
+      lines.push("Supporting evidence:");
+      for (const e of s.why.supportingEvidence) lines.push(`- [${e.id}] ${e.finding || e.source}`);
+    }
+    if (s.why.supportingClaims?.length) {
+      lines.push("Supporting claims:");
+      for (const c of s.why.supportingClaims) lines.push(`- [${c.id}] ${c.text}`);
+    }
+    if (s.why.supportingAssumptions?.length) {
+      lines.push("Supporting assumptions:");
+      for (const a of s.why.supportingAssumptions) lines.push(`- [${a.id}] ${a.text}`);
+    }
+    lines.push("");
+  }
+  if (s.whoDissented) {
+    lines.push("## Who dissented");
+    if (s.whoDissented.objections?.length) {
+      lines.push("Objections:");
+      for (const o of s.whoDissented.objections) {
+        const block = o.blocking ? " (blocking)" : "";
+        lines.push(`- [${o.id}] ${o.raisedBy || "?"}: ${o.text}${block}`);
+      }
+    }
+    if (s.whoDissented.minorityReports?.length) {
+      lines.push("Minority reports:");
+      for (const m of s.whoDissented.minorityReports) {
+        lines.push(`- [${m.id}] ${m.filedBy}: ${m.text}`);
+      }
+    }
+    lines.push("");
+  }
+  if (s.whatNext) {
+    lines.push("## What next");
+    lines.push(s.whatNext);
+  }
+  return lines.join("\n");
 }
 
 function forkLineage(options, cwd) {
