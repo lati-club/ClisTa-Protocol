@@ -155,6 +155,8 @@ Candidate next milestones remain unselected:
 | Protocol Distribution | Verified state can move across environments. |
 | Next Replay Observation | Another non-builder reaches the same understanding from the public docs. |
 
+On the Next Replay Observation candidate: the adapter flow now has a one-command clean-room path (`npm run replay`), and it has been reproduced once from a fresh `git clone` of `main` with no local state — but builder-run. That verifies the published artifact reproduces from scratch; it does not satisfy the candidate, which by definition requires an independent non-builder. The bar remains a real external observer, exactly as `m28_real_external_replay_observed_once` was.
+
 Holding state:
 
 ```text
@@ -167,6 +169,8 @@ m32_reproducible_adapter_replay = complete
 agent_session_bridge = engine_validated
 phase0_acceptance_test = executable_via_decision_summary
 adapter_replay = deterministic_and_diffable
+adapter_replay_reproduced_from_fresh_clone = PASS (builder_run, one_command: npm run replay)
+next_replay_observation = open_pending_external_non_builder
 next_selected_milestone = none
 decision_pause = pause_or_select_from_observed_friction
 safe_to_build_from = yes
