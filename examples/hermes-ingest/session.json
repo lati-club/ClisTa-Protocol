@@ -1,0 +1,29 @@
+[
+  {
+    "role": "user",
+    "content": "We need to decide whether to run a limited beta of the AI support assistant. The queue pressure is high, but privacy is a concern.",
+    "timestamp": "2026-06-08T10:00:00.000Z"
+  },
+  {
+    "role": "assistant",
+    "content": "I will search for the current queue metrics and privacy guidelines.",
+    "timestamp": "2026-06-08T10:00:05.000Z",
+    "tool_calls": [
+      {
+        "name": "web_search",
+        "arguments": "{\"query\": \"support queue metrics Q2 2026\"}"
+      }
+    ]
+  },
+  {
+    "role": "tool",
+    "content": "{\"results\": [{\"title\": \"Q2 Queue Report\", \"description\": \"Median wait time is 45 minutes, exceeding the 15-minute target.\"}]}",
+    "timestamp": "2026-06-08T10:00:06.000Z",
+    "tool_call_id": "call_1"
+  },
+  {
+    "role": "assistant",
+    "content": "Based on the data, the median wait time is 45 minutes. However, we must ensure any beta uses redacted transcripts to comply with privacy guidelines. I recommend a limited, redacted beta.",
+    "timestamp": "2026-06-08T10:00:10.000Z"
+  }
+]
