@@ -116,3 +116,38 @@ export function emitClistaThread(session: {
 2. Start a fresh agent context with only the exported JSON.
 3. Ask: "What was decided, why, who dissented, and what should happen next?"
 4. The answer should identify the selected option, rationale, dissenting claims, and next artifact to produce.
+
+## Implemented Adapter
+
+`src/ingest_hermes.py` implements this adapter. It has two output formats:
+
+```bash
+# Flat clista.protocol.v0 export (standalone JSON)
+python3 src/ingest_hermes.py --input session.json --output thread.json
+
+# Append-only event log the JS engine consumes directly
+python3 src/ingest_hermes.py --input session.json --output events.ndjson --format events
+```
+
+The `events` format emits the same chained NDJSON the engine writes itself
+(`src/clista_events.py` reproduces the canonical hashing in `src/integrity.js`
+byte-for-byte), so a Hermes session flows straight into the projection:
+
+```bash
+node src/cli.js validate   --events events.ndjson
+node src/cli.js state show  --events events.ndjson
+node src/cli.js audit show  --events events.ndjson
+```
+
+Mapping realized by the adapter:
+
+| Hermes input | Emitted event |
+| --- | --- |
+| Human + agent identities | `ParticipantAdded` (×2) |
+| Session | `ThreadCreated` |
+| Substantive user message | `ClaimCreated` (status `draft`) |
+| Tool output linked to its call | `EvidenceCommitted` |
+
+Assistant prose is preserved as conversation, not forced into a claim or a
+fabricated decision — extraction stays boring and deterministic, exactly as the
+sketch above prescribes. Decision extraction remains a future extension.

@@ -18,8 +18,17 @@ import datetime
 import os
 from typing import List, Dict, Any, Optional
 
+import clista_events
+
+
 def generate_id(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:12]}"
+
+
+def _utc_now() -> str:
+    """ISO 8601 UTC timestamp with milliseconds, e.g. 2026-06-08T16:21:59.654Z."""
+    dt = datetime.datetime.now(datetime.timezone.utc)
+    return dt.strftime("%Y-%m-%dT%H:%M:%S.") + f"{dt.microsecond // 1000:03d}Z"
 
 def hash_payload(payload: Dict[str, Any]) -> str:
     """Generate a SHA256 hash of the payload for audit integrity."""
@@ -67,6 +76,122 @@ def parse_session(input_path: str) -> List[Dict[str, Any]]:
             else:
                 raise ValueError("Unsupported JSON structure. Expected list of messages or {'messages': [...]}")
     return messages
+
+def session_to_events(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Map a Hermes session to an ordered ClisTa event list (unhashed).
+
+    Emits the canonical append-only sequence the JS engine consumes:
+      ParticipantAdded x2  (declared first; the actor is the participant being
+                            added, which the engine exempts from the actor-known
+                            check, mirroring its own logs)
+      ThreadCreated        (references both participants)
+      ClaimCreated         (one per substantive user message)
+      EvidenceCommitted    (one per tool output linked to its call)
+
+    Assistant prose is not a first-class protocol object, so it stays in the
+    conversation rather than being forced into a claim or a fabricated decision.
+    The returned events are unhashed; run them through
+    clista_events.prepare_and_chain before serializing.
+    """
+    now = _utc_now()
+    thread_id = generate_id("thd")
+    human_id = generate_id("par")
+    agent_id = generate_id("par")
+
+    first_user = next((m for m in messages if m.get("role") == "user"), messages[0])
+    problem = str(first_user.get("content", "Hermes session"))[:500]
+
+    events: List[Dict[str, Any]] = []
+
+    def emit(event_type, actor_id, payload, timestamp):
+        events.append({
+            "event_id": generate_id("evt"),
+            "event_type": event_type,
+            "thread_id": thread_id,
+            "actor_id": actor_id,
+            "timestamp": timestamp,
+            "payload": payload,
+        })
+
+    emit("ParticipantAdded", human_id, {"participant": {
+        "id": human_id, "object": "participant", "kind": "human",
+        "name": "Human User", "role": "decision_owner",
+    }}, now)
+    emit("ParticipantAdded", agent_id, {"participant": {
+        "id": agent_id, "object": "participant", "kind": "agent",
+        "name": "Hermes Agent", "role": "reasoning_participant",
+    }}, now)
+
+    emit("ThreadCreated", human_id, {"thread": {
+        "id": thread_id, "object": "thread",
+        "title": f"Hermes Session: {problem[:60]}",
+        "question": problem,
+        "status": "active",
+        "participantIds": [human_id, agent_id],
+        "createdAt": now, "updatedAt": now,
+    }}, now)
+
+    pending_tool_calls: List[Dict[str, Any]] = []
+    for msg in messages:
+        role = msg.get("role", "unknown")
+        content = msg.get("content", "")
+        timestamp = msg.get("timestamp", now)
+
+        if role == "user" and len(str(content)) > 20:
+            emit("ClaimCreated", human_id, {"claim": {
+                "id": generate_id("clm"), "object": "claim",
+                "threadId": thread_id,
+                "text": str(content)[:1000],
+                "status": "draft",
+                "createdByParticipantId": human_id,
+                "createdAt": timestamp,
+            }}, timestamp)
+
+        if role == "assistant" and msg.get("tool_calls"):
+            for tc in msg["tool_calls"]:
+                pending_tool_calls.append({
+                    "id": tc.get("id") or tc.get("tool_call_id"),
+                    "name": tc.get("name", "unknown_tool"),
+                    "arguments": tc.get("arguments", "{}"),
+                    "timestamp": timestamp,
+                })
+
+        if role == "tool":
+            tc_info = _match_tool_call(pending_tool_calls, msg.get("tool_call_id"))
+            if tc_info is not None:
+                emit("EvidenceCommitted", agent_id, {"evidence": {
+                    "id": generate_id("evd"), "object": "evidence",
+                    "threadId": thread_id,
+                    "source": f"Tool: {tc_info['name']}",
+                    "finding": str(content)[:1000],
+                    "confidence": 0.9,
+                    "committedByParticipantId": agent_id,
+                    "committedAt": tc_info["timestamp"],
+                }}, tc_info["timestamp"])
+
+    return events
+
+
+def ingest_session_events(input_path: str, output_path: str):
+    """Ingest a Hermes session into a chained ClisTa NDJSON event log."""
+    messages = parse_session(input_path)
+    if not messages:
+        raise ValueError("No messages found in input file.")
+
+    events = clista_events.prepare_and_chain(session_to_events(messages))
+
+    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(clista_events.serialize_ndjson(events))
+
+    counts: Dict[str, int] = {}
+    for e in events:
+        counts[e["event_type"]] = counts.get(e["event_type"], 0) + 1
+    summary = ", ".join(f"{n} {t}" for t, n in counts.items())
+    print(f"Successfully ingested {len(messages)} messages.")
+    print(f"Generated {len(events)} events: {summary}")
+    print(f"Event log written to: {output_path}")
+
 
 def ingest_session(input_path: str, output_path: str):
     messages = parse_session(input_path)
@@ -239,7 +364,13 @@ def ingest_session(input_path: str, output_path: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ingest Hermes session into ClisTa Protocol v0 format")
     parser.add_argument("--input", required=True, help="Path to input .json or .ndjson Hermes session")
-    parser.add_argument("--output", required=True, help="Path to output ClisTa thread export JSON")
+    parser.add_argument("--output", required=True, help="Path to output file")
+    parser.add_argument("--format", choices=["export", "events"], default="export",
+                        help="export: flat clista.protocol.v0 JSON (default); "
+                             "events: chained NDJSON event log for the engine")
     args = parser.parse_args()
-    
-    ingest_session(args.input, args.output)
+
+    if args.format == "events":
+        ingest_session_events(args.input, args.output)
+    else:
+        ingest_session(args.input, args.output)

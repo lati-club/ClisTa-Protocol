@@ -20,7 +20,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from engine import ClisTaEngine
-from ingest_hermes import ingest_session
+from ingest_hermes import ingest_session, ingest_session_events
 
 def resolve_thread_id(engine, requested):
     """Return the requested thread id, or the first thread in the export.
@@ -69,9 +69,12 @@ def cmd_project(args):
         sys.exit(1)
 
 def cmd_ingest(args):
-    """Ingest a Hermes session into a ClisTa protocol export."""
+    """Ingest a Hermes session into a ClisTa export or engine event log."""
     try:
-        ingest_session(args.input, args.output)
+        if args.format == "events":
+            ingest_session_events(args.input, args.output)
+        else:
+            ingest_session(args.input, args.output)
         sys.exit(0)
     except Exception as e:
         print(json.dumps({"error": str(e)}, indent=2))
@@ -99,7 +102,10 @@ def main():
     # Ingest command
     ingest_parser = subparsers.add_parser("ingest", help="Ingest Hermes session into ClisTa format")
     ingest_parser.add_argument("--input", required=True, help="Path to input Hermes session (.json or .ndjson)")
-    ingest_parser.add_argument("--output", required=True, help="Path to output ClisTa export JSON")
+    ingest_parser.add_argument("--output", required=True, help="Path to output file")
+    ingest_parser.add_argument("--format", choices=["export", "events"], default="export",
+                               help="export: flat clista.protocol.v0 JSON (default); "
+                                    "events: chained NDJSON event log the engine consumes")
     ingest_parser.set_defaults(func=cmd_ingest)
     
     args = parser.parse_args()
