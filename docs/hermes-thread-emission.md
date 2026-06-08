@@ -147,7 +147,19 @@ Mapping realized by the adapter:
 | Session | `ThreadCreated` |
 | Substantive user message | `ClaimCreated` (status `draft`) |
 | Tool output linked to its call | `EvidenceCommitted` |
+| Explicit assistant recommendation (with evidence present) | `AssumptionDeclared` + `DecisionRequestOpened` + `ReviewSubmitted` + `DecisionMerged` |
 
-Assistant prose is preserved as conversation, not forced into a claim or a
-fabricated decision — extraction stays boring and deterministic, exactly as the
-sketch above prescribes. Decision extraction remains a future extension.
+Assistant prose that is *not* an explicit recommendation is preserved as
+conversation, never forced into a claim or an inferred decision — extraction
+stays boring and deterministic, exactly as the sketch above prescribes.
+
+A decision is emitted only when the assistant states an explicit recommendation
+(e.g. "I recommend …", "I suggest …", "Recommendation:") **and** the session
+produced evidence. The agent proposes its own recommendation
+(`DecisionRequestOpened`) and the human, who holds the `decision_owner` role,
+approves it (`ReviewSubmitted` → `DecisionMerged`). The engine requires every
+decision to rest on evidence, a claim, and a named assumption, so the adapter
+also declares the load-bearing assumption (that the gathered evidence is
+sufficient to act on). A recommendation in a session with no tool evidence
+yields claims and evidence but no decision, because an evidence-free merge would
+be rejected.
