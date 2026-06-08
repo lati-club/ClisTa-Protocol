@@ -28,7 +28,7 @@ sys.path.insert(0, os.path.join(REPO_ROOT, "src"))
 
 import clista_events  # noqa: E402
 import ingest_hermes  # noqa: E402
-from ingest_hermes import session_to_events  # noqa: E402
+from ingest_hermes import _match_tool_call, session_to_events  # noqa: E402
 
 MOCK_MESSAGES = [
     {"role": "user",
@@ -49,6 +49,30 @@ NO_RECOMMENDATION_MESSAGES = MOCK_MESSAGES[:-1] + [
     {"role": "assistant", "content": "The median wait time is 45 minutes.",
      "timestamp": "2026-01-01T00:00:03.000Z"},
 ]
+
+
+class MatchToolCallTests(unittest.TestCase):
+    def test_exact_id_match(self):
+        pending = [{"id": "call_A", "name": "a"}, {"id": "call_B", "name": "b"}]
+        match = _match_tool_call(pending, "call_B")
+        self.assertEqual(match["name"], "b")
+        self.assertEqual([p["name"] for p in pending], ["a"])
+
+    def test_empty_pending_returns_none(self):
+        self.assertIsNone(_match_tool_call([], "call_A"))
+
+    def test_fallback_prefers_untagged_call(self):
+        # Result carries an id, but the matching call was stored without one
+        # (the Hermes shape). We must not steal the unrelated id-tagged call.
+        pending = [{"id": "call_A", "name": "tagged"}, {"id": None, "name": "untagged"}]
+        match = _match_tool_call(pending, "call_unknown")
+        self.assertEqual(match["name"], "untagged")
+        self.assertEqual([p["name"] for p in pending], ["tagged"])
+
+    def test_fallback_fifo_when_all_tagged(self):
+        pending = [{"id": "call_A", "name": "first"}, {"id": "call_B", "name": "second"}]
+        match = _match_tool_call(pending, None)
+        self.assertEqual(match["name"], "first")
 
 
 class CanonicalHashingTests(unittest.TestCase):

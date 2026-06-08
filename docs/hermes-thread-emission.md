@@ -119,19 +119,20 @@ export function emitClistaThread(session: {
 
 ## Implemented Adapter
 
-`src/ingest_hermes.py` implements this adapter. It has two output formats:
+`src/ingest_hermes.py` implements this adapter. It emits the canonical
+append-only event log the engine consumes — the one representation, so there is
+no second format to keep in sync:
 
 ```bash
-# Flat clista.protocol.v0 export (standalone JSON)
-python3 src/ingest_hermes.py --input session.json --output thread.json
-
-# Append-only event log the JS engine consumes directly
-python3 src/ingest_hermes.py --input session.json --output events.ndjson --format events
+python3 src/ingest_hermes.py --input session.json --output events.ndjson
+# or, equivalently:
+python3 src/cli.py ingest --input session.json --output events.ndjson
 ```
 
-The `events` format emits the same chained NDJSON the engine writes itself
+The output is the same chained NDJSON the engine writes itself
 (`src/clista_events.py` reproduces the canonical hashing in `src/integrity.js`
-byte-for-byte), so a Hermes session flows straight into the projection:
+byte-for-byte), so a Hermes session flows straight into the projection — there
+is no separate Python engine; validation and projection live in the engine:
 
 ```bash
 node src/cli.js validate   --events events.ndjson
