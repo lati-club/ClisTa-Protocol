@@ -77,6 +77,34 @@ def parse_session(input_path: str) -> List[Dict[str, Any]]:
                 raise ValueError("Unsupported JSON structure. Expected list of messages or {'messages': [...]}")
     return messages
 
+# Conservative, deterministic phrases that mark an assistant turn as an explicit
+# recommendation. Detection stays boring on purpose: it never infers a decision
+# from subtext, only from a stated recommendation.
+_RECOMMENDATION_TRIGGERS = (
+    "i recommend", "we recommend", "my recommendation", "our recommendation",
+    "i suggest", "we suggest", "i propose", "we propose", "i advise",
+    "recommendation:", "decision:",
+)
+
+
+def _detect_recommendation(messages: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Return the last assistant turn that states an explicit recommendation.
+
+    Returns {"text", "timestamp"} for the final recommending assistant message,
+    or None if no assistant turn uses recommendation language. The decision the
+    human (decision owner) then approves is that recommendation verbatim.
+    """
+    found = None
+    for msg in messages:
+        if msg.get("role") != "assistant":
+            continue
+        content = str(msg.get("content", ""))
+        lowered = content.lower()
+        if any(trigger in lowered for trigger in _RECOMMENDATION_TRIGGERS):
+            found = {"text": content, "timestamp": msg.get("timestamp")}
+    return found
+
+
 def session_to_events(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Map a Hermes session to an ordered ClisTa event list (unhashed).
 
@@ -87,9 +115,16 @@ def session_to_events(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
       ThreadCreated        (references both participants)
       ClaimCreated         (one per substantive user message)
       EvidenceCommitted    (one per tool output linked to its call)
+      DecisionRequestOpened + ReviewSubmitted + DecisionMerged
+                           (only when the assistant states an explicit
+                            recommendation AND evidence exists: the agent
+                            proposes it, the human/decision_owner approves it)
 
-    Assistant prose is not a first-class protocol object, so it stays in the
-    conversation rather than being forced into a claim or a fabricated decision.
+    Assistant prose that is not an explicit recommendation stays conversation —
+    it is never forced into a claim or an inferred decision. A decision is only
+    emitted when the engine's own rules can be satisfied (a merge requires at
+    least one piece of evidence and an approving review), so a recommendation in
+    a session with no tool evidence yields claims/evidence but no decision.
     The returned events are unhashed; run them through
     clista_events.prepare_and_chain before serializing.
     """
@@ -131,6 +166,9 @@ def session_to_events(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         "createdAt": now, "updatedAt": now,
     }}, now)
 
+    claim_ids: List[str] = []
+    evidence_ids: List[str] = []
+
     pending_tool_calls: List[Dict[str, Any]] = []
     for msg in messages:
         role = msg.get("role", "unknown")
@@ -138,8 +176,10 @@ def session_to_events(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         timestamp = msg.get("timestamp", now)
 
         if role == "user" and len(str(content)) > 20:
+            claim_id = generate_id("clm")
+            claim_ids.append(claim_id)
             emit("ClaimCreated", human_id, {"claim": {
-                "id": generate_id("clm"), "object": "claim",
+                "id": claim_id, "object": "claim",
                 "threadId": thread_id,
                 "text": str(content)[:1000],
                 "status": "draft",
@@ -159,8 +199,10 @@ def session_to_events(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if role == "tool":
             tc_info = _match_tool_call(pending_tool_calls, msg.get("tool_call_id"))
             if tc_info is not None:
+                evidence_id = generate_id("evd")
+                evidence_ids.append(evidence_id)
                 emit("EvidenceCommitted", agent_id, {"evidence": {
-                    "id": generate_id("evd"), "object": "evidence",
+                    "id": evidence_id, "object": "evidence",
                     "threadId": thread_id,
                     "source": f"Tool: {tc_info['name']}",
                     "finding": str(content)[:1000],
@@ -168,6 +210,70 @@ def session_to_events(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                     "committedByParticipantId": agent_id,
                     "committedAt": tc_info["timestamp"],
                 }}, tc_info["timestamp"])
+
+    # Decision chain: only when the assistant made an explicit recommendation and
+    # there is evidence to back it (the engine rejects an evidence-free merge).
+    recommendation = _detect_recommendation(messages)
+    if recommendation and evidence_ids:
+        proposal = recommendation["text"][:1000]
+        ts = recommendation["timestamp"] or now
+        assumption_id = generate_id("asm")
+        request_id = generate_id("drq")
+        review_id = generate_id("rev")
+        record_id = generate_id("dcr")
+
+        # The engine requires every decision to rest on evidence, a claim, and a
+        # named assumption. The load-bearing assumption behind acting on a
+        # recommendation is that the gathered evidence is sufficient and current.
+        emit("AssumptionDeclared", agent_id, {"assumption": {
+            "id": assumption_id, "object": "assumption",
+            "threadId": thread_id,
+            "text": "The evidence gathered in this session is sufficient and current "
+                    "enough to act on the recommendation.",
+            "status": "active",
+            "evidenceIds": evidence_ids,
+            "declaredByParticipantId": agent_id,
+            "declaredAt": ts,
+        }}, ts)
+
+        # The agent proposes its own recommendation...
+        emit("DecisionRequestOpened", agent_id, {"decisionRequest": {
+            "id": request_id, "object": "decisionRequest",
+            "threadId": thread_id,
+            "proposal": proposal,
+            "status": "review",
+            "supportingEvidenceIds": evidence_ids,
+            "supportingClaimIds": claim_ids,
+            "supportingAssumptionIds": [assumption_id],
+            "openedByParticipantId": agent_id,
+            "openedAt": ts,
+        }}, ts)
+
+        # ...the human/decision_owner reviews and approves it...
+        emit("ReviewSubmitted", human_id, {"review": {
+            "id": review_id, "object": "review",
+            "threadId": thread_id,
+            "decisionRequestId": request_id,
+            "reviewerParticipantId": human_id,
+            "status": "approve",
+            "comment": "Approved the assistant's recommendation.",
+            "reviewedAt": ts,
+        }}, ts)
+
+        # ...and merges the final decision record.
+        emit("DecisionMerged", human_id, {"decisionRecord": {
+            "id": record_id, "object": "decisionRecord",
+            "threadId": thread_id,
+            "decisionRequestId": request_id,
+            "status": "approved",
+            "summary": proposal,
+            "rationale": "Approved the assistant's recommendation from the session.",
+            "supportingEvidenceIds": evidence_ids,
+            "supportingClaimIds": claim_ids,
+            "supportingAssumptionIds": [assumption_id],
+            "decidedByParticipantId": human_id,
+            "decidedAt": ts,
+        }}, ts)
 
     return events
 

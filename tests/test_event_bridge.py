@@ -27,6 +27,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO_ROOT, "src"))
 
 import clista_events  # noqa: E402
+import ingest_hermes  # noqa: E402
 from ingest_hermes import session_to_events  # noqa: E402
 
 MOCK_MESSAGES = [
@@ -38,7 +39,14 @@ MOCK_MESSAGES = [
      "tool_calls": [{"name": "web_search", "arguments": "{}"}]},
     {"role": "tool", "content": "{\"median_wait\": \"45m\"}",
      "timestamp": "2026-01-01T00:00:02.000Z", "tool_call_id": "call_1"},
-    {"role": "assistant", "content": "Recommend a limited, redacted beta.",
+    {"role": "assistant", "content": "I recommend a limited, redacted beta.",
+     "timestamp": "2026-01-01T00:00:03.000Z"},
+]
+
+# Same as MOCK_MESSAGES but the conclusion states no recommendation, so no
+# decision chain should be emitted.
+NO_RECOMMENDATION_MESSAGES = MOCK_MESSAGES[:-1] + [
+    {"role": "assistant", "content": "The median wait time is 45 minutes.",
      "timestamp": "2026-01-01T00:00:03.000Z"},
 ]
 
@@ -126,7 +134,9 @@ class SessionToEventsTests(unittest.TestCase):
         self.assertEqual(
             [e["event_type"] for e in events],
             ["ParticipantAdded", "ParticipantAdded", "ThreadCreated",
-             "ClaimCreated", "EvidenceCommitted"],
+             "ClaimCreated", "EvidenceCommitted",
+             "AssumptionDeclared", "DecisionRequestOpened",
+             "ReviewSubmitted", "DecisionMerged"],
         )
         thread = events[2]["payload"]["thread"]
         self.assertEqual(thread["status"], "active")
@@ -151,21 +161,95 @@ class SessionToEventsTests(unittest.TestCase):
             self.assertEqual(ev["actor_id"], ev["payload"]["participant"]["id"])
 
 
+class DecisionExtractionTests(unittest.TestCase):
+    def _by_type(self, events):
+        out = {}
+        for e in events:
+            out.setdefault(e["event_type"], []).append(e)
+        return out
+
+    def test_detect_recommendation_picks_last_recommending_turn(self):
+        rec = ingest_hermes._detect_recommendation(MOCK_MESSAGES)
+        self.assertIsNotNone(rec)
+        self.assertIn("limited", rec["text"])
+
+    def test_no_recommendation_returns_none(self):
+        self.assertIsNone(ingest_hermes._detect_recommendation(NO_RECOMMENDATION_MESSAGES))
+
+    def test_decision_chain_roles_and_links(self):
+        events = session_to_events(MOCK_MESSAGES)
+        by = self._by_type(events)
+        human_id = events[0]["payload"]["participant"]["id"]
+        agent_id = events[1]["payload"]["participant"]["id"]
+
+        request = by["DecisionRequestOpened"][0]["payload"]["decisionRequest"]
+        review = by["ReviewSubmitted"][0]["payload"]["review"]
+        record = by["DecisionMerged"][0]["payload"]["decisionRecord"]
+
+        # Agent proposes; decision_owner human reviews and decides.
+        self.assertEqual(request["openedByParticipantId"], agent_id)
+        self.assertEqual(review["reviewerParticipantId"], human_id)
+        self.assertEqual(review["status"], "approve")
+        self.assertEqual(record["decidedByParticipantId"], human_id)
+        self.assertEqual(record["status"], "approved")
+
+        # The record links back to the request and carries all three supports.
+        self.assertEqual(record["decisionRequestId"], request["id"])
+        self.assertEqual(review["decisionRequestId"], request["id"])
+        for field in ("supportingEvidenceIds", "supportingClaimIds", "supportingAssumptionIds"):
+            self.assertTrue(record[field], f"{field} must be non-empty")
+        self.assertIn("recommend", record["summary"].lower())
+
+    def test_no_decision_without_recommendation(self):
+        types = [e["event_type"] for e in session_to_events(NO_RECOMMENDATION_MESSAGES)]
+        self.assertNotIn("DecisionMerged", types)
+        self.assertNotIn("DecisionRequestOpened", types)
+
+    def test_no_decision_without_evidence(self):
+        # Recommendation present, but no tool output -> no evidence -> the engine
+        # would reject an evidence-free merge, so the adapter emits no decision.
+        messages = [
+            {"role": "user", "content": "Should we launch the limited beta now?",
+             "timestamp": "2026-01-01T00:00:00Z"},
+            {"role": "assistant", "content": "I recommend launching a limited beta.",
+             "timestamp": "2026-01-01T00:00:01Z"},
+        ]
+        types = [e["event_type"] for e in session_to_events(messages)]
+        self.assertNotIn("DecisionMerged", types)
+        self.assertNotIn("EvidenceCommitted", types)
+
+
 @unittest.skipUnless(shutil.which("node"), "node not available")
 class EngineRoundTripTests(unittest.TestCase):
+    def _write_log(self, tmp, messages):
+        events = clista_events.prepare_and_chain(session_to_events(messages))
+        log = os.path.join(tmp, "events.ndjson")
+        with open(log, "w", encoding="utf-8") as f:
+            f.write(clista_events.serialize_ndjson(events))
+        return log
+
+    def _cli(self, *args):
+        return subprocess.run(
+            ["node", os.path.join("src", "cli.js"), *args],
+            cwd=REPO_ROOT, capture_output=True, text=True,
+        )
+
     def test_generated_log_is_accepted_by_engine(self):
-        events = clista_events.prepare_and_chain(session_to_events(MOCK_MESSAGES))
         with tempfile.TemporaryDirectory() as tmp:
-            log = os.path.join(tmp, "events.ndjson")
-            with open(log, "w", encoding="utf-8") as f:
-                f.write(clista_events.serialize_ndjson(events))
-            proc = subprocess.run(
-                ["node", os.path.join("src", "cli.js"), "validate", "--events", log],
-                cwd=REPO_ROOT, capture_output=True, text=True,
-            )
+            log = self._write_log(tmp, MOCK_MESSAGES)
+            proc = self._cli("validate", "--events", log)
         self.assertEqual(proc.returncode, 0, proc.stderr or proc.stdout)
-        report = json.loads(proc.stdout)
-        self.assertTrue(report["valid"], report)
+        self.assertTrue(json.loads(proc.stdout)["valid"], proc.stdout)
+
+    def test_decision_projects_as_approved(self):
+        # The full session (recommendation + evidence) must project a merged,
+        # approved decision in the engine's own state view.
+        with tempfile.TemporaryDirectory() as tmp:
+            log = self._write_log(tmp, MOCK_MESSAGES)
+            proc = self._cli("state", "show", "--events", log)
+        self.assertEqual(proc.returncode, 0, proc.stderr or proc.stdout)
+        status = json.loads(proc.stdout).get("decisionStatus", {})
+        self.assertEqual(status.get("recordStatus"), "approved", status)
 
 
 if __name__ == "__main__":
