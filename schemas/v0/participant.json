@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clista.ai/schemas/v0/participant.json",
+  "title": "Participant",
+  "description": "Human or AI entity.",
+  "type": "object",
+  "properties": {
+    "id": { "type": "string" },
+    "object_type": { "type": "string", "const": "participant" },
+    "display_name": { "type": "string" },
+    "type": { "type": "string", "enum": ["human", "ai_agent", "system"] },
+    "organization": { "type": ["string", "null"] },
+    "identity_ref": { "type": ["string", "null"] },
+    "agent_model_ref": { "type": ["string", "null"] },
+    "public_key": { "type": ["string", "null"] },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "required": ["id", "object_type", "display_name", "type", "created_at"],
+  "additionalProperties": false
+}

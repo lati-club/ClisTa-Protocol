@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clista.ai/schemas/v0/audit_event.json",
+  "title": "Audit Event",
+  "description": "Immutable protocol history.",
+  "type": "object",
+  "properties": {
+    "id": { "type": "string" },
+    "object_type": { "type": "string", "const": "audit_event" },
+    "thread_id": { "type": "string" },
+    "actor_participant_id": { "type": "string" },
+    "action_type": { "type": "string" },
+    "target_object_type": { "type": "string" },
+    "target_object_id": { "type": "string" },
+    "payload_hash": { "type": "string" },
+    "previous_event_id": { "type": ["string", "null"] },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "required": [
+    "id", "object_type", "thread_id", "actor_participant_id", "action_type",
+    "target_object_type", "target_object_id", "payload_hash", "created_at"
+  ],
+  "additionalProperties": false
+}

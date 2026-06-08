@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clista.ai/schemas/v0/decision.json",
+  "title": "Decision",
+  "description": "Authorized outcome.",
+  "type": "object",
+  "properties": {
+    "id": { "type": "string" },
+    "object_type": { "type": "string", "const": "decision" },
+    "thread_id": { "type": "string" },
+    "outcome": { "type": "string", "enum": ["approved", "rejected", "deferred", "modified"] },
+    "decision_text": { "type": "string" },
+    "rationale": { "type": "string" },
+    "deciding_participant_ids": { "type": "array", "items": { "type": "string" } },
+    "approver_participant_ids": { "type": "array", "items": { "type": "string" } },
+    "rejected_alternatives": { "type": "array", "items": { "type": "string" } },
+    "evidence_snapshot_ids": { "type": "array", "items": { "type": "string" } },
+    "alignment_state_id": { "type": "string" },
+    "minority_report_ids": { "type": "array", "items": { "type": "string" } },
+    "effective_at": { "type": ["string", "null"], "format": "date-time" },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "required": [
+    "id", "object_type", "thread_id", "outcome", "decision_text", "rationale",
+    "deciding_participant_ids", "alignment_state_id", "created_at"
+  ],
+  "additionalProperties": false
+}

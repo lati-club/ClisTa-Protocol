@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clista.ai/schemas/v0/thread.json",
+  "title": "Thread",
+  "description": "The container for reasoning.",
+  "type": "object",
+  "properties": {
+    "id": { "type": "string" },
+    "object_type": { "type": "string", "const": "thread" },
+    "title": { "type": "string" },
+    "problem_statement": { "type": "string" },
+    "status": { "type": "string", "enum": ["open", "in_deliberation", "decided", "forked", "archived"] },
+    "created_by_participant_id": { "type": "string" },
+    "participant_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "role_bindings": { "type": "array", "items": { "type": "string" } },
+    "evidence_ids": { "type": "array", "items": { "type": "string" } },
+    "claim_ids": { "type": "array", "items": { "type": "string" } },
+    "position_ids": { "type": "array", "items": { "type": "string" } },
+    "objection_ids": { "type": "array", "items": { "type": "string" } },
+    "alignment_state_ids": { "type": "array", "items": { "type": "string" } },
+    "decision_ids": { "type": "array", "items": { "type": "string" } },
+    "minority_report_ids": { "type": "array", "items": { "type": "string" } },
+    "fork_ids": { "type": "array", "items": { "type": "string" } },
+    "parent_thread_id": { "type": ["string", "null"] },
+    "visibility": { "type": "string", "enum": ["private", "internal", "public"] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "required": [
+    "id", "object_type", "title", "problem_statement", "status",
+    "created_by_participant_id", "participant_ids", "visibility", "created_at", "updated_at"
+  ],
+  "additionalProperties": false
+}

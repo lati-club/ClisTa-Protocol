@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clista.ai/schemas/v0/evidence.json",
+  "title": "Evidence",
+  "description": "A verifiable observation or source.",
+  "type": "object",
+  "properties": {
+    "id": { "type": "string" },
+    "object_type": { "type": "string", "const": "evidence" },
+    "thread_id": { "type": "string" },
+    "title": { "type": "string" },
+    "source_type": { "type": "string" },
+    "source_url": { "type": ["string", "null"] },
+    "source_ref": { "type": ["string", "null"] },
+    "summary": { "type": "string" },
+    "content_hash": { "type": ["string", "null"] },
+    "category": { "type": ["string", "null"] },
+    "credibility_score": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "added_by_participant_id": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "required": [
+    "id", "object_type", "thread_id", "title", "source_type", "summary", "added_by_participant_id", "created_at"
+  ],
+  "additionalProperties": false
+}
