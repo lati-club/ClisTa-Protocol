@@ -40,7 +40,7 @@ None of those systems should define the protocol.
 
 Verified baseline:
 
-- Completed through M29: Product Narrative Pass
+- Completed through M30: Agent Ingestion Adapter (Hermes bridge)
 
 Next selected milestone:
 
@@ -53,7 +53,9 @@ Status:
 - Surrounding quickstart hygiene defects found and patched
 - M29 product narrative pass complete
 - M29 changed narrative documentation only
-- M30 not selected
+- M30 agent ingestion adapter (Hermes bridge) complete
+- M30 selected from observed friction: the two-engine drift between the Python MVP export and the canonical event log
+- M30 engine-validated: imported sessions are accepted byte-for-byte and projected by the reference engine
 - Next decision: pause or select the next milestone from observed friction
 
 M28 audited the existing M27 scenario. It did not expand the product surface.
@@ -96,6 +98,20 @@ Explicitly out of scope:
 
 M27 proved that a realistic demo workflow exists. M28 proved, by repository tests and one real external replay observation, that a non-builder can reproduce that workflow from the public artifact and understand the state it produces. M29 makes that value legible at the top of the public docs: the limited beta approval is not just a yes, but a yes with its accountability structure fused on.
 
+M30 realizes Phase 3 (Agent Adapter): the Hermes ingestion adapter turns a raw agent session into the canonical append-only event log without becoming the protocol. A session now projects a full accountable thread — claim, evidence, a recorded concern, a named assumption, and an approved decision that considered them — validated by the reference engine itself. M30 was chosen from observed friction (the Python MVP export had drifted into a second, weaker representation) and also consolidated the tooling onto one representation, the event log, and one engine, retiring the parallel Python engine and flat export.
+
+The M30 theorem is:
+
+```text
+agent_ingestion = emit(session_transcript) -> canonical_protocol_events
+```
+
+Hard law:
+
+```text
+adapter_emits_protocol != adapter_owns_protocol
+```
+
 Candidate next milestones remain unselected:
 
 | Candidate | What it would prove |
@@ -107,9 +123,11 @@ Candidate next milestones remain unselected:
 Holding state:
 
 ```text
-latest_verified_milestone = M29
+latest_verified_milestone = M30
 m28_real_external_replay_observed_once = PASS
 m29_product_narrative_pass = complete
+m30_agent_ingestion_adapter = complete
+agent_session_bridge = engine_validated
 next_selected_milestone = none
 decision_pause = pause_or_select_from_observed_friction
 safe_to_build_from = yes
@@ -270,6 +288,25 @@ Adapter rule:
 agent output is input to ClisTa;
 ClisTa state is not agent memory
 ```
+
+Implemented first adapter — Hermes ingestion (M30):
+
+The first adapter built is a Hermes session adapter (`src/ingest_hermes.py`), not
+LangGraph. It parses a raw transcript and emits the canonical append-only event
+log the engine consumes, honoring the adapter rule above — the session is input;
+the engine owns protocol state. One session maps to:
+
+- participants -> `ParticipantAdded`
+- session -> `ThreadCreated`
+- substantive user messages -> `ClaimCreated`
+- tool outputs -> `EvidenceCommitted`
+- named concerns -> `ObjectionRaised` (non-blocking)
+- an explicit recommendation backed by evidence -> `AssumptionDeclared` + `DecisionRequestOpened` + `ReviewSubmitted` + `DecisionMerged`
+
+The generated log is accepted by the engine byte-for-byte (`src/clista_events.py`
+reproduces the canonical event hashing), so an imported session projects a full
+reasoning thread via `clista state show` and `clista audit show`. The mapping and
+its extraction rules are documented in `docs/hermes-thread-emission.md`.
 
 ## Phase 4: Interop / Distribution
 
