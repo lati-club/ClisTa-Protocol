@@ -2549,58 +2549,68 @@ function formatDecisionSummaryAsText(s) {
   if (s.error) {
     return `Decision Summary Error: ${s.error} (thread ${s.threadId || "unknown"})`;
   }
+  // Always render all four questions, with an explicit fallback when a section
+  // is empty, so the answer view is consistent and never shows a bare heading.
   const lines = [];
   lines.push(`# ${s.title || "Decision Summary"}`);
   lines.push(`Thread: ${s.threadId}`);
   lines.push(`Question: ${s.question}`);
   lines.push(`Status: ${s.status}`);
-  lines.push("");
+
+  lines.push("", "## What was decided");
   if (s.whatWasDecided) {
-    lines.push("## What was decided");
     if (s.whatWasDecided.status) lines.push(`Status: ${s.whatWasDecided.status}`);
     if (s.whatWasDecided.summary) lines.push(`Summary: ${s.whatWasDecided.summary}`);
     if (s.whatWasDecided.decidedBy) lines.push(`Decided by: ${s.whatWasDecided.decidedBy}`);
     if (s.whatWasDecided.proposal) lines.push(`Proposal: ${s.whatWasDecided.proposal}`);
-    lines.push("");
+  } else {
+    lines.push("Not yet decided.");
   }
-  if (s.why) {
-    lines.push("## Why");
-    if (s.why.rationale) lines.push(`Rationale: ${s.why.rationale}`);
-    if (s.why.supportingEvidence?.length) {
-      lines.push("Supporting evidence:");
-      for (const e of s.why.supportingEvidence) lines.push(`- [${e.id}] ${e.finding || e.source}`);
-    }
-    if (s.why.supportingClaims?.length) {
-      lines.push("Supporting claims:");
-      for (const c of s.why.supportingClaims) lines.push(`- [${c.id}] ${c.text}`);
-    }
-    if (s.why.supportingAssumptions?.length) {
-      lines.push("Supporting assumptions:");
-      for (const a of s.why.supportingAssumptions) lines.push(`- [${a.id}] ${a.text}`);
-    }
-    lines.push("");
+
+  lines.push("", "## Why");
+  const why = s.why || {};
+  let wroteWhy = false;
+  if (why.rationale) { lines.push(`Rationale: ${why.rationale}`); wroteWhy = true; }
+  if (why.supportingEvidence?.length) {
+    lines.push("Supporting evidence:");
+    for (const e of why.supportingEvidence) lines.push(`- [${e.id}] ${e.finding || e.source}`);
+    wroteWhy = true;
   }
-  if (s.whoDissented) {
-    lines.push("## Who dissented");
-    if (s.whoDissented.objections?.length) {
-      lines.push("Objections:");
-      for (const o of s.whoDissented.objections) {
-        const block = o.blocking ? " (blocking)" : "";
-        lines.push(`- [${o.id}] ${o.raisedBy || "?"}: ${o.text}${block}`);
-      }
-    }
-    if (s.whoDissented.minorityReports?.length) {
-      lines.push("Minority reports:");
-      for (const m of s.whoDissented.minorityReports) {
-        lines.push(`- [${m.id}] ${m.filedBy}: ${m.text}`);
-      }
-    }
-    lines.push("");
+  if (why.supportingClaims?.length) {
+    lines.push("Supporting claims:");
+    for (const c of why.supportingClaims) lines.push(`- [${c.id}] ${c.text}`);
+    wroteWhy = true;
   }
-  if (s.whatNext) {
-    lines.push("## What next");
-    lines.push(s.whatNext);
+  if (why.supportingAssumptions?.length) {
+    lines.push("Supporting assumptions:");
+    for (const a of why.supportingAssumptions) lines.push(`- [${a.id}] ${a.text}`);
+    wroteWhy = true;
   }
+  if (!wroteWhy) lines.push("No rationale or support recorded.");
+
+  lines.push("", "## Who dissented");
+  const dissent = s.whoDissented || {};
+  let wroteDissent = false;
+  if (dissent.objections?.length) {
+    lines.push("Objections:");
+    for (const o of dissent.objections) {
+      const block = o.blocking ? " (blocking)" : "";
+      lines.push(`- [${o.id}] ${o.raisedBy || "?"}: ${o.text}${block}`);
+    }
+    wroteDissent = true;
+  }
+  if (dissent.minorityReports?.length) {
+    lines.push("Minority reports:");
+    for (const m of dissent.minorityReports) {
+      lines.push(`- [${m.id}] ${m.filedBy}: ${m.text}`);
+    }
+    wroteDissent = true;
+  }
+  if (!wroteDissent) lines.push("None recorded.");
+
+  lines.push("", "## What next");
+  lines.push(s.whatNext || "No next action recorded.");
+
   return lines.join("\n");
 }
 

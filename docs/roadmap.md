@@ -109,7 +109,6 @@ The M30 theorem is:
 agent_ingestion = emit(session_transcript) -> canonical_protocol_events
 ```
 
-
 M31 realizes Phase 0 acceptance as executable legibility. The original Phase 0 criterion was "Given only the exported ClisTa JSON, another agent can answer: What was decided? Why? Who dissented? What should happen next?" After projection existed, this was still a manual dig through large `state show` or `export` JSON. M31 adds the `decision summary` command (backed by `selectDecisionSummary` in the projector) that surfaces exactly those four answers in a compact, purpose-built view:
 
 - `whatWasDecided` (status, summary, decidedBy)

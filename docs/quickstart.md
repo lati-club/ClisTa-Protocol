@@ -60,7 +60,10 @@ node src/cli.js state show --thread thd_scenario_demo --events examples/scenario
 node src/cli.js export --events examples/scenario-demo/events.ndjson
 node src/cli.js attribution list --thread thd_scenario_demo --events examples/scenario-demo/events.ndjson
 node src/cli.js provenance trace dcr_limited_beta --events examples/scenario-demo/events.ndjson
+node src/cli.js decision summary --thread thd_scenario_demo --events examples/scenario-demo/events.ndjson
 ```
+
+`decision summary` answers "what was decided, why, who dissented, what next" from projected state alone. It prints JSON by default; add `--format text` (or `md`) for a human-readable markdown rendering.
 
 This is the minimum release usage path:
 

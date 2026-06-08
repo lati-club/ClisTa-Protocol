@@ -57,7 +57,12 @@ node src/cli.js audit show        --events examples/hermes-ingest/events.ndjson
 
 `decision summary` is the concise answer view: what was decided, why, who
 dissented, and what should happen next — without reading the full state
-projection.
+projection. It prints JSON by default; add `--format text` (or `md`) for a
+human-readable markdown rendering of the same four answers:
+
+```sh
+node src/cli.js decision summary --events examples/hermes-ingest/events.ndjson --format text
+```
 
 To trace the decision back to its source event, participant, and authority
 context (ids vary per run, so read one from the log):

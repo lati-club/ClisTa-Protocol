@@ -57,6 +57,21 @@ test("decision summary surfaces a non-blocking objection with no minority report
   assert.equal(summary.whoDissented.minorityReports.length, 0);
 });
 
+test("decision summary --format text renders the four answer sections", () => {
+  const result = spawnSync(
+    "node",
+    ["src/cli.js", "decision", "summary",
+     "--events", "examples/scenario-demo/events.ndjson", "--format", "text"],
+    { cwd: root, encoding: "utf8" }
+  );
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const text = result.stdout;
+  for (const heading of ["## What was decided", "## Why", "## Who dissented", "## What next"]) {
+    assert.ok(text.includes(heading), `missing section: ${heading}`);
+  }
+  assert.ok(!text.trimStart().startsWith("{"), "text mode must not emit JSON");
+});
+
 test("decision summary reports an error for an unknown thread", () => {
   const summary = decisionSummary(
     "examples/scenario-demo/events.ndjson",
