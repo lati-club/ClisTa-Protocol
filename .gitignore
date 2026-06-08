@@ -4,3 +4,10 @@ node_modules/
 npm-debug.log*
 continuity.json
 package-lock.json
+
+# Build artifacts
+.next/
+tsconfig.tsbuildinfo
+
+# OS files
+.DS_Store

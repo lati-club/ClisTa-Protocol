@@ -26,6 +26,29 @@ def hash_payload(payload: Dict[str, Any]) -> str:
     payload_str = json.dumps(payload, sort_keys=True, separators=(',', ':'))
     return f"sha256:{hashlib.sha256(payload_str.encode('utf-8')).hexdigest()}"
 
+def _match_tool_call(pending: List[Dict[str, Any]], tool_call_id: Optional[str]) -> Optional[Dict[str, Any]]:
+    """Pop the tool call a tool result belongs to.
+
+    Prefers an explicit tool_call_id match; falls back to FIFO order when the
+    provider omits ids on the call or the result (e.g. the Hermes export format),
+    since tool outputs follow their calls in order.
+    """
+    if not pending:
+        return None
+    if tool_call_id:
+        for i, tc in enumerate(pending):
+            if tc.get("id") == tool_call_id:
+                return pending.pop(i)
+    # No id match (Hermes omits the id on the call side while the result carries
+    # one). Fall back to the oldest call that has no id of its own, so we never
+    # steal a call that was explicitly id-tagged for a different result. Only if
+    # every remaining call carries an id do we fall back to plain FIFO.
+    for i, tc in enumerate(pending):
+        if not tc.get("id"):
+            return pending.pop(i)
+    return pending.pop(0)
+
+
 def parse_session(input_path: str) -> List[Dict[str, Any]]:
     """Parse either JSON array or NDJSON format."""
     messages = []
@@ -50,7 +73,7 @@ def ingest_session(input_path: str, output_path: str):
     if not messages:
         raise ValueError("No messages found in input file.")
 
-    now = datetime.datetime.utcnow().isoformat() + "Z"
+    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
     thread_id = generate_id("thd")
     
     # 1. Initialize Participants
@@ -111,8 +134,10 @@ def ingest_session(input_path: str, output_path: str):
     audit_events = []
     prev_event_id = None
     
-    # Track pending tool calls to link with their outputs
-    pending_tool_calls = {}
+    # Track pending tool calls to link with their outputs.
+    # An ordered list (FIFO) so we can fall back to positional matching when a
+    # provider omits the tool-call id on either the call or the result.
+    pending_tool_calls = []
 
     # 3. Process Messages into Protocol Objects
     for idx, msg in enumerate(messages):
@@ -122,8 +147,8 @@ def ingest_session(input_path: str, output_path: str):
         
         actor_id = participants["hermes_agent"]["id"] if role in ["assistant", "tool"] else participants["human_user"]["id"]
         
-        # Extract Claims from user prompts
-        if role == "user" and len(claims) == 0 and len(str(content)) > 20:
+        # Extract a Claim from each substantive user prompt (not just the first).
+        if role == "user" and len(str(content)) > 20:
             claim = {
                 "id": generate_id("clm"),
                 "object_type": "claim",
@@ -141,19 +166,18 @@ def ingest_session(input_path: str, output_path: str):
         # Track tool calls
         if role == "assistant" and "tool_calls" in msg and msg["tool_calls"]:
             for tc in msg["tool_calls"]:
-                tc_id = tc.get("id") or tc.get("tool_call_id") or f"tc_{uuid.uuid4().hex[:8]}"
-                pending_tool_calls[tc_id] = {
+                pending_tool_calls.append({
+                    "id": tc.get("id") or tc.get("tool_call_id"),
                     "name": tc.get("name", "unknown_tool"),
                     "arguments": tc.get("arguments", "{}"),
                     "timestamp": timestamp,
                     "actor_id": actor_id
-                }
+                })
 
         # Extract Evidence from tool outputs
         if role == "tool":
-            tc_id = msg.get("tool_call_id")
-            if tc_id and tc_id in pending_tool_calls:
-                tc_info = pending_tool_calls.pop(tc_id)
+            tc_info = _match_tool_call(pending_tool_calls, msg.get("tool_call_id"))
+            if tc_info is not None:
                 ev = {
                     "id": generate_id("evd"),
                     "object_type": "evidence",
@@ -172,8 +196,10 @@ def ingest_session(input_path: str, output_path: str):
                 evidence_items.append(ev)
                 thread["evidence_ids"].append(ev["id"])
 
-        # Create Audit Event for every message
-        payload = {"role": role, "content_preview": str(content)[:100] if content else "", "has_tools": "tool_calls" in msg or role == "tool"}
+        # Create Audit Event for every message. Hash the full content so the
+        # audit chain actually commits to the payload it claims to (a truncated
+        # preview would leave any later edit undetectable).
+        payload = {"role": role, "content": str(content) if content else "", "has_tools": "tool_calls" in msg or role == "tool"}
         event = {
             "id": generate_id("evt"),
             "object_type": "audit_event",

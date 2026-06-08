@@ -22,18 +22,29 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from engine import ClisTaEngine
 from ingest_hermes import ingest_session
 
+def resolve_thread_id(engine, requested):
+    """Return the requested thread id, or the first thread in the export.
+
+    Raises ValueError (not IndexError) when an export with no threads is loaded,
+    so callers can surface a clean structured error.
+    """
+    if requested:
+        return requested
+    thread_ids = list(engine.index["threads"].keys())
+    if not thread_ids:
+        raise ValueError("Export contains no threads.")
+    return thread_ids[0]
+
 def cmd_validate(args):
     """Validate an export file for referential integrity and audit chain."""
     engine = ClisTaEngine()
     try:
         engine.load_export(args.export)
+        thread_id = resolve_thread_id(engine, args.thread)
     except Exception as e:
         print(json.dumps({"error": str(e), "valid": False}, indent=2))
         sys.exit(1)
-    
-    # Get first thread if not specified
-    thread_id = args.thread or list(engine.index["threads"].keys())[0]
-    
+
     report = engine.run_full_validation(thread_id)
     
     print(json.dumps(report, indent=2))
@@ -44,12 +55,11 @@ def cmd_project(args):
     engine = ClisTaEngine()
     try:
         engine.load_export(args.export)
+        thread_id = resolve_thread_id(engine, args.thread)
     except Exception as e:
         print(json.dumps({"error": str(e)}, indent=2))
         sys.exit(1)
-    
-    thread_id = args.thread or list(engine.index["threads"].keys())[0]
-    
+
     try:
         state = engine.project_state(thread_id)
         print(json.dumps(state, indent=2))
