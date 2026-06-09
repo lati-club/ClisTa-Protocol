@@ -34,6 +34,42 @@ conversation -> event log -> projection -> verification -> accountable state
 
 Operating law: **conversation is input; reasoning state is output.**
 
+## Start here — run an external debate (this is the only deadline)
+
+ClisTa's productization claim sits on a public, bidirectional gate: **five external
+debate-pack runs by 2026-09-07, or the claim dies on the record** (`pack/GATES.md`). An
+"external run" is a team we did not prompt, host, or grade, running the pack on their own
+real decision in their own harness. Running one is the single highest-impact thing a
+visitor can do here — it moves this project more than any code change, because the format's
+own debate ruled that further clean closures *by us* confirm nothing.
+
+You can go from here to a reportable run in under an hour:
+
+1. **Get the pack.** `pack/PROMPT_PACK.md` (roles, rules, close protocol),
+   `pack/LEDGER_TEMPLATE.md` (the artifact of record), `pack/RUNBOOK.md` (how to run and
+   where to report). Works with AI agents from any vendor, humans, or both. No tooling
+   required — one markdown ledger is the whole artifact.
+2. **Pick a real decision** that passes the applicability check in `PROMPT_PACK.md` (hard
+   to reverse, multi-party or multi-session, claims checkable against real artifacts).
+3. **Run the rounds and keep the ledger.** Capture `failures.md` and `cost.md` alongside
+   it — that instrumentation is what makes the run count (`pack/RUNBOOK.md`).
+4. **Report it.** Easiest — no software needed:
+   [**open a prefilled report issue**](https://github.com/lati-club/clista-protocol/issues/new?title=External%20run%20report%3A%20%3Cdecision%20title%3E&body=%3C%21--%20ClisTa%20external%20debate-pack%20run.%20Edit%20%3Cdecision%20title%3E%20in%20the%20issue%20title%20above.%20--%3E%0A%0AThis%20run%20was%20NOT%20prompted%2C%20hosted%2C%20refereed%2C%20or%20graded%20by%20the%20ClisTa%20project.%0Aepistemic_state%3A%20unaudited%20%E2%80%94%20a%20clean%20closure%20means%20well-shaped%2C%20not%20right.%0A%0A%23%23%20Artifacts%20%28attach%20or%20link%29%0A-%20%5B%20%5D%20LEDGER.md%20%E2%80%94%20closure_state%3A%20closed%2C%20every%20row%20terminal%2C%20Transfer%20State%20filled%0A-%20%5B%20%5D%20failures.md%20%E2%80%94%20discipline%20failures%20observed%20%28or%20%22none%20observed%22%29%0A-%20%5B%20%5D%20cost.md%20%E2%80%94%20wall-clock%2C%20rounds%2C%20tokens%2C%20human-minutes%20of%20format%20overhead%0A-%20%5B%20%5D%20outcome.md%20%E2%80%94%20later%2C%20if%20the%20decision%20gets%20executed%0A%0A%23%23%20One-line%20integrity%20verdict%0AWas%20the%20debate%20real%3F%0A)
+   (the title and an artifact checklist are filled in for you), then attach `LEDGER.md`,
+   `failures.md`, and `cost.md`. Or email them to `lati@clista.ai`.
+
+   *Optional, only if you captured the run as a ClisTa event log:*
+   `npm install && npm run clista -- run report --events <your-run>.ndjson --out submission.json`
+   validates the log, writes a portable `submission.json`, and prints the same reporting link.
+   It fails closed on an invalid log and keeps `trusted: false`.
+
+**Failed and abandoned runs are wanted evidence** — a run that exposes the format is worth
+more than one that flatters it. Nothing here becomes trusted by running it: verification of
+structure is never endorsement of content, and only blind external judging
+(`docs/judging.md`) decides whether a run counts toward the gate.
+
+Everything below is the protocol tour — what the engine is, and how to verify it yourself.
+
 ## Try It in 30 Seconds
 
 Prerequisite: Node.js >= 18. Nothing to install — the engine has zero dependencies.
@@ -186,14 +222,36 @@ The standing boundary rules, each load-bearing:
 This repository is `clista-protocol` — the protocol spine only. UI, agent orchestration, and
 platform features are out of scope until the spine has earned them.
 
-## Run the Debate Pack on Your Own Decision
+### Scope freeze until the gate lifts
 
-`pack/` is the distributable Stage 0 debate pack: `PROMPT_PACK.md` (roles, rules, close
-protocol), `LEDGER_TEMPLATE.md` (the artifact of record), and `RUNBOOK.md` (how to run an
-instrumented external run and where to report it). It works with AI agents from any vendor,
-humans, or both. External runs feed a public, bidirectional gate (`pack/GATES.md`): if five
-external runs don't materialize by 2026-09-07, or runs show no advantage, the productization
-claim dies on the record. Failed and abandoned runs are explicitly wanted evidence.
+The spine is frozen until the EXTERNAL-RUNS gate is decided (`pack/GATES.md`):
+
+- **No new verifier layers until five external runs exist.** Every layer is permanent
+  deterministic surface area — once shipped, the determinism guarantee (same events → same
+  state) must hold for it forever. Adding layers before the productization claim is tested is
+  building on an unverified foundation. The cheapest way to move this project is an external
+  run, not a new layer (see *Start here* at the top). This rule lifts when the gate lifts.
+- **Frozen-but-supported layers.** Four existing layers are platform-shaped concerns that
+  already wear protocol clothes: **amendment, adaptation, learning, negotiation**. They are
+  *supported* — their verifiers keep passing, they stay deterministic, and they keep
+  `trusted: false` — but *frozen*: no expansion of their event families or rules until the
+  gate lifts. They are flagged here so their permanence is a deliberate, recorded choice, not
+  drift. They are not removed; removing a shipped layer would break determinism for any log
+  that used it.
+
+Bugfixes, docs, tests, and the debate pack are always in scope. New deterministic *layers*
+are not, until the runs materialize.
+
+## The Debate Pack (reference)
+
+The call to action is at the top of this README; this section is the reference for what
+`pack/` contains. `pack/` is the distributable Stage 0 debate pack: `PROMPT_PACK.md` (roles,
+rules, close protocol), `LEDGER_TEMPLATE.md` (the artifact of record), and `RUNBOOK.md` (how
+to run an instrumented external run and where to report it, including the `clista run report`
+helper). It works with AI agents from any vendor, humans, or both. External runs feed a
+public, bidirectional gate (`pack/GATES.md`): if five external runs don't materialize by
+2026-09-07, or runs show no advantage, the productization claim dies on the record. Failed
+and abandoned runs are explicitly wanted evidence.
 
 ## License
 

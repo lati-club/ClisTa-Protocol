@@ -4,6 +4,28 @@ ClisTa is a protocol engine first.
 
 Do not build UI, agents, graph DB, governance portal, or platform features until the protocol spine works.
 
+## Scope Freeze (until the EXTERNAL-RUNS gate)
+
+The spine is frozen until the EXTERNAL-RUNS gate is decided (`pack/GATES.md`: ≥5 external
+runs by 2026-09-07, or the productization claim dies on the record).
+
+```text
+No new verifier layers until 5 external runs exist.
+```
+
+- Every layer is permanent deterministic surface area. Once shipped, `same events -> same
+  state` must hold for it forever. Do not add a layer before the claim it would serve is
+  tested by external runs.
+- Frozen-but-supported layers: amendment, adaptation, learning, negotiation. These are
+  platform-shaped concerns already wearing protocol clothes. Keep their verifiers passing and
+  `trusted:false`; do NOT expand their event families or rules, and do NOT remove them
+  (removal breaks determinism for any log that used them).
+- Always in scope: bugfixes, docs, tests, the debate pack, and anything that lowers the cost
+  of an external run materializing. New deterministic layers are not, until the runs exist.
+
+This rule lifts when the gate lifts. See `CONTRIBUTING.md` and the README "Scope freeze"
+boundary.
+
 ## Core Loop
 
 ```text

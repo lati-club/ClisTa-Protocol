@@ -396,6 +396,8 @@ function main(argv = process.argv.slice(2), cwd = process.cwd()) {
         return exportShow(options, cwd);
       case "import":
         return importCommand(options, cwd);
+      case "run report":
+        return runReport(options, cwd);
       case "help":
       case "":
         return help();
@@ -2933,6 +2935,94 @@ function exportShow(options, cwd) {
   return print(exportProtocol(projection));
 }
 
+// `run report` is the last mile of an external debate-pack run: validate the
+// completed event log, package it for submission, and print exactly where and
+// how to report it so the run can count toward the EXTERNAL-RUNS gate
+// (pack/GATES.md). It fails closed on an invalid log and keeps trusted:false —
+// a clean report means the log is well-formed and reportable, never that the
+// decision was good or that the run "counts". Only blind external judging
+// decides that. Read-only: it appends no events and is deterministic for a
+// given log (no wall-clock timestamps leak into the printed report).
+function runReport(options, cwd) {
+  const events = readEventsForOptions(options, cwd);
+  const result = validateEvents(events);
+  if (!result.valid) {
+    print({
+      schema: "clista.run.report.v0",
+      valid: false,
+      trusted: false,
+      reportable: false,
+      errors: result.errors,
+      guidance:
+        "Fix these validation errors before reporting. The gate accepts only logs that pass `clista validate` — an invalid log is not a reportable run."
+    });
+    process.exitCode = 1;
+    return;
+  }
+
+  const projection = projectEvents(events);
+  const integrity = verifyEventIntegrity(projection.events);
+  const summary = selectDecisionSummary(projection, options.thread);
+
+  let bundle = { written: false, hint: "re-run with --out <path> to write a portable submission bundle" };
+  if (options.out) {
+    const bundlePath = path.resolve(cwd, options.out);
+    fs.writeFileSync(bundlePath, `${JSON.stringify(exportProtocol(projection), null, 2)}\n`);
+    bundle = { written: true, path: options.out, format: PROTOCOL_VERSION };
+  }
+
+  const decisionTitle = options.title || summary.title || summary.threadId || "untitled run";
+  const issueTitle = `External run report: ${decisionTitle}`;
+  const issueBody = [
+    "<!-- ClisTa external debate-pack run. -->",
+    "",
+    "This run was NOT prompted, hosted, refereed, or graded by the ClisTa project.",
+    "epistemic_state: unaudited — a clean closure means well-shaped, not right.",
+    "",
+    "## Artifacts (attach or link)",
+    "- [ ] LEDGER.md (or the submission bundle written with --out)",
+    "- [ ] failures.md — discipline failures observed (or \"none observed\")",
+    "- [ ] cost.md — wall-clock, rounds, tokens, human-minutes of format overhead",
+    "- [ ] outcome.md — later, if the decision gets executed",
+    "",
+    "## One-line integrity verdict",
+    "Was the debate real?",
+    ""
+  ].join("\n");
+  const issueUrl =
+    "https://github.com/lati-club/clista-protocol/issues/new" +
+    `?title=${encodeURIComponent(issueTitle)}&body=${encodeURIComponent(issueBody)}`;
+
+  return print({
+    schema: "clista.run.report.v0",
+    valid: true,
+    trusted: false,
+    reportable: true,
+    threadId: summary.threadId || options.thread || null,
+    eventCount: projection.events.length,
+    integrityValid: integrity.valid,
+    decisionSummary: summary,
+    bundle,
+    submit: {
+      gate: "EXTERNAL-RUNS",
+      deadline: "2026-09-07",
+      issueTitle,
+      issueUrl,
+      url: "https://github.com/lati-club/clista-protocol/issues/new",
+      emailFallback: "lati@clista.ai",
+      include: [
+        "this event log (or the bundle written with --out)",
+        "failures.md — every discipline failure observed",
+        "cost.md — wall-clock, rounds, tokens, human-minutes of format overhead",
+        "outcome.md — later, if the decision gets executed"
+      ],
+      runbook: "pack/RUNBOOK.md"
+    },
+    boundary:
+      "Structure validated, content not endorsed. trusted:false stays the default: a clean report means the log is well-formed and reportable, not that the decision was good. Only blind external judging (docs/judging.md) decides whether a run counts toward the gate. Failed and abandoned runs are wanted evidence — report them too."
+  });
+}
+
 function importCommand(options, cwd) {
   requireOption(options, "events");
   const sourcePath = path.resolve(cwd, options.events);
@@ -4762,7 +4852,9 @@ function usage() {
   clista audit show [--thread <threadId>] [--events <path>]
   clista fork lineage --thread <forkThreadId> [--events <path>]
   clista export [--events <path>]
-  clista import --events <path> [--replace true]`;
+  clista import --events <path> [--replace true]
+  # Report a completed external run toward the EXTERNAL-RUNS gate (pack/GATES.md, pack/RUNBOOK.md)
+  clista run report [--events <path>] [--thread <threadId>] [--title <decision title>] [--out <bundlePath>]`;
 }
 
 if (require.main === module) {
