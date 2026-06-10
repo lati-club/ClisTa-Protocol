@@ -230,6 +230,23 @@ verifier layers until five external runs exist, and four existing layers (`amend
 event families don't grow. Bugfixes, docs, tests, and the debate pack are always in scope.
 See `CONTRIBUTING.md` for the full constraint and what it means for PRs.
 
+## Worked example — a sample Challenge Record (`pilot-dryrun/`)
+
+`pilot-dryrun/` is a full dress rehearsal of one application of the debate pack: the engine,
+unchanged, used to produce a sample *Challenge Record* for a model-risk-management deployment
+decision (the public Epic Sepsis Model case). It adapts the pack to MRM roles
+(`pilot-dryrun/pack-mrm/`), runs five sealed review sessions as ClisTa event logs that each
+`validate` and replay, and aggregates them into a 9-section Challenge Record with a verification
+bundle (`pilot-dryrun/verification.md`, runnable cold). No new protocol code or layers — it
+exercises the frozen spine, so it stays within the scope freeze above.
+
+It is a **sample against public sources, not advice, and not productization evidence**:
+`trusted: false` throughout; all five sessions came from one model family and one author, so the
+Record discloses its convergence as **suspected single-author monoculture, not independent
+corroboration**; and the sessions are producer-run, so — like everything we run ourselves — they
+**count toward no gate** (`pack/GATES.md`). It is included as a worked example of what the
+deliverable looks like and how the format surfaces its own weaknesses, nothing more.
+
 ## License
 
 Code is licensed under Apache-2.0 (see `LICENSE`). Documentation and the debate prompt pack
