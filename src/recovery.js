@@ -1,4 +1,5 @@
 const { PROTOCOL_VERSION, contentHash } = require("./integrity");
+const { groupBy, indexBy, normalizeType, stripUndefined } = require("./utils");
 
 const RECOVERY_SCHEMA = "clista.recovery.v0";
 const RECOVERY_VERIFY_SCHEMA = "clista.recovery.verify.v0";
@@ -1191,27 +1192,7 @@ function mapValuesForRecovery(map, array, recoveryId) {
   return (array || []).filter((record) => record.recoveryId === recoveryId);
 }
 
-function indexBy(records, key) {
-  return records.reduce((indexed, record) => {
-    if (record[key]) {
-      indexed[record[key]] = record;
-    }
-    return indexed;
-  }, {});
-}
 
-function groupBy(records, key) {
-  return records.reduce((grouped, record) => {
-    if (!record[key]) {
-      return grouped;
-    }
-    if (!grouped[record[key]]) {
-      grouped[record[key]] = [];
-    }
-    grouped[record[key]].push(record);
-    return grouped;
-  }, {});
-}
 
 function uniqueBy(records, keyFn) {
   const seen = new Set();
@@ -1232,12 +1213,6 @@ function deterministicId(prefix, type, seed) {
   return `${prefix}_${normalizeType(type).slice(0, 24) || "recovery"}_${hash}`;
 }
 
-function normalizeType(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s-]+/g, "_");
-}
 
 function normalizeString(value) {
   if (value === undefined || value === null) {
@@ -1250,14 +1225,6 @@ function subjectKey(subjectType, subjectId) {
   return `${normalizeType(subjectType)}:${subjectId || ""}`;
 }
 
-function stripUndefined(object) {
-  for (const key of Object.keys(object)) {
-    if (object[key] === undefined) {
-      delete object[key];
-    }
-  }
-  return object;
-}
 
 module.exports = {
   CHECKPOINT_TYPES,

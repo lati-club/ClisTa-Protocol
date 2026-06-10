@@ -6,6 +6,7 @@ const {
   computeEventHash,
   contentHash
 } = require("./integrity");
+const { groupBy, unique } = require("./utils");
 
 const PROVENANCE_SCHEMA = "clista.provenance.v0";
 const PROVENANCE_VERIFY_SCHEMA = "clista.provenance.verify.v0";
@@ -692,23 +693,7 @@ function dedupeSourceRefs(sourceRefs) {
   return deduped;
 }
 
-function groupBy(records, key) {
-  return records.reduce((grouped, record) => {
-    const value = record[key];
-    if (!value) {
-      return grouped;
-    }
-    if (!grouped[value]) {
-      grouped[value] = [];
-    }
-    grouped[value].push(record);
-    return grouped;
-  }, {});
-}
 
-function unique(values) {
-  return Array.from(new Set((values || []).filter(Boolean)));
-}
 
 function isKnownContribution(projection, contributionId) {
   if (!projection || !contributionId) {

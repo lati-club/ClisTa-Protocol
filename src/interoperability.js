@@ -1,4 +1,5 @@
 const { PROTOCOL_VERSION, contentHash } = require("./integrity");
+const { indexBy, stripUndefined, unique } = require("./utils");
 
 const INTEROPERABILITY_SCHEMA = "clista.interoperability.v0";
 const INTEROPERABILITY_VERIFY_SCHEMA = "clista.interoperability.verify.v0";
@@ -714,14 +715,6 @@ function normalizeSemantic(value) {
     .replace(/[\s-]+/g, "_");
 }
 
-function indexBy(records, key) {
-  return records.reduce((indexed, record) => {
-    if (record[key]) {
-      indexed[record[key]] = record;
-    }
-    return indexed;
-  }, {});
-}
 
 function arrayValues(value) {
   if (Array.isArray(value)) {
@@ -730,18 +723,7 @@ function arrayValues(value) {
   return [];
 }
 
-function unique(values) {
-  return Array.from(new Set(arrayValues(values)));
-}
 
-function stripUndefined(object) {
-  for (const key of Object.keys(object)) {
-    if (object[key] === undefined) {
-      delete object[key];
-    }
-  }
-  return object;
-}
 
 module.exports = {
   INTEROPERABILITY_EVENT_TYPES,

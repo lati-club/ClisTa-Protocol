@@ -75,6 +75,7 @@ const {
   projectProvenance,
   selectProvenanceForThread
 } = require("./provenance");
+const { unique } = require("./utils");
 
 function emptyProjection() {
   return {
@@ -1920,9 +1921,6 @@ function summarizeEvent(event) {
     || `${eventType(event)} ${object.id}`;
 }
 
-function unique(values) {
-  return Array.from(new Set(values.filter(Boolean)));
-}
 
 module.exports = {
   exportProtocol,

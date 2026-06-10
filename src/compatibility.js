@@ -1,4 +1,5 @@
 const { PROTOCOL_VERSION, contentHash } = require("./integrity");
+const { indexBy, normalizeType, stripUndefined, unique } = require("./utils");
 
 const COMPATIBILITY_SCHEMA = "clista.compatibility.v0";
 const COMPATIBILITY_VERIFY_SCHEMA = "clista.compatibility.verify.v0";
@@ -569,21 +570,7 @@ function normalizeStatus(status) {
   return String(status || "incompatible").trim().toLowerCase();
 }
 
-function normalizeType(type) {
-  return String(type || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s-]+/g, "_");
-}
 
-function indexBy(records, key) {
-  return records.reduce((indexed, record) => {
-    if (record[key]) {
-      indexed[record[key]] = record;
-    }
-    return indexed;
-  }, {});
-}
 
 function arrayValues(value) {
   if (Array.isArray(value)) {
@@ -592,18 +579,7 @@ function arrayValues(value) {
   return [];
 }
 
-function unique(values) {
-  return Array.from(new Set(arrayValues(values)));
-}
 
-function stripUndefined(object) {
-  for (const key of Object.keys(object)) {
-    if (object[key] === undefined) {
-      delete object[key];
-    }
-  }
-  return object;
-}
 
 module.exports = {
   COMPATIBILITY_EVENT_TYPES,

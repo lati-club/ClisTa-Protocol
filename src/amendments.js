@@ -1,4 +1,5 @@
 const { contentHash } = require("./integrity");
+const { groupByByValues, indexBy, normalizeType, stripUndefined, unique } = require("./utils");
 
 const AMENDMENT_SCHEMA = "clista.amendments.v0";
 const AMENDMENT_VERIFY_SCHEMA = "clista.amendments.verify.v0";
@@ -744,12 +745,6 @@ function compactAmendment(amendment) {
   };
 }
 
-function normalizeType(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s-]+/g, "_");
-}
 
 function normalizeEffectScope(value) {
   const normalized = normalizeType(value || "future_only");
@@ -761,39 +756,9 @@ function deterministicId(prefix, type, seed) {
   return `${prefix}_${normalizeType(type).slice(0, 24) || "amendment"}_${hash}`;
 }
 
-function indexBy(records, key) {
-  return records.reduce((indexed, record) => {
-    if (record[key]) {
-      indexed[record[key]] = record;
-    }
-    return indexed;
-  }, {});
-}
 
-function groupByByValues(records, key) {
-  return records.reduce((grouped, record) => {
-    for (const value of record[key] || []) {
-      if (!grouped[value]) {
-        grouped[value] = [];
-      }
-      grouped[value].push(record);
-    }
-    return grouped;
-  }, {});
-}
 
-function stripUndefined(object) {
-  for (const key of Object.keys(object)) {
-    if (object[key] === undefined) {
-      delete object[key];
-    }
-  }
-  return object;
-}
 
-function unique(values) {
-  return Array.from(new Set((values || []).filter(Boolean)));
-}
 
 module.exports = {
   AMENDMENT_EVENT_TYPES,

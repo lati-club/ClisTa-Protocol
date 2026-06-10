@@ -1,4 +1,5 @@
 const { contentHash } = require("./integrity");
+const { groupBy, groupByByValues, indexBy, stripUndefined, unique } = require("./utils");
 
 const LEARNING_SCHEMA = "clista.learning.v0";
 const LEARNING_VERIFY_SCHEMA = "clista.learning.verify.v0";
@@ -759,53 +760,10 @@ function deterministicId(prefix, type, seed) {
   return `${prefix}_${normalizePattern(type).slice(0, 24) || "signal"}_${hash}`;
 }
 
-function indexBy(records, key) {
-  return records.reduce((indexed, record) => {
-    if (record[key]) {
-      indexed[record[key]] = record;
-    }
-    return indexed;
-  }, {});
-}
 
-function groupBy(records, key) {
-  return records.reduce((grouped, record) => {
-    const value = record[key];
-    if (!value) {
-      return grouped;
-    }
-    if (!grouped[value]) {
-      grouped[value] = [];
-    }
-    grouped[value].push(record);
-    return grouped;
-  }, {});
-}
 
-function groupByByValues(records, key) {
-  return records.reduce((grouped, record) => {
-    for (const value of record[key] || []) {
-      if (!grouped[value]) {
-        grouped[value] = [];
-      }
-      grouped[value].push(record);
-    }
-    return grouped;
-  }, {});
-}
 
-function stripUndefined(object) {
-  for (const key of Object.keys(object)) {
-    if (object[key] === undefined) {
-      delete object[key];
-    }
-  }
-  return object;
-}
 
-function unique(values) {
-  return Array.from(new Set((values || []).filter(Boolean)));
-}
 
 module.exports = {
   LEARNING_EVENT_TYPES,

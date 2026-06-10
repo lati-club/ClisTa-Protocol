@@ -5,6 +5,7 @@ const {
   normalizeAuthority,
   normalizeRole
 } = require("./identity");
+const { groupBy } = require("./utils");
 
 const ATTRIBUTION_EVENT_TYPES = new Set([
   "ContributionAttributed",
@@ -634,19 +635,6 @@ function normalizeContributionType(contributionType) {
     .replace(/[\s-]+/g, "_");
 }
 
-function groupBy(records, key) {
-  return records.reduce((grouped, record) => {
-    const value = record[key];
-    if (!value) {
-      return grouped;
-    }
-    if (!grouped[value]) {
-      grouped[value] = [];
-    }
-    grouped[value].push(record);
-    return grouped;
-  }, {});
-}
 
 module.exports = {
   ATTRIBUTION_EVENT_TYPES,

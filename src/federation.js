@@ -1,4 +1,5 @@
 const { PROTOCOL_VERSION, contentHash } = require("./integrity");
+const { groupBy, indexBy, stripUndefined } = require("./utils");
 
 const FEDERATION_SCHEMA = "clista.federation.v0";
 const FEDERATION_VERIFY_SCHEMA = "clista.federation.verify.v0";
@@ -698,35 +699,8 @@ function normalizeText(value) {
     .replace(/[\s-]+/g, "_");
 }
 
-function indexBy(records, key) {
-  return records.reduce((indexed, record) => {
-    if (record[key]) {
-      indexed[record[key]] = record;
-    }
-    return indexed;
-  }, {});
-}
 
-function groupBy(records, key) {
-  return records.reduce((grouped, record) => {
-    const value = record[key];
-    if (!value) {
-      return grouped;
-    }
-    grouped[value] ||= [];
-    grouped[value].push(record);
-    return grouped;
-  }, {});
-}
 
-function stripUndefined(object) {
-  for (const key of Object.keys(object)) {
-    if (object[key] === undefined) {
-      delete object[key];
-    }
-  }
-  return object;
-}
 
 module.exports = {
   FEDERATION_EVENT_TYPES,

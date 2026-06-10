@@ -6,6 +6,7 @@ const {
   LOCAL_CAPABILITY_SET,
   SUPPORTED_VERIFICATION_LAYERS
 } = require("./compatibility");
+const { stripUndefined, unique } = require("./utils");
 
 const RELEASE_SCHEMA = "clista.release.manifest.v0";
 const RELEASE_VERIFY_SCHEMA = "clista.release.verify.v0";
@@ -591,18 +592,7 @@ function requireEqual(reasons, field, actual, expected) {
   }
 }
 
-function unique(values) {
-  return Array.from(new Set(values.filter(Boolean)));
-}
 
-function stripUndefined(object) {
-  for (const key of Object.keys(object)) {
-    if (object[key] === undefined) {
-      delete object[key];
-    }
-  }
-  return object;
-}
 
 module.exports = {
   DEFAULT_MANIFEST_PATH,

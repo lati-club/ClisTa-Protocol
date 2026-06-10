@@ -1,4 +1,5 @@
 const { PROTOCOL_VERSION, contentHash } = require("./integrity");
+const { groupBy, indexBy, stripUndefined, unique } = require("./utils");
 
 const EXECUTION_SCHEMA = "clista.execution.v0";
 const EXECUTION_PROTOCOL_VERSION = "0.20.0";
@@ -633,26 +634,7 @@ function addRecord(records, record) {
   }
 }
 
-function indexBy(records, key) {
-  return records.reduce((indexed, record) => {
-    if (record[key]) {
-      indexed[record[key]] = record;
-    }
-    return indexed;
-  }, {});
-}
 
-function groupBy(records, key) {
-  return records.reduce((grouped, record) => {
-    const value = record[key];
-    if (!value) {
-      return grouped;
-    }
-    grouped[value] ||= [];
-    grouped[value].push(record);
-    return grouped;
-  }, {});
-}
 
 function arrayValues(value) {
   if (Array.isArray(value)) {
@@ -664,18 +646,7 @@ function arrayValues(value) {
   return [value];
 }
 
-function unique(values) {
-  return Array.from(new Set(values.filter(Boolean)));
-}
 
-function stripUndefined(object) {
-  for (const key of Object.keys(object)) {
-    if (object[key] === undefined) {
-      delete object[key];
-    }
-  }
-  return object;
-}
 
 module.exports = {
   EXECUTION_EVENT_TYPES,

@@ -4,6 +4,7 @@ const {
   emptyIdentityState,
   isDecisionOwnerRole
 } = require("./identity");
+const { unique } = require("./utils");
 
 const APPROVAL_REVIEW_STATUSES = new Set([
   "approve",
@@ -422,9 +423,6 @@ function pushUnique(values, value) {
   }
 }
 
-function unique(values) {
-  return Array.from(new Set(values.filter(Boolean)));
-}
 
 module.exports = {
   buildGovernanceState,

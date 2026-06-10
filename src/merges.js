@@ -4,6 +4,7 @@ const {
   authorizedParticipantIds,
   emptyIdentityState
 } = require("./identity");
+const { unique } = require("./utils");
 
 const MERGE_REQUEST_CHANGES_STATUSES = new Set(["request_changes"]);
 const MERGE_REJECT_STATUSES = new Set(["reject"]);
@@ -543,9 +544,6 @@ function eventsThroughBoundary(events, inheritedThroughEventId) {
   return events.slice(0, boundaryIndex + 1);
 }
 
-function unique(values) {
-  return Array.from(new Set((values || []).filter(Boolean)));
-}
 
 module.exports = {
   MERGE_CONFLICT_RESOLUTIONS,

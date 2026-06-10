@@ -5,6 +5,7 @@ const {
   buildLocalInteroperabilityProfile
 } = require("./interoperability");
 const { PROTOCOL_VERSION, contentHash } = require("./integrity");
+const { groupBy, indexBy, stripUndefined } = require("./utils");
 
 const NEGOTIATION_SCHEMA = "clista.negotiation.v0";
 const NEGOTIATION_VERIFY_SCHEMA = "clista.negotiation.verify.v0";
@@ -1045,26 +1046,7 @@ function addRecord(records, record) {
   }
 }
 
-function indexBy(records, key) {
-  return records.reduce((indexed, record) => {
-    if (record[key]) {
-      indexed[record[key]] = record;
-    }
-    return indexed;
-  }, {});
-}
 
-function groupBy(records, key) {
-  return records.reduce((grouped, record) => {
-    const value = record[key];
-    if (!value) {
-      return grouped;
-    }
-    grouped[value] ||= [];
-    grouped[value].push(record);
-    return grouped;
-  }, {});
-}
 
 function arrayValues(value) {
   if (Array.isArray(value)) {
@@ -1073,14 +1055,6 @@ function arrayValues(value) {
   return [];
 }
 
-function stripUndefined(object) {
-  for (const key of Object.keys(object)) {
-    if (object[key] === undefined) {
-      delete object[key];
-    }
-  }
-  return object;
-}
 
 module.exports = {
   NEGOTIATION_EVENT_TYPES,

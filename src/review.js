@@ -1,4 +1,5 @@
 const { PROTOCOL_VERSION, contentHash } = require("./integrity");
+const { groupBy, indexBy, normalizeType, stripUndefined } = require("./utils");
 
 const REVIEW_SCHEMA = "clista.review.v0";
 const REVIEW_PROTOCOL_VERSION = "0.23.0";
@@ -706,12 +707,6 @@ function normalizeStatus(status) {
   return normalizeType(status || "open");
 }
 
-function normalizeType(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s-]+/g, "_");
-}
 
 function normalizeString(value) {
   if (value === undefined || value === null) {
@@ -724,36 +719,8 @@ function subjectKey(subjectType, subjectId) {
   return `${normalizeType(subjectType)}:${subjectId || ""}`;
 }
 
-function indexBy(records, key) {
-  return records.reduce((indexed, record) => {
-    if (record[key]) {
-      indexed[record[key]] = record;
-    }
-    return indexed;
-  }, {});
-}
 
-function groupBy(records, key) {
-  return records.reduce((grouped, record) => {
-    if (!record[key]) {
-      return grouped;
-    }
-    if (!grouped[record[key]]) {
-      grouped[record[key]] = [];
-    }
-    grouped[record[key]].push(record);
-    return grouped;
-  }, {});
-}
 
-function stripUndefined(object) {
-  for (const key of Object.keys(object)) {
-    if (object[key] === undefined) {
-      delete object[key];
-    }
-  }
-  return object;
-}
 
 module.exports = {
   REVIEW_EVENT_TYPES,

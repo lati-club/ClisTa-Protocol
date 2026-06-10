@@ -130,6 +130,7 @@ const {
   objectIdsForThreadScope,
   threadDescendsFrom
 } = require("./merges");
+const { unique } = require("./utils");
 
 class ValidationError extends Error {
   constructor(errors) {
@@ -3661,9 +3662,6 @@ function isDecisionOwner(participantId, state, threadId) {
   return participantHasAuthority(state.identity, participantId, "decision_owner", threadId);
 }
 
-function unique(values) {
-  return Array.from(new Set(values.filter(Boolean)));
-}
 
 function formatValidationErrors(errors) {
   if (!errors.length) {

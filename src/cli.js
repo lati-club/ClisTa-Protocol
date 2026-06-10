@@ -141,6 +141,7 @@ const {
 const { evaluateDecisionEligibility } = require("./governance");
 const { evaluateMergeEligibility } = require("./merges");
 const { assertValidEvents, validateEvents } = require("./validator");
+const { stripUndefined, unique } = require("./utils");
 
 function main(argv = process.argv.slice(2), cwd = process.cwd()) {
   let { command, options } = parseCommand(argv);
@@ -4684,18 +4685,7 @@ function adaptationProjectionForThread(adaptation, threadId) {
   };
 }
 
-function stripUndefined(object) {
-  for (const key of Object.keys(object)) {
-    if (object[key] === undefined) {
-      delete object[key];
-    }
-  }
-  return object;
-}
 
-function unique(values) {
-  return Array.from(new Set(values.filter(Boolean)));
-}
 
 function print(value) {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);

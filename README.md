@@ -224,34 +224,11 @@ platform features are out of scope until the spine has earned them.
 
 ### Scope freeze until the gate lifts
 
-The spine is frozen until the EXTERNAL-RUNS gate is decided (`pack/GATES.md`):
-
-- **No new verifier layers until five external runs exist.** Every layer is permanent
-  deterministic surface area — once shipped, the determinism guarantee (same events → same
-  state) must hold for it forever. Adding layers before the productization claim is tested is
-  building on an unverified foundation. The cheapest way to move this project is an external
-  run, not a new layer (see *Start here* at the top). This rule lifts when the gate lifts.
-- **Frozen-but-supported layers.** Four existing layers are platform-shaped concerns that
-  already wear protocol clothes: **amendment, adaptation, learning, negotiation**. They are
-  *supported* — their verifiers keep passing, they stay deterministic, and they keep
-  `trusted: false` — but *frozen*: no expansion of their event families or rules until the
-  gate lifts. They are flagged here so their permanence is a deliberate, recorded choice, not
-  drift. They are not removed; removing a shipped layer would break determinism for any log
-  that used it.
-
-Bugfixes, docs, tests, and the debate pack are always in scope. New deterministic *layers*
-are not, until the runs materialize.
-
-## The Debate Pack (reference)
-
-The call to action is at the top of this README; this section is the reference for what
-`pack/` contains. `pack/` is the distributable Stage 0 debate pack: `PROMPT_PACK.md` (roles,
-rules, close protocol), `LEDGER_TEMPLATE.md` (the artifact of record), and `RUNBOOK.md` (how
-to run an instrumented external run and where to report it, including the `clista run report`
-helper). It works with AI agents from any vendor, humans, or both. External runs feed a
-public, bidirectional gate (`pack/GATES.md`): if five external runs don't materialize by
-2026-09-07, or runs show no advantage, the productization claim dies on the record. Failed
-and abandoned runs are explicitly wanted evidence.
+The spine is frozen until the EXTERNAL-RUNS gate is decided (`pack/GATES.md`): no new
+verifier layers until five external runs exist, and four existing layers (`amendment`,
+`adaptation`, `learning`, `negotiation`) are frozen-but-supported — verifiers stay passing,
+event families don't grow. Bugfixes, docs, tests, and the debate pack are always in scope.
+See `CONTRIBUTING.md` for the full constraint and what it means for PRs.
 
 ## License
 
