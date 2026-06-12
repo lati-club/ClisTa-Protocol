@@ -258,11 +258,12 @@ This is the live, operationalized example of the full integration (as of 2026-06
 
 - Octopus runs the CSV CLI arms (parsing, stats, CLI integration + error handling).
 - ThreadHub stores the execution signals (cascade-blocks → ObjectionRaised) in `octo-build`.
-- ClisTa turns them into accountable governance in a dedicated ThreadHub thread `clista-csv-cli-build-v3` (and the clean event log `examples/clista-csv-cli-build.ndjson`).
+- ClisTa turns them into accountable governance in a dedicated ThreadHub thread `clista-csv-cli-build-v4` (and the clean event log `examples/clista-csv-cli-build.ndjson`).
 
 Key artifacts:
 - Clean combined log — **25 events, validates clean** (`node src/cli.js validate`, exit 0) and projects a full `clista.threadState.v0`: `examples/clista-csv-cli-build.ndjson`. Models the build arms as `DelegationGranted` → delegation-authorized `ExecutionStarted`, with the `DecisionMerged` last (governance ratifies after review, integrating 4 live cascade-blocks incl. the error-handling arm).
-- Dedicated ThreadHub thread: slug `clista-csv-cli-build-v3` (id `thd_432894c119a9`), 26 records, head `sha256:016c38aa37ae7e7b33a1609be0f5524a1e7f3fa3e0a83efd7d6455dda870dcd0`. (Lineage: original `clista-csv-cli-build` / `thd_99f812b60f7c` was a pre-fix draft that didn't validate → `-v2` / `thd_f35bd1d6ffdc` first validating version → `-v3` adds the error-handling arm. Predecessors kept as immutable history.)
+- Dedicated ThreadHub thread: slug `clista-csv-cli-build-v4` (id `thd_89cda49b0116`), 26 records, head `sha256:373e3d906a353131905e5c79251afb0f28aacc3b4cc6b0741d77e2a617c05612`. (Lineage: original `clista-csv-cli-build` / `thd_99f812b60f7c` was a pre-fix draft that didn't validate → `-v2` / `thd_f35bd1d6ffdc` first validating version → `-v3` adds the error-handling arm → `-v4` hash-chains the event log. Predecessors kept as immutable history.)
+- N2 (resume without replay): the log is hash-chained (per-event `content_hash`/`previous_hash`), so a successor resumes the settled state from a continuity packet alone with `resumeStatus: verified` (strict), not degraded. See [N2](docs/protocol/v0/n2-resumption-without-replay.md).
 - Raw signals: `octo-build` slug (8 records, the 3 live blocks at seq 5/6/7 with hashes `27226cae...`, `6c39ae70...`, `460f601d...`)
 - Cross-links: ClisTa `EvidenceCommitted` events carry the exact ThreadHub record hashes as artifacts. Provenance traces "ThreadHub octo-build seq N (live arm-...)" + hash.
 - Attribution: `par_octopus` for execution dissent; `id_troy` for governance (claims, evidence commits from the live blocks, review).
@@ -277,9 +278,9 @@ node src/cli.js provenance trace --contribution evd_live_p2 --events examples/cl
 
 ### In ThreadHub (from ThreadHub root)
 ```sh
-node bin/cli.js verify --thread clista-csv-cli-build-v3
+node bin/cli.js verify --thread clista-csv-cli-build-v4
 node bin/cli.js verify --thread octo-build
-node bin/cli.js export --thread clista-csv-cli-build-v3 | head -c 1000
+node bin/cli.js export --thread clista-csv-cli-build-v4 | head -c 1000
 ```
 
 See `docs/clista-csv-cli-build.md` (in the ThreadHub repo) for full details, how the 3 live arms were added one-at-a-time, commands, and operational notes for future arms (tests, docs, error handling).

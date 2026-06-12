@@ -11,6 +11,7 @@ const assert = require("node:assert/strict");
 const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
+const os = require("node:os");
 const test = require("node:test");
 
 const root = path.resolve(__dirname, "..");
@@ -67,6 +68,17 @@ test("cited ThreadHub record hashes resolve to octo-build records", async (t) =>
     assert.equal(rec.thread, octo.thread, `${h} should live in octo-build`);
     assert.equal(rec.payload.event_type, "ObjectionRaised", `${h} should be a cascade-block`);
   }
+});
+
+// #3 — N2: the example resumes from a continuity packet alone, and because the
+// log is hash-chained it resumes "verified" (strict), not degraded.
+test("the example resumes cleanly without replay (N2 continuity)", () => {
+  const pkt = path.join(os.tmpdir(), `csv-cont-${process.pid}-${Date.now()}.json`);
+  runCli(["continuity", "export", "--events", csvLog, "--thread", TID, "--out", pkt]);
+  const v = runCli(["continuity", "verify", "--packet", pkt]);
+  assert.equal(v.valid, true);
+  assert.equal(v.resumeStatus, "verified", "hash-chained example should resume verified, not degraded");
+  fs.rmSync(pkt, { force: true });
 });
 
 // ---- helpers ----
