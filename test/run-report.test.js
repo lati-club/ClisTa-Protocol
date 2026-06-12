@@ -34,10 +34,10 @@ test("run report validates a completed log and prints where to send it", () => {
   assert.match(report.submit.issueTitle, /^External run report: /);
   // A one-click prefilled issue URL serves the markdown-default runner who never
   // touches the engine — the title and an artifact checklist are baked into the link.
-  assert.match(report.submit.issueUrl, /^https:\/\/github\.com\/lati-club\/clista-protocol\/issues\/new\?title=/);
+  assert.match(report.submit.issueUrl, /^https:\/\/github\.com\/lati-club\/ClisTa-Protocol\/issues\/new\?title=/);
   assert.match(report.submit.issueUrl, /failures\.md/);
   assert.equal(report.submit.deadline, "2026-09-07");
-  assert.match(report.submit.url, /github\.com\/lati-club\/clista-protocol/);
+  assert.match(report.submit.url, /github\.com\/lati-club\/ClisTa-Protocol/);
   assert.equal(report.submit.emailFallback, "lati@clista.ai");
   assert.ok(
     report.submit.include.some((item) => /failures\.md/.test(item)),

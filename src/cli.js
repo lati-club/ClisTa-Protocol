@@ -2991,7 +2991,7 @@ function runReport(options, cwd) {
     ""
   ].join("\n");
   const issueUrl =
-    "https://github.com/lati-club/clista-protocol/issues/new" +
+    "https://github.com/lati-club/ClisTa-Protocol/issues/new" +
     `?title=${encodeURIComponent(issueTitle)}&body=${encodeURIComponent(issueBody)}`;
 
   return print({
@@ -3009,7 +3009,7 @@ function runReport(options, cwd) {
       deadline: "2026-09-07",
       issueTitle,
       issueUrl,
-      url: "https://github.com/lati-club/clista-protocol/issues/new",
+      url: "https://github.com/lati-club/ClisTa-Protocol/issues/new",
       emailFallback: "lati@clista.ai",
       include: [
         "this event log (or the bundle written with --out)",

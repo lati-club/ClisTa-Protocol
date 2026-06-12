@@ -54,7 +54,7 @@ You can go from here to a reportable run in under an hour:
 3. **Run the rounds and keep the ledger.** Capture `failures.md` and `cost.md` alongside
    it — that instrumentation is what makes the run count (`pack/RUNBOOK.md`).
 4. **Report it.** Easiest — no software needed:
-   [**open a prefilled report issue**](https://github.com/lati-club/clista-protocol/issues/new?title=External%20run%20report%3A%20%3Cdecision%20title%3E&body=%3C%21--%20ClisTa%20external%20debate-pack%20run.%20Edit%20%3Cdecision%20title%3E%20in%20the%20issue%20title%20above.%20--%3E%0A%0AThis%20run%20was%20NOT%20prompted%2C%20hosted%2C%20refereed%2C%20or%20graded%20by%20the%20ClisTa%20project.%0Aepistemic_state%3A%20unaudited%20%E2%80%94%20a%20clean%20closure%20means%20well-shaped%2C%20not%20right.%0A%0A%23%23%20Artifacts%20%28attach%20or%20link%29%0A-%20%5B%20%5D%20LEDGER.md%20%E2%80%94%20closure_state%3A%20closed%2C%20every%20row%20terminal%2C%20Transfer%20State%20filled%0A-%20%5B%20%5D%20failures.md%20%E2%80%94%20discipline%20failures%20observed%20%28or%20%22none%20observed%22%29%0A-%20%5B%20%5D%20cost.md%20%E2%80%94%20wall-clock%2C%20rounds%2C%20tokens%2C%20human-minutes%20of%20format%20overhead%0A-%20%5B%20%5D%20outcome.md%20%E2%80%94%20later%2C%20if%20the%20decision%20gets%20executed%0A%0A%23%23%20One-line%20integrity%20verdict%0AWas%20the%20debate%20real%3F%0A)
+   [**open a prefilled report issue**](https://github.com/lati-club/ClisTa-Protocol/issues/new?title=External%20run%20report%3A%20%3Cdecision%20title%3E&body=%3C%21--%20ClisTa%20external%20debate-pack%20run.%20Edit%20%3Cdecision%20title%3E%20in%20the%20issue%20title%20above.%20--%3E%0A%0AThis%20run%20was%20NOT%20prompted%2C%20hosted%2C%20refereed%2C%20or%20graded%20by%20the%20ClisTa%20project.%0Aepistemic_state%3A%20unaudited%20%E2%80%94%20a%20clean%20closure%20means%20well-shaped%2C%20not%20right.%0A%0A%23%23%20Artifacts%20%28attach%20or%20link%29%0A-%20%5B%20%5D%20LEDGER.md%20%E2%80%94%20closure_state%3A%20closed%2C%20every%20row%20terminal%2C%20Transfer%20State%20filled%0A-%20%5B%20%5D%20failures.md%20%E2%80%94%20discipline%20failures%20observed%20%28or%20%22none%20observed%22%29%0A-%20%5B%20%5D%20cost.md%20%E2%80%94%20wall-clock%2C%20rounds%2C%20tokens%2C%20human-minutes%20of%20format%20overhead%0A-%20%5B%20%5D%20outcome.md%20%E2%80%94%20later%2C%20if%20the%20decision%20gets%20executed%0A%0A%23%23%20One-line%20integrity%20verdict%0AWas%20the%20debate%20real%3F%0A)
    (the title and an artifact checklist are filled in for you), then attach `LEDGER.md`,
    `failures.md`, and `cost.md`. Or email them to `lati@clista.ai`.
 
@@ -75,7 +75,7 @@ Everything below is the protocol tour — what the engine is, and how to verify 
 Prerequisites: Node.js >= 18, plus Python 3 (used only to re-ingest the session). Nothing to install — the engine itself has zero npm dependencies.
 
 ```sh
-git clone https://github.com/lati-club/clista-protocol.git
+git clone https://github.com/lati-club/ClisTa-Protocol.git
 cd clista-protocol
 npm run replay
 ```
@@ -92,7 +92,7 @@ source of truth.
 Prerequisite: Node.js >= 18.
 
 ```sh
-git clone https://github.com/lati-club/clista-protocol.git
+git clone https://github.com/lati-club/ClisTa-Protocol.git
 cd clista-protocol
 npm install
 npm run clista -- help
