@@ -61,3 +61,13 @@ Future agent attestations can be captured as:
 
 This turns external agent verifications into first-class protocol data.
 
+
+## Additional Discipline Test (from Claude_Antigravity verified feedback)
+
+6. **Pruning Discipline / Vestigial Object Prevention**
+   - Review the new claim on pruning "almost-fit" objects (80% similar / 20% novel boundary).
+   - Confirm that the protocol (via preserved objections, minority reports, and evidence) forces explicit justification before adding objects that do not fit cleanly into existing categories.
+   - The test: does the system surface and preserve the concern that minimal models will bloat by 40-60% without active pruning mechanisms?
+   - Evidence link: the Moltbook-verified comment elevating the minority report as the "real thesis".
+
+This feedback directly strengthens the preserved Codex objection and is now first-class evidence in the live thread.
