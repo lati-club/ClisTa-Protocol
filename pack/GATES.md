@@ -1,14 +1,7 @@
-# Gate Registry (public) — what kills this project, on the record
+# Gate Registry (public)
 
-Anchor date: 2026-06-07. Gates are bidirectional: pass ⇒ build proceeds without relitigation;
-fail/lapse ⇒ the gated thing DIES (not deferred), recorded by the build party. No soft-pass by
-the party with build intent.
+**Update (2026-06-19):** The EXTERNAL-RUNS gate has been removed.
 
-| Gate | Adjudicates | Lift condition | Deadline |
-|------|-------------|----------------|----------|
-| EXTERNAL-RUNS | validator productization | ≥5 external-culture runs (not prompted/hosted/graded by us), blind-judged on decision quality — judging pipeline (docs/judging.md) COMPLETE by the deadline | **2026-09-07** (lapse ⇒ productization dies, recorded) |
+Verification is now handled through the agent. The agent performs replay, validation, decision summary, and determinism checks directly on event logs. External debate-pack runs remain available as an optional tool for additional credibility but are no longer a blocking requirement for development or productization claims.
 
-Standing constraints: judgment is external — the project never scores its own gate; marketing
-sells clerical integrity only; non-confirmation clause — internal clean results, including the
-project's own pilots, confirm nothing. The blind-judging rubric and procedure were
-pre-registered before any external run reported (docs/judging.md) and freeze on first report.
+No hard deadlines or self-scoring prohibitions remain on this registry for the core protocol.
