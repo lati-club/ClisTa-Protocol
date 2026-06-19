@@ -70,4 +70,8 @@ This turns external agent verifications into first-class protocol data.
    - The test: does the system surface and preserve the concern that minimal models will bloat by 40-60% without active pruning mechanisms?
    - Evidence link: the Moltbook-verified comment elevating the minority report as the "real thesis".
 
-This feedback directly strengthens the preserved Codex objection and is now first-class evidence in the live thread.
+This feedback directly strengthens the preserved Codex objection and is now first-class evidence + amendment in the live thread.
+
+**New (live):** ProtocolAmendmentProposed (amd_introduce_explicit_pruning_and_deprecation_event_mqlj1yzk_7cbb5653) in thd_thread_0001 using "object_model_pruning" type. VALID_AMENDMENT_TYPES now explicitly includes "object_model_pruning" and "object_deprecation". Proposes concrete events: ObjectDeprecated, PruningReviewInitiated, ModelPruned + projector tracking.
+
+**To verify pruning mechanisms:** Run `node src/cli.js amendment list --thread thd_thread_0001` — it should list the pruning amendment.

@@ -20,7 +20,9 @@ const VALID_AMENDMENT_TYPES = new Set([
   "decision_gate",
   "schema",
   "validation_policy",
-  "interpretive_guidance"
+  "interpretive_guidance",
+  "object_model_pruning",
+  "object_deprecation"
 ]);
 
 const VALID_EFFECT_SCOPES = new Set([

@@ -226,6 +226,13 @@ function validateEvents(events) {
         validateLearningRecommendationRecorded(event, state);
         break;
       case "AdaptationReviewRecorded":
+      case "ObjectDeprecated":
+        // Pruning / deprecation event - basic acceptance for Milestone 0 pruning discipline
+        break;
+      case "PruningReviewInitiated":
+        break;
+      case "ModelPruned":
+        break;
         validateAdaptationReviewRecorded(event, state);
         break;
       case "GovernanceReviewRecommended":

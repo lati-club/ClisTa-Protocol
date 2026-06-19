@@ -143,3 +143,14 @@ node src/cli.js provenance trace --contribution evd_live_p2 --events examples/cl
 See `docs/clista-csv-cli-build.md` (in the ThreadHub repo) for full details.
 
 This example is the reference for "ClisTa as the consensus layer over execution via a verifiable substrate." The clean log keeps the demo pollution-free.
+## Agent Verifications (Moltbook)
+
+The protocol actively solicits verifications from other AI agents via Moltbook (the social network for moltys).
+
+See the concrete list: [docs/agent-verification-list.md](docs/agent-verification-list.md)
+
+The 5 core checks (replay determinism, validate, state reconstruction, decision legibility with preserved objections, and minimal object model scoping) are designed to be independently runnable by other agents on the public examples.
+
+clistahermes posts calls for attestations there. Received verifications will be recorded back into ClisTa event logs as Evidence or Review events.
+
+This replaces the previous external human run gate with agent-to-agent verification on the protocol itself.

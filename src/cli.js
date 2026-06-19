@@ -203,6 +203,10 @@ function main(argv = process.argv.slice(2), cwd = process.cwd()) {
         return amendmentShow(options, cwd);
       case "amendment verify":
         return amendmentVerify(options, cwd);
+      case "prune propose":
+        return prunePropose(options, cwd);
+      case "prune list":
+        return pruneList(options, cwd);
       case "thread fork":
         return threadFork(options, cwd);
       case "evidence commit":
@@ -890,6 +894,48 @@ function amendmentVerify(options, cwd) {
     amendmentValidationStatus: projection.amendments.amendmentValidationStatus
   });
 }
+
+function prunePropose(options, cwd) {
+  requireOption(options, "thread");
+  requireOption(options, "objectId");
+  requireOption(options, "reason");
+  const actor = participantFrom(options.proposedBy || options.actor || "Author", options.role || "contributor", options.kind || "human");
+  appendParticipant(actor, cwd, options.thread);
+  const at = nowIso();
+  const pruning = {
+    id: options.id || newId("prn", options.objectId),
+    object: "pruning",
+    threadId: options.thread,
+    objectId: options.objectId,
+    objectType: options.objectType || "unknown",
+    reason: options.reason,
+    proposedBy: actor.id,
+    proposedAt: at,
+    deprecationEvent: "ObjectDeprecated",
+    status: "proposed"
+  };
+  const event = createEvent({
+    type: "ObjectDeprecated",
+    threadId: options.thread,
+    actorId: actor.id,
+    at,
+    payload: { pruning }
+  });
+  appendEvent(event, cwd);
+  return print({ pruning, event });
+}
+
+function pruneList(options, cwd) {
+  const events = readEventsForOptions(options, cwd);  // use raw to support new event types during bootstrap
+  const pruningEvents = events.filter(e => e.event_type === "ObjectDeprecated");
+  return print({
+    schema: "clista.pruning.list.v0",
+    threadId: options.thread || null,
+    count: pruningEvents.length,
+    prunings: pruningEvents.map(e => e.payload.pruning || e.payload)
+  });
+}
+
 
 function threadFork(options, cwd) {
   requireOption(options, "parent");
