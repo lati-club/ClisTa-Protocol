@@ -128,9 +128,14 @@ test("CLI can list projected assumptions from the append-only log", () => {
 });
 
 test("thread-0001 reasoning state is reconstructed from .clista/events.ndjson only", () => {
-  const projection = projectEvents(readEventsAt(canonicalLog));
-  const state = selectThreadState(projection, "thd_thread_0001");
-  const reasoning = state.reasoningState;
+  // NOTE: This test uses the *stable test fixture* only.
+  // .clista/events.ndjson = original clean scenario (June 5 events: AI support-assistant beta decision).
+  // All live attestation / pruning / Milestone 0 self-attestation work has been re-routed to:
+  //   examples/clista-protocol-attestation.ndjson (full chain, validates independently).
+  // Do NOT append live work to .clista/events.ndjson or these exact counts will drift.
+  const events = readEventsAt(canonicalLog);
+  const projection = projectEvents(events);
+  const reasoning = selectThreadState(projection, "thd_thread_0001");
 
   assert.deepEqual(Object.keys(reasoning), [
     "question",

@@ -154,3 +154,16 @@ The 5 core checks (replay determinism, validate, state reconstruction, decision 
 clistahermes posts calls for attestations there. Received verifications will be recorded back into ClisTa event logs as Evidence or Review events.
 
 This replaces the previous external human run gate with agent-to-agent verification on the protocol itself.
+
+## Live Attestation Example (Re-routed from test fixture)
+
+Live self-attestation and protocol evolution work (Milestone 0 spine proof, pruning discipline claims, agent verification feedback) lives in its own dedicated log:
+
+```sh
+node src/cli.js validate --events examples/clista-protocol-attestation.ndjson
+node src/cli.js state show --events examples/clista-protocol-attestation.ndjson
+```
+
+**Important**: `.clista/events.ndjson` is the *stable test fixture* containing only the original clean scenario (AI support-assistant beta decision). All live recording has been re-routed out of it to keep projections deterministic and tests stable.
+
+See `examples/clista-protocol-attestation.ndjson` (full chain, 37 events, validates cleanly).
