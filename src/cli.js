@@ -243,6 +243,8 @@ function main(argv = process.argv.slice(2), cwd = process.cwd()) {
         return decisionSummary(options, cwd);
       case "decision eligibility":
         return decisionEligibility(options, cwd);
+      case "attestation record":
+        return attestationRecord(options, cwd);
       case "review submit":
         return reviewSubmit(options, cwd);
       case "review require":
@@ -1196,6 +1198,108 @@ function decisionEligibility(options, cwd) {
   requireOption(options, "request");
   const events = readValidEventsForOptions(options, cwd);
   return print(evaluateDecisionEligibility(events, options.request));
+}
+
+// Record an attestation as first-class events in a thread (M36).
+//
+// Composes existing types — ParticipantDeclared (idempotent, via
+// appendParticipant), EvidenceCommitted (the attestation text), and, when
+// --request targets a decisionRequest, ReviewSubmitted. The verb adds NO new
+// event types: an attestation is a *composition* of objects the protocol
+// already knows about. This is the M36 hard law in code:
+//   attestation_recording != manual_copy_paste
+// — the molty no longer has to retype their verify_protocol output into a
+// Moltbook reply for it to count; the events are committed directly.
+//
+// Omitting --request emits Participant + Evidence only, which is the right
+// shape for attesting *about* a thread without targeting a specific
+// decision request (or after a decision has merged — the validator refuses
+// a late ReviewSubmitted on a merged request, src/validator.js:2363).
+function attestationRecord(options, cwd) {
+  requireOption(options, "thread");
+  requireOption(options, "attester");
+  requireOption(options, "text");
+  const attester = participantFrom(options.attester, options.role || "attester", options.kind || "human");
+  appendParticipant(attester, cwd, options.thread);
+  const at = nowIso();
+  const events = [];
+
+  // Evidence first: this is the permanent record of *what was attested*.
+  // The source field encodes the attestation provenance (a URL when given,
+  // otherwise the attester name) so the answer view surfaces it without
+  // touching artifactIds — that field's semantics are "id of a known
+  // artifact" and we don't pollute it with raw URLs.
+  const evidence = {
+    id: newId("evd", `attestation_${attester.name}`),
+    object: "evidence",
+    threadId: options.thread,
+    source: options.source
+      ? `Moltbook attestation: ${options.source}`
+      : `Attestation by ${attester.name}`,
+    finding: options.text,
+    committedByParticipantId: attester.id,
+    committedAt: at,
+    artifactIds: [],
+    contentHash: contentHash({
+      source: options.source
+        ? `Moltbook attestation: ${options.source}`
+        : `Attestation by ${attester.name}`,
+      finding: options.text,
+      confidence: undefined,
+      artifactIds: []
+    })
+  };
+  stripUndefined(evidence);
+  const evidenceEvent = createEvent({
+    type: "EvidenceCommitted",
+    threadId: evidence.threadId,
+    actorId: attester.id,
+    at,
+    payload: { evidence }
+  });
+  appendEvent(evidenceEvent, cwd);
+  events.push(evidenceEvent);
+
+  // Review only when an actual decisionRequest target is given. The
+  // validator (src/validator.js:2360-2364) rejects a Review against an
+  // unknown or already-merged request; we let that surface as the natural
+  // error rather than reinventing pre-checks here.
+  let review = null;
+  if (options.request) {
+    const status = options.status || "approve";
+    const comment = options.source
+      ? `${options.text}\n\nSource: ${options.source}`
+      : options.text;
+    review = {
+      id: newId("rev", `${attester.name}_attestation_${status}`),
+      object: "review",
+      threadId: options.thread,
+      decisionRequestId: options.request,
+      reviewerParticipantId: attester.id,
+      status,
+      conditions: parseList(options.conditions),
+      comment,
+      reviewedAt: at
+    };
+    stripUndefined(review);
+    const reviewEvent = createEvent({
+      type: "ReviewSubmitted",
+      threadId: review.threadId,
+      actorId: attester.id,
+      at,
+      payload: { review }
+    });
+    appendEvent(reviewEvent, cwd);
+    events.push(reviewEvent);
+  }
+
+  return print({
+    schema: "clista.attestation.record.v0",
+    attester,
+    evidence,
+    review,
+    events
+  });
 }
 
 function reviewSubmit(options, cwd) {
@@ -4810,6 +4914,7 @@ function usage() {
   clista objection raise --thread <threadId> --participant <name|id> --target <objectId> --text <objection>
   clista decision open --thread <threadId> --proposal <proposal>
   clista decision eligibility --request <decisionRequestId> [--events <path>]
+  clista attestation record --thread <threadId> --attester <name|id> --text <text> [--source <url>] [--request <decisionRequestId>] [--status <status>] [--conditions <list>] [--role <role>] [--kind human|agent|tool|system]
   clista review submit --thread <threadId> --request <requestId> --reviewer <name|id> --status <status>
   # M23 protocol review commands (review routes state changes; review is not approval)
   clista review require --thread <threadId> --subject <objectId> [--subject-type <type>] --trigger <triggerType> --reason <reason> [--required-reviewer-role <role>]

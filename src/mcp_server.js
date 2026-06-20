@@ -266,6 +266,42 @@ function tools() {
       toArgv: (a) => ["decision", "open", "--thread", String(a.thread), "--proposal", String(a.proposal)]
     },
     {
+      name: "attestation_record",
+      description:
+        "Record an attestation as first-class events in a thread (M36). " +
+        "Emits ParticipantDeclared (idempotent) + EvidenceCommitted, plus " +
+        "ReviewSubmitted when `request` targets a decision request. No new event types.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          thread: { type: "string" },
+          attester: { type: "string", description: "Attester name or par_… id." },
+          text: { type: "string" },
+          source: { type: "string", description: "Optional source URL (e.g. Moltbook post)." },
+          request: { type: "string", description: "Optional drq_… to attach a Review to." },
+          status: { type: "string" },
+          conditions: { type: "string", description: "Comma-separated conditions for the Review." },
+          role: { type: "string" },
+          kind: { type: "string", enum: ["human", "agent", "tool", "system"] }
+        },
+        required: ["thread", "attester", "text"],
+        additionalProperties: false
+      },
+      toArgv: (a) => {
+        const argv = ["attestation", "record",
+          "--thread", String(a.thread),
+          "--attester", String(a.attester),
+          "--text", String(a.text)];
+        if (a.source) argv.push("--source", String(a.source));
+        if (a.request) argv.push("--request", String(a.request));
+        if (a.status) argv.push("--status", String(a.status));
+        if (a.conditions) argv.push("--conditions", String(a.conditions));
+        if (a.role) argv.push("--role", String(a.role));
+        if (a.kind) argv.push("--kind", String(a.kind));
+        return argv;
+      }
+    },
+    {
       name: "review_submit",
       description: "Submit a review on a decision request (status: approve|request_changes|reject).",
       inputSchema: {

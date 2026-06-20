@@ -76,6 +76,7 @@ Write / append (one CLI verb each, no filesystem paths):
 | `objection_raise`     | `thread`, `participant`, `target`, `text`                |
 | `decision_open`       | `thread`, `proposal`                                     |
 | `review_submit`       | `thread`, `request`, `reviewer`, `status`                |
+| `attestation_record`  | `thread`, `attester`, `text` (optional `source`, `request`, `status`, `conditions`, `role`, `kind`) |
 | `continuity_export`   | (optional `thread`) — returns the packet inline as JSON  |
 
 Meta:
@@ -112,7 +113,32 @@ Meta:
    - 3. Decision legibility: FAIL — no decision summary
    - 4. Attribution coverage: PASS — 3 attributions
    - 5. Replay determinism: SKIPPED — Run `npm run replay` …"
+
+→ tools/call {"name":"attestation_record",
+              "arguments":{"thread":"thd_…","attester":"Claude_Code",
+                           "text":"ClisTa verification PASS via MCP",
+                           "source":"https://moltbook.example/p/abc",
+                           "request":"drq_…",
+                           "status":"approve_with_conditions"}}
+← {schema:"clista.attestation.record.v0",
+   attester:{id:"par_claude_code", ...},
+   evidence:{id:"evd_…",
+             source:"Moltbook attestation: https://moltbook.example/p/abc", ...},
+   review:{id:"rev_…", decisionRequestId:"drq_…",
+           status:"approve_with_conditions",
+           comment:"ClisTa verification PASS via MCP\n\nSource: https://moltbook.example/p/abc",
+           ...},
+   events:[...]}
 ```
+
+The same `attestation_record` tool works for the inverse direction:
+when an external molty replies on Moltbook, record their reply into
+the live dev thread by pointing `thread` at `thd_thread_0001` and
+`request` at the relevant `drq_…`. M36's hard law in code:
+`attestation_recording != manual_copy_paste`. Omit `request` to record
+an attestation as Evidence only (no Review) — the right shape when the
+target decision has already merged (the validator rejects late Reviews
+on merged requests).
 
 The replay sub-check honestly degrades to `SKIPPED`: the byte-identical
 proof lives in `examples/hermes-ingest/` and
@@ -123,8 +149,10 @@ verifier does not lie about that.
 
 Paste the attestation text into a Moltbook reply to
 [@clistahermes](https://www.moltbook.com/u/clistahermes). It becomes
-public verification evidence and is recorded as a Review on the live
-development thread.
+public verification evidence — and, via the `attestation_record` tool
+above, lands in the live dev thread as a `ParticipantAdded` +
+`EvidenceCommitted` (+ `ReviewSubmitted` when targeting a `drq_…`)
+without a human transcription step.
 
 ## Hard laws this server obeys
 
@@ -135,6 +163,11 @@ development thread.
 - `attestation_view != full_state_dump` — `verify_protocol` returns a
   concise attestation. The full state is available, but never as the
   default.
+- `attestation_recording != manual_copy_paste` — `attestation_record`
+  composes existing event types (Participant + Evidence [+ Review])
+  into a first-class log entry. No new event types; the source URL
+  lives in the evidence `source` field and the review `comment`, never
+  in `artifactIds`.
 - One process, one store. The server does not accept filesystem-path
   arguments through any tool schema. The store root is fixed at
   `initialize` time.

@@ -108,3 +108,15 @@ MCP server scoped to a store (`CLISTA_STORE=/path npm run mcp` or
 
 See `docs/mcp-quickstart.md` for a worked round trip and the full tool
 catalog.
+
+### Recording attestations (M36)
+
+After `verify_protocol`, call the `attestation_record` tool to land the
+attestation as first-class events in a thread — `ParticipantAdded`
+(idempotent) + `EvidenceCommitted`, plus `ReviewSubmitted` when
+`request` targets a `drq_…`. No new event types. The same tool records
+external Moltbook attestations into the project's live dev thread
+(`thd_thread_0001`) — exactly mechanizing the
+`rev_claude_antigravity_approve_with_conditions_…` precedent the
+project used to assemble by hand. Hard law: `attestation_recording !=
+manual_copy_paste`.
