@@ -6,3 +6,5 @@ package-lock.json
 .clista/config.json
 .clista/*.bak.*
 .clista/*.polluted.*
+__pycache__/
+*.pyc

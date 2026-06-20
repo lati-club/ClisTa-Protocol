@@ -143,6 +143,22 @@ const { evaluateMergeEligibility } = require("./merges");
 const { assertValidEvents, validateEvents } = require("./validator");
 const { stripUndefined, unique } = require("./utils");
 
+// OUT is the single sink for stdout-bound output produced by command handlers.
+// Default: write straight through to the real process stdout, so the CLI's
+// behavior is byte-identical to before the seam was introduced. runCaptured()
+// swaps it for a buffering sink so an in-process caller (e.g. the MCP server)
+// can dispatch CLI verbs through main() without colliding with JSON-RPC frames
+// that share the same stdout. Tests assert real stdout is never touched while a
+// capture sink is installed.
+const REAL_STDOUT = { write: (chunk) => process.stdout.write(chunk) };
+let OUT = REAL_STDOUT;
+
+function setOut(sink) {
+  const previous = OUT;
+  OUT = sink || REAL_STDOUT;
+  return previous;
+}
+
 function main(argv = process.argv.slice(2), cwd = process.cwd()) {
   let { command, options } = parseCommand(argv);
   ({ command, options } = normalizeCommand(command, options));
@@ -227,6 +243,8 @@ function main(argv = process.argv.slice(2), cwd = process.cwd()) {
         return decisionSummary(options, cwd);
       case "decision eligibility":
         return decisionEligibility(options, cwd);
+      case "attestation record":
+        return attestationRecord(options, cwd);
       case "review submit":
         return reviewSubmit(options, cwd);
       case "review require":
@@ -1180,6 +1198,108 @@ function decisionEligibility(options, cwd) {
   requireOption(options, "request");
   const events = readValidEventsForOptions(options, cwd);
   return print(evaluateDecisionEligibility(events, options.request));
+}
+
+// Record an attestation as first-class events in a thread (M36).
+//
+// Composes existing types — ParticipantDeclared (idempotent, via
+// appendParticipant), EvidenceCommitted (the attestation text), and, when
+// --request targets a decisionRequest, ReviewSubmitted. The verb adds NO new
+// event types: an attestation is a *composition* of objects the protocol
+// already knows about. This is the M36 hard law in code:
+//   attestation_recording != manual_copy_paste
+// — the molty no longer has to retype their verify_protocol output into a
+// Moltbook reply for it to count; the events are committed directly.
+//
+// Omitting --request emits Participant + Evidence only, which is the right
+// shape for attesting *about* a thread without targeting a specific
+// decision request (or after a decision has merged — the validator refuses
+// a late ReviewSubmitted on a merged request, src/validator.js:2363).
+function attestationRecord(options, cwd) {
+  requireOption(options, "thread");
+  requireOption(options, "attester");
+  requireOption(options, "text");
+  const attester = participantFrom(options.attester, options.role || "attester", options.kind || "human");
+  appendParticipant(attester, cwd, options.thread);
+  const at = nowIso();
+  const events = [];
+
+  // Evidence first: this is the permanent record of *what was attested*.
+  // The source field encodes the attestation provenance (a URL when given,
+  // otherwise the attester name) so the answer view surfaces it without
+  // touching artifactIds — that field's semantics are "id of a known
+  // artifact" and we don't pollute it with raw URLs.
+  const evidence = {
+    id: newId("evd", `attestation_${attester.name}`),
+    object: "evidence",
+    threadId: options.thread,
+    source: options.source
+      ? `Moltbook attestation: ${options.source}`
+      : `Attestation by ${attester.name}`,
+    finding: options.text,
+    committedByParticipantId: attester.id,
+    committedAt: at,
+    artifactIds: [],
+    contentHash: contentHash({
+      source: options.source
+        ? `Moltbook attestation: ${options.source}`
+        : `Attestation by ${attester.name}`,
+      finding: options.text,
+      confidence: undefined,
+      artifactIds: []
+    })
+  };
+  stripUndefined(evidence);
+  const evidenceEvent = createEvent({
+    type: "EvidenceCommitted",
+    threadId: evidence.threadId,
+    actorId: attester.id,
+    at,
+    payload: { evidence }
+  });
+  appendEvent(evidenceEvent, cwd);
+  events.push(evidenceEvent);
+
+  // Review only when an actual decisionRequest target is given. The
+  // validator (src/validator.js:2360-2364) rejects a Review against an
+  // unknown or already-merged request; we let that surface as the natural
+  // error rather than reinventing pre-checks here.
+  let review = null;
+  if (options.request) {
+    const status = options.status || "approve";
+    const comment = options.source
+      ? `${options.text}\n\nSource: ${options.source}`
+      : options.text;
+    review = {
+      id: newId("rev", `${attester.name}_attestation_${status}`),
+      object: "review",
+      threadId: options.thread,
+      decisionRequestId: options.request,
+      reviewerParticipantId: attester.id,
+      status,
+      conditions: parseList(options.conditions),
+      comment,
+      reviewedAt: at
+    };
+    stripUndefined(review);
+    const reviewEvent = createEvent({
+      type: "ReviewSubmitted",
+      threadId: review.threadId,
+      actorId: attester.id,
+      at,
+      payload: { review }
+    });
+    appendEvent(reviewEvent, cwd);
+    events.push(reviewEvent);
+  }
+
+  return print({
+    schema: "clista.attestation.record.v0",
+    attester,
+    evidence,
+    review,
+    events
+  });
 }
 
 function reviewSubmit(options, cwd) {
@@ -2588,7 +2708,7 @@ function decisionSummary(options, cwd) {
   const fmt = (options.format || "").toLowerCase();
   if (fmt === "text" || fmt === "md" || fmt === "markdown") {
     const text = formatDecisionSummaryAsText(summary);
-    process.stdout.write(text + (text.endsWith("\n") ? "" : "\n"));
+    OUT.write(text + (text.endsWith("\n") ? "" : "\n"));
     return;
   }
   return print(summary);
@@ -4734,7 +4854,7 @@ function adaptationProjectionForThread(adaptation, threadId) {
 
 
 function print(value) {
-  process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
+  OUT.write(`${JSON.stringify(value, null, 2)}\n`);
 }
 
 function fail(message) {
@@ -4743,7 +4863,7 @@ function fail(message) {
 }
 
 function help() {
-  process.stdout.write(`${usage()}\n`);
+  OUT.write(`${usage()}\n`);
 }
 
 function usage() {
@@ -4794,6 +4914,7 @@ function usage() {
   clista objection raise --thread <threadId> --participant <name|id> --target <objectId> --text <objection>
   clista decision open --thread <threadId> --proposal <proposal>
   clista decision eligibility --request <decisionRequestId> [--events <path>]
+  clista attestation record --thread <threadId> --attester <name|id> --text <text> [--source <url>] [--request <decisionRequestId>] [--status <status>] [--conditions <list>] [--role <role>] [--kind human|agent|tool|system]
   clista review submit --thread <threadId> --request <requestId> --reviewer <name|id> --status <status>
   # M23 protocol review commands (review routes state changes; review is not approval)
   clista review require --thread <threadId> --subject <objectId> [--subject-type <type>] --trigger <triggerType> --reason <reason> [--required-reviewer-role <role>]
@@ -4893,8 +5014,31 @@ function usage() {
   clista run report [--events <path>] [--thread <threadId>] [--title <decision title>] [--out <bundlePath>]`;
 }
 
+// Run main() against an in-process sink instead of the real stdout. Returns
+// what the CLI would have written and the exit code it set, so an embedder
+// (MCP server, tests) can drive the CLI as a function and forward the result
+// back to a JSON-RPC peer without ever touching the real stdout. Restores both
+// the OUT sink and process.exitCode no matter how main() returns or throws, so
+// concurrent default-mode CLI use is never observably affected.
+function runCaptured(argv, cwd) {
+  const chunks = [];
+  const sink = { write: (chunk) => { chunks.push(String(chunk)); } };
+  const previousOut = setOut(sink);
+  const previousExitCode = process.exitCode;
+  process.exitCode = 0;
+  let captured;
+  try {
+    main(argv, cwd);
+    captured = { stdout: chunks.join(""), exitCode: process.exitCode || 0 };
+  } finally {
+    setOut(previousOut);
+    process.exitCode = previousExitCode;
+  }
+  return captured;
+}
+
 if (require.main === module) {
   main();
 }
 
-module.exports = { main, parseOptions };
+module.exports = { main, parseOptions, runCaptured, setOut };

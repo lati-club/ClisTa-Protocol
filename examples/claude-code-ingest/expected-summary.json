@@ -1,0 +1,52 @@
+{
+  "schema": "clista.decisionSummary.v0",
+  "threadId": "thd_f20fdd63a497",
+  "title": "Claude Code Session: We need to decide whether to migrate the staging build pipel",
+  "question": "We need to decide whether to migrate the staging build pipeline from Make to Bazel. The team is split — speed wins are real, but the migration risk is non-trivial.",
+  "status": "decided",
+  "whatWasDecided": {
+    "status": "approved",
+    "summary": "Based on the Makefile size (412 lines) and the cache-hit rate (0.42), Bazel's hermetic action graph would likely lift cache reuse considerably. However, the migration risk is real: there are two flaky integration targets that would need rewriting as Bazel rules first. I recommend a staged migration — port the lint and unit targets first behind a feature flag, keep Make as the fallback for one release, then port the flaky integration targets only once they are stable under Make.",
+    "decidedBy": "Human User"
+  },
+  "why": {
+    "rationale": "Approved the assistant's recommendation from the session.",
+    "supportingEvidence": [
+      {
+        "id": "evd_db7969499cd4",
+        "source": "Tool: Read",
+        "finding": "build/Makefile: 412 lines. Top targets: all, test, lint, docker. Mean wall-clock on CI: 11m 40s (p95 18m 12s)."
+      },
+      {
+        "id": "evd_4b79b8265078",
+        "source": "Tool: Bash",
+        "finding": "{\"cache_hit_rate\": 0.42, \"incremental_build_p50_s\": 175, \"full_build_p50_s\": 700, \"flaky_targets\": [\"integration\", \"e2e-chrome\"]}"
+      }
+    ],
+    "supportingClaims": [
+      {
+        "id": "clm_145366e3378f",
+        "text": "We need to decide whether to migrate the staging build pipeline from Make to Bazel. The team is split — speed wins are real, but the migration risk is non-trivial."
+      }
+    ],
+    "supportingAssumptions": [
+      {
+        "id": "asm_fac0ff88e1cc",
+        "text": "The evidence gathered in this session is sufficient and current enough to act on the recommendation."
+      }
+    ]
+  },
+  "whoDissented": {
+    "objections": [
+      {
+        "id": "obj_8da52436b7f4",
+        "text": "However, the migration risk is real: there are two flaky integration targets that would need rewriting as Bazel rules first.",
+        "raisedBy": "Claude Code Agent",
+        "status": "open",
+        "blocking": false
+      }
+    ],
+    "minorityReports": []
+  },
+  "whatNext": null
+}

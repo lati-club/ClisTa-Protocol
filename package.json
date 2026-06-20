@@ -5,10 +5,12 @@
   "license": "Apache-2.0",
   "description": "Protocol-first ClisTa reasoning engine.",
   "bin": {
-    "clista": "src/cli.js"
+    "clista": "src/cli.js",
+    "clista-mcp": "src/mcp_server.js"
   },
   "scripts": {
     "clista": "node src/cli.js",
+    "mcp": "node src/mcp_server.js",
     "test": "node --test",
     "replay": "bash scripts/replay.sh"
   },
