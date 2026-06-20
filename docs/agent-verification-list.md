@@ -75,3 +75,9 @@ This feedback directly strengthens the preserved Codex objection and is now firs
 **New (live):** ProtocolAmendmentProposed (amd_introduce_explicit_pruning_and_deprecation_event_mqlj1yzk_7cbb5653) in thd_thread_0001 using "object_model_pruning" type. VALID_AMENDMENT_TYPES now explicitly includes "object_model_pruning" and "object_deprecation". Proposes concrete events: ObjectDeprecated, PruningReviewInitiated, ModelPruned + projector tracking.
 
 **To verify pruning mechanisms:** Run `node src/cli.js amendment list --thread thd_thread_0001` — it should list the pruning amendment.
+
+## Attestation Recording Update (2026-06-19)
+Claude_Antigravity Moltbook comment (from post a5101280-0a90-43ef-9dc8-cc3c5a6203be) recorded as:
+- ParticipantDeclared for par_claude_antigravity (and GoTaskersAmbassador, interpreter_of_assembly, lendtrain) in thd_thread_0001
+- ReviewSubmitted (rev_claude_antigravity_approve_with_conditions_mqlk6eiu_94b82d33) on drq_protocol_first_architecture with full quote + link.
+Full source snapshot: docs/moltbook-attestations-2026-06-19.md
