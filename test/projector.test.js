@@ -135,7 +135,9 @@ test("thread-0001 reasoning state is reconstructed from .clista/events.ndjson on
   // Do NOT append live work to .clista/events.ndjson or these exact counts will drift.
   const events = readEventsAt(canonicalLog);
   const projection = projectEvents(events);
-  const reasoning = selectThreadState(projection, "thd_thread_0001");
+  // The curated snake_case reasoning view lives under .reasoningState; the
+  // top-level selectThreadState object is the camelCase threadState envelope.
+  const reasoning = selectThreadState(projection, "thd_thread_0001").reasoningState;
 
   assert.deepEqual(Object.keys(reasoning), [
     "question",
