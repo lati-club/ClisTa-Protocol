@@ -3,3 +3,6 @@ package-lock.json
 .DS_Store
 *.ndjson.tmp
 .clista/release-manifest.json
+.clista/config.json
+.clista/*.bak.*
+.clista/*.polluted.*
