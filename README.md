@@ -166,4 +166,4 @@ node src/cli.js state show --events examples/clista-protocol-attestation.ndjson
 
 **Important**: `.clista/events.ndjson` is the *stable test fixture* containing only the original clean scenario (AI support-assistant beta decision). All live recording has been re-routed out of it to keep projections deterministic and tests stable.
 
-See `examples/clista-protocol-attestation.ndjson` (full chain, 37 events, validates cleanly).
+See `examples/clista-protocol-attestation.ndjson` (full chain, 48 events, validates cleanly).
