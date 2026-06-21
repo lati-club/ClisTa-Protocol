@@ -8,3 +8,6 @@ package-lock.json
 .clista/*.polluted.*
 __pycache__/
 *.pyc
+
+# Local lati agent docs (not part of the protocol)
+docs/lati-*.md
