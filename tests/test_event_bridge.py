@@ -27,10 +27,26 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO_ROOT, "src"))
 
 import clista_events  # noqa: E402
-import ingest_hermes  # noqa: E402
-from ingest_hermes import (  # noqa: E402
-    _detect_objections, _match_tool_call, session_to_events,
+import ingest_session  # noqa: E402
+from ingest_session import (  # noqa: E402
+    PROFILES, _detect_objections, _detect_recommendation, _match_tool_call,
 )
+
+# Since M33, session_to_events is the shared, profile-parameterized pipeline in
+# ingest_session (ingest_hermes is now a thin profile shim over it). These are
+# the Hermes bridge's tests, so drive the shared pipeline with the hermes
+# profile's presentation params — read from the registry so there's one source
+# of truth — which keeps the committed golden log under examples/hermes-ingest/
+# reproducing byte-for-byte.
+_HERMES = PROFILES["hermes"]
+
+
+def session_to_events(messages):
+    return ingest_session.session_to_events(
+        messages,
+        thread_title_prefix=_HERMES["thread_title_prefix"],
+        agent_name=_HERMES["agent_name"],
+    )
 
 MOCK_MESSAGES = [
     {"role": "user",
@@ -203,12 +219,12 @@ class DecisionExtractionTests(unittest.TestCase):
         return out
 
     def test_detect_recommendation_picks_last_recommending_turn(self):
-        rec = ingest_hermes._detect_recommendation(MOCK_MESSAGES)
+        rec = _detect_recommendation(MOCK_MESSAGES)
         self.assertIsNotNone(rec)
         self.assertIn("limited", rec["text"])
 
     def test_no_recommendation_returns_none(self):
-        self.assertIsNone(ingest_hermes._detect_recommendation(NO_RECOMMENDATION_MESSAGES))
+        self.assertIsNone(_detect_recommendation(NO_RECOMMENDATION_MESSAGES))
 
     def test_decision_chain_roles_and_links(self):
         events = session_to_events(MOCK_MESSAGES)
