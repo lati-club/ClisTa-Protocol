@@ -2455,17 +2455,12 @@ function validateReviewTriggered(event, state) {
   if (!objection) {
     addError(state, event, `review trigger references unknown objection ${trigger.triggeringObjectionId}`);
   }
-  // Ordering: the trigger (and its objection) must post-date the decision. A
-  // trigger that predates the decision is incoherent — fail closed.
-  if (decision && objection) {
-    const decidedAt = Date.parse(decision.decidedAt);
-    if (Date.parse(trigger.triggeredAt) < decidedAt) {
-      addError(state, event, "review trigger triggeredAt precedes the decision");
-    }
-    if (objection.raisedAt && Date.parse(objection.raisedAt) < decidedAt) {
-      addError(state, event, "review trigger objection precedes the decision");
-    }
-  }
+  // The "post-decision" property is enforced by append ORDER, not by comparing
+  // client-supplied timestamps: a ReviewTriggered can only resolve a decision +
+  // objection that already appear earlier in the log, and the server emits it
+  // only while the thread is decided. Trusting the nested decidedAt/raisedAt
+  // here would let a backdated objection dodge (or wrongly trip) the trigger,
+  // so we deliberately do not gate on them.
   if (!state.participants.has(trigger.triggeredByParticipantId)) {
     addError(state, event, `review trigger references unknown participant ${trigger.triggeredByParticipantId}`);
   }
