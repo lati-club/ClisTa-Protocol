@@ -460,6 +460,9 @@ function validateEvents(events) {
       case "DecisionMerged":
         validateDecisionMerged(event, state);
         break;
+      case "ReviewTriggered":
+        validateReviewTriggered(event, state);
+        break;
       case "MinorityReportFiled":
         validateMinorityReportFiled(event, state);
         break;
@@ -2428,6 +2431,39 @@ function validateDecisionMerged(event, state) {
   state.decisionRecords.set(decision.id, decision);
   state.decisionsByRequest.set(decision.decisionRequestId, decision);
   state.decisionEventsByRecord.set(decision.id, event);
+}
+
+// A re-review trigger flags an in-force decision for re-validation when a new
+// objection arrives after the decision was recorded (the finance model-risk
+// "monitoring breach → re-validate" loop). It changes no decision substance —
+// it only references the in-force record + the post-decision objection that
+// fired it, so the original decision snapshot stays frozen. Fail-closed.
+function validateReviewTriggered(event, state) {
+  const trigger = event.payload.reviewTrigger;
+  if (!trigger?.id) {
+    addError(state, event, "ReviewTriggered payload missing reviewTrigger.id");
+    return;
+  }
+  validateThreadObject(event, trigger, state, "review trigger");
+  const decision = state.decisionRecords.get(trigger.decisionRecordId);
+  if (!decision) {
+    addError(state, event, `review trigger references unknown decision ${trigger.decisionRecordId}`);
+  } else if (decision.threadId !== trigger.threadId) {
+    addError(state, event, "review trigger decision belongs to a different thread");
+  }
+  const objection = state.objections.get(trigger.triggeringObjectionId);
+  if (!objection) {
+    addError(state, event, `review trigger references unknown objection ${trigger.triggeringObjectionId}`);
+  }
+  // The "post-decision" property is enforced by append ORDER, not by comparing
+  // client-supplied timestamps: a ReviewTriggered can only resolve a decision +
+  // objection that already appear earlier in the log, and the server emits it
+  // only while the thread is decided. Trusting the nested decidedAt/raisedAt
+  // here would let a backdated objection dodge (or wrongly trip) the trigger,
+  // so we deliberately do not gate on them.
+  if (!state.participants.has(trigger.triggeredByParticipantId)) {
+    addError(state, event, `review trigger references unknown participant ${trigger.triggeredByParticipantId}`);
+  }
 }
 
 function validateMinorityReportFiled(event, state) {
