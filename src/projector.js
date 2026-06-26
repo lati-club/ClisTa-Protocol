@@ -92,6 +92,7 @@ function emptyProjection() {
     decisionRequests: {},
     reviews: {},
     decisionRecords: {},
+    reviewTriggers: {},
     minorityReports: {},
     mergeRequests: {},
     mergeReviews: {},
@@ -835,6 +836,10 @@ function projectEvents(events) {
         upsert(projection.decisionRecords, payload.decisionRecord);
         applyDecisionRecord(projection, payload.decisionRecord, eventTimestamp(event));
         break;
+      case "ReviewTriggered":
+        upsert(projection.reviewTriggers, payload.reviewTrigger);
+        applyReviewTrigger(projection, payload.reviewTrigger, eventTimestamp(event));
+        break;
       case "MinorityReportFiled":
         upsert(projection.minorityReports, payload.minorityReport);
         attachMinorityReport(projection, payload.minorityReport);
@@ -1178,7 +1183,12 @@ function selectDecisionSummary(projection, requestedThreadId) {
   const decisionRecord = state.decisionStatus.decisionRecord;
   const proposal = state.currentProposal;
   const support = decisionRecord || proposal || {};
-  const status = decisionRecord ? "decided" : (proposal ? "pending" : "open");
+  // A re-review thread still HAS an in-force decision (whatWasDecided/why render
+  // unchanged from the frozen record) but is flagged for re-validation — surface
+  // that here so the summary view agrees with the real thread status.
+  const status = state.thread.status === "re-review"
+    ? "re-review"
+    : (decisionRecord ? "decided" : (proposal ? "pending" : "open"));
 
   return {
     schema: "clista.decisionSummary.v0",
@@ -1395,6 +1405,18 @@ function applyDecisionRecord(projection, decisionRecord, at) {
     }
   }
   setThreadStatus(projection, decisionRecord.threadId, "decided", at);
+}
+
+// A post-decision objection flagged the in-force decision for re-validation.
+// The decision record is untouched (snapshot stays frozen) — only the thread
+// status flips to "re-review". Because events replay in order and the
+// DecisionMerged that set "decided" is always earlier in the log, a full replay
+// deterministically resolves to "re-review".
+function applyReviewTrigger(projection, reviewTrigger, at) {
+  if (!reviewTrigger) {
+    return;
+  }
+  setThreadStatus(projection, reviewTrigger.threadId, "re-review", at);
 }
 
 function attachMinorityReport(projection, minorityReport) {
