@@ -55,40 +55,51 @@ cli exposes the protocol
 tests prove the theorem
 ```
 
-Concrete structure:
+Concrete structure (the spine is annotated; the rest has grown one protocol
+property at a time — see the milestone docs for what each module proves):
 
 ```text
-.clista/events.ndjson          canonical origin thread log
+.clista/events.ndjson           frozen test fixture (original clean scenario);
+                                tests pin its counts — never append to it
 
-AGENTS.md                     guardrails for Codex
-README.md                     mission + critical commands
+AGENTS.md                       guardrails for agents
+README.md                       mission + critical commands
+CONTRIBUTING.md                 invariants + dogfooding (attestation) mechanics
 
-docs/protocol/v0/
-  constitution.md
-  north-star.md
-  protocol-law-001.md
-  core-objects.md
-  governance.md
-  spec.md
-  milestone-0.md
-  milestone-1.md
+docs/protocol/v0/               constitution.md, north-star.md, core-objects.md,
+                                protocol-law-001.md, spec.md, governance.md, and
+                                milestone-0.md … milestone-36.md (one per property)
 
-schemas/
-  clista-protocol.schema.json
+schemas/                        clista-protocol.schema.json   the object model
+                                clista-mvp.schema.json, clista-continuity.schema.json,
+                                clista-release-manifest.schema.json, v0/
 
-src/
-  events.js                   create/read append-only events
-  projector.js                event log -> reasoning state
-  validator.js                invalid reasoning fails loudly
-  cli.js                      clista commands
+src/                            the engine — one module per protocol property
+  events.js                     create/read append-only events  (spine)
+  projector.js                  event log -> reasoning state     (spine)
+  validator.js                  invalid reasoning fails loudly   (spine)
+  cli.js                        clista commands                  (spine)
+  mcp_server.js                 the protocol over MCP
+  integrity.js                  canonical hashing / hash chain
+  governance.js attribution.js provenance.js delegation.js execution.js
+  continuity.js recovery.js federation.js negotiation.js merges.js
+  amendments.js adaptation.js learning.js outcome*.js review.js release.js …
+  ingest_session.py …           Python ingestion adapters (hermes, claude-code)
 
-test/
-  projector.test.js           proves memory/projection
-  validator.test.js           proves validity/governance
+test/                           JS suite (node --test) — *.test.js per module,
+                                incl. projector / validator / scenario-demo and a
+                                clean-room replay audit (scripts/replay.sh)
+tests/                          Python suite (unittest) — ingestion bridge
 
-examples/first-test-thread/
-  events.ndjson
+examples/                       scenario-demo/ (the bundled decision),
+                                hermes-ingest/, claude-code-ingest/, action-chain/,
+                                pharma-phase-gate*, vendor-due-diligence, and
+                                clista-protocol-attestation.ndjson (the live chain)
 ```
+
+The spine is still `events -> projector -> validator -> cli`; everything else
+is that spine extended. When this list drifts from the tree, the tree wins —
+prefer `ls src/`, `ls docs/protocol/v0/`, and `examples/manifest.json`.
 
 ## Build Rhythm
 
