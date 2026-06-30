@@ -1,0 +1,53 @@
+name: Notify cockpit on release
+
+# When a protocol release tag (v*) is pushed, ping lati-club/clista-ai-app so its
+# sync workflow re-vendors from this release. The cockpit already listens for
+# repository_dispatch { type: clista-protocol-release } and reads
+# client_payload.ref to check out the exact tag.
+#
+# This removes only the "nobody remembered to trigger the sync" failure mode. The
+# human review gate on the cockpit's engine-sync PR is unchanged: this opens a PR
+# there, it does not deploy. The same dispatch will also drive the future
+# sync-examples workflow, which listens for the same event type.
+#
+# Requires a CLISTA_APP_DISPATCH_TOKEN secret: a fine-grained PAT (or GitHub App
+# token) scoped to lati-club/clista-ai-app with "Contents: read and write".
+# repository_dispatch needs contents:write, and the default GITHUB_TOKEN is scoped
+# to this repo only — it cannot dispatch across repositories.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Protocol git ref to tell the cockpit to sync (tag/branch/sha). Blank = the triggering ref."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require dispatch token
+        env:
+          TOKEN: ${{ secrets.CLISTA_APP_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::Set CLISTA_APP_DISPATCH_TOKEN (fine-grained PAT with Contents: read and write on lati-club/clista-ai-app). The default GITHUB_TOKEN cannot dispatch cross-repo."
+            exit 1
+          fi
+
+      - name: Dispatch clista-protocol-release to cockpit
+        env:
+          GH_TOKEN: ${{ secrets.CLISTA_APP_DISPATCH_TOKEN }}
+          REF: ${{ github.event.inputs.ref || github.ref_name }}
+        run: |
+          echo "Notifying lati-club/clista-ai-app to sync at ref: $REF"
+          # jq --arg keeps REF out of the JSON literal (no injection from a tag name).
+          jq -nc --arg ref "$REF" '{event_type: "clista-protocol-release", client_payload: {ref: $ref}}' \
+            | gh api repos/lati-club/clista-ai-app/dispatches --input -
