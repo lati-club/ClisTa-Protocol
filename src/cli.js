@@ -4295,6 +4295,25 @@ function negotiationOptionsFromCli(options, results) {
 function validateCommand(options, cwd) {
   const events = readEventsForOptions(options, cwd);
   const result = validateEvents(events);
+  // Plain `validate` checks protocol structure and (lax) any hashes present, but
+  // does not assert tamper-evidence: an unsigned log passes. `--strict` adds a
+  // fail-closed integrity pass that requires a complete, intact hash chain
+  // (content_hash + previous_hash on every event), so it can be used as the
+  // gate for logs that claim to be chained.
+  if (booleanOption(options.strict, false)) {
+    const integrity = verifyEventIntegrity(events, { strict: true });
+    result.integrity = integrity;
+    if (!integrity.valid) {
+      result.valid = false;
+      result.errors = [
+        ...result.errors,
+        ...integrity.reasons.map((reason) => ({
+          event_id: reason.event_id,
+          reason: reason.reason
+        }))
+      ];
+    }
+  }
   print(result);
   if (!result.valid) {
     process.exitCode = 1;
@@ -4998,7 +5017,7 @@ function usage() {
   clista merge conflict resolve --request <mergeRequestId> --conflict <conflictId> --resolution <accept_parent|accept_fork|preserve_both|supersede|reject_fork> --rationale <rationale>
   clista merge eligibility --request <mergeRequestId> [--events <path>]
   clista merge complete --request <mergeRequestId>
-  clista validate [--events <path>]
+  clista validate [--events <path>] [--strict]
   clista verify-cross-thread --parent <path> --arm <path> [--arm <path>...]
   clista integrity verify [--events <path>] [--strict]
   clista continuity export [--events <path>] [--thread <threadId>] [--out <path>]
