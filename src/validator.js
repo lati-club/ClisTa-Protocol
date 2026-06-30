@@ -130,7 +130,7 @@ const {
   objectIdsForThreadScope,
   threadDescendsFrom
 } = require("./merges");
-const { unique } = require("./utils");
+const { normalizeType, unique } = require("./utils");
 
 class ValidationError extends Error {
   constructor(errors) {
@@ -1289,7 +1289,7 @@ function validateDelegationGrantedEvent(event, state) {
   if (grant.delegatorParticipantId && event.actor_id !== grant.delegatorParticipantId) {
     addError(state, event, "delegation grant actor must be the delegator");
   }
-  const requiredAuthority = normalizeDelegationText(grant.authorityRequired || "decision_owner");
+  const requiredAuthority = normalizeType(grant.authorityRequired || "decision_owner");
   if (
     grant.delegatorParticipantId
     && !participantHasAuthority(state.identity, grant.delegatorParticipantId, requiredAuthority, grant.threadId)
@@ -2880,10 +2880,10 @@ function validateDelegatedActionAgainstGrant(event, state, action, grant) {
   if (action.delegateId !== grant.delegateId) {
     addError(state, event, "delegated action delegateId must match delegation grant");
   }
-  if (normalizeDelegationText(action.action) !== normalizeDelegationText(grant.action)) {
+  if (normalizeType(action.action) !== normalizeType(grant.action)) {
     addError(state, event, "delegated action must match granted action");
   }
-  if (normalizeDelegationText(action.scope) !== normalizeDelegationText(grant.scope)) {
+  if (normalizeType(action.scope) !== normalizeType(grant.scope)) {
     addError(state, event, "delegated action must stay within granted scope");
   }
   if (action.attribution?.delegateId !== action.delegateId) {
@@ -2903,8 +2903,8 @@ function validateDelegationDelegateActor(event, state, delegateId, delegateType,
     addError(state, event, `delegation ${label} references unknown accountable delegate ${delegateId}`);
     return;
   }
-  const normalizedType = normalizeDelegationText(delegateType || "participant");
-  const normalizedKind = normalizeDelegationText(participant.kind || "human");
+  const normalizedType = normalizeType(delegateType || "participant");
+  const normalizedKind = normalizeType(participant.kind || "human");
   const permittedKinds = {
     participant: null,
     agent: new Set(["agent"]),
@@ -2974,7 +2974,7 @@ function validateExecutionRecordMatchesPrior(event, state, record, prior, label)
     addError(state, event, `execution ${label} actorId must match execution start`);
   }
   if (
-    normalizeDelegationText(record.authorizationRef?.type) !== normalizeDelegationText(prior.authorizationRef?.type)
+    normalizeType(record.authorizationRef?.type) !== normalizeType(prior.authorizationRef?.type)
     || record.authorizationRef?.id !== prior.authorizationRef?.id
   ) {
     addError(state, event, `execution ${label} authorizationRef must match execution start`);
@@ -2985,17 +2985,17 @@ function validateExecutionRecordMatchesPrior(event, state, record, prior, label)
   if (record.decisionId !== prior.decisionId) {
     addError(state, event, `execution ${label} decisionId must match execution start`);
   }
-  if (normalizeDelegationText(record.actionType) !== normalizeDelegationText(prior.actionType)) {
+  if (normalizeType(record.actionType) !== normalizeType(prior.actionType)) {
     addError(state, event, `execution ${label} actionType must match execution start`);
   }
-  if (normalizeDelegationText(record.scope) !== normalizeDelegationText(prior.scope)) {
+  if (normalizeType(record.scope) !== normalizeType(prior.scope)) {
     addError(state, event, `execution ${label} scope must match execution start`);
   }
 }
 
 function validateExecutionAuthorization(event, state, record) {
   const ref = record?.authorizationRef || {};
-  const type = normalizeDelegationText(ref.type);
+  const type = normalizeType(ref.type);
   if (type === "delegation") {
     const grant = ref.id ? state.delegationGrants.get(ref.id) : null;
     if (!grant) {
@@ -3033,10 +3033,10 @@ function validateExecutionAgainstDelegation(event, state, record, grant) {
   if (record.delegationId !== grant.id) {
     addError(state, event, "delegated execution must identify delegationId");
   }
-  if (normalizeDelegationText(record.actionType) !== normalizeDelegationText(grant.action)) {
+  if (normalizeType(record.actionType) !== normalizeType(grant.action)) {
     addError(state, event, "delegated execution must match granted action");
   }
-  if (normalizeDelegationText(record.scope) !== normalizeDelegationText(grant.scope)) {
+  if (normalizeType(record.scope) !== normalizeType(grant.scope)) {
     addError(state, event, "delegated execution must stay within granted scope");
   }
   requireExecutionConstraints(event, state, record, grant.limits || [], "delegation limits");
@@ -3065,8 +3065,8 @@ function validateExecutionAgainstDecision(event, state, record, decision) {
     `thread:${decision.threadId}`,
     decision.id,
     `decision:${decision.id}`
-  ].map(normalizeDelegationText));
-  if (!allowedScopes.has(normalizeDelegationText(record.scope))) {
+  ].map(normalizeType));
+  if (!allowedScopes.has(normalizeType(record.scope))) {
     addError(state, event, "decision execution must stay within decision scope");
   }
   requireExecutionConstraints(event, state, record, decision.conditions || [], "decision conditions");
@@ -3076,11 +3076,11 @@ function validateExecutionAgainstDecision(event, state, record, decision) {
 }
 
 function requireExecutionConstraints(event, state, record, requiredConstraints, label) {
-  const required = arrayValues(requiredConstraints).map(normalizeDelegationText).filter(Boolean);
+  const required = arrayValues(requiredConstraints).map(normalizeType).filter(Boolean);
   if (!required.length) {
     return;
   }
-  const actual = new Set(arrayValues(record.constraints).map(normalizeDelegationText));
+  const actual = new Set(arrayValues(record.constraints).map(normalizeType));
   for (const constraint of required) {
     if (!actual.has(constraint)) {
       addError(state, event, `execution constraints must include ${label} ${constraint}`);
@@ -3199,7 +3199,7 @@ function validateOutcomeLearningReferences(event, state, object, label, particip
   }
   if (
     object.evaluationResult
-    && normalizeDelegationText(object.evaluationResult) !== normalizeDelegationText(evaluation.evaluationResult)
+    && normalizeType(object.evaluationResult) !== normalizeType(evaluation.evaluationResult)
   ) {
     addError(state, event, `outcome learning ${label} evaluationResult must match evaluated outcome`);
   }
@@ -3243,7 +3243,7 @@ function validateReviewParticipant(event, state, participantId, label) {
 }
 
 function validateReviewSubject(event, state, review) {
-  const subjectType = normalizeReviewText(review.subjectType || review.subjectRef?.type);
+  const subjectType = normalizeType(review.subjectType || review.subjectRef?.type);
   const subjectId = review.subjectId || review.subjectRef?.id;
   if (!subjectType || !subjectId) {
     return;
@@ -3296,7 +3296,7 @@ function validateRecoveryParticipant(event, state, participantId, label) {
 }
 
 function validateRecoverySubject(event, state, record, label) {
-  const subjectType = normalizeRecoveryText(record.subjectType || record.subjectRef?.type);
+  const subjectType = normalizeType(record.subjectType || record.subjectRef?.type);
   const subjectId = record.subjectId || record.subjectRef?.id;
   if (!subjectType || !subjectId || !RECOVERY_SUBJECT_TYPES.has(subjectType)) {
     return;
@@ -3338,8 +3338,8 @@ function validateRecoverySubject(event, state, record, label) {
 }
 
 function validateRecoverySubjectMatchesRequest(event, state, record, request, label) {
-  const recordType = normalizeRecoveryText(record.subjectType || record.subjectRef?.type);
-  const requestType = normalizeRecoveryText(request.subjectType || request.subjectRef?.type);
+  const recordType = normalizeType(record.subjectType || record.subjectRef?.type);
+  const requestType = normalizeType(request.subjectType || request.subjectRef?.type);
   const recordId = record.subjectId || record.subjectRef?.id;
   const requestId = request.subjectId || request.subjectRef?.id;
   if (recordType !== requestType || recordId !== requestId) {
@@ -3366,7 +3366,7 @@ function validateRecoveryReviewReference(event, state, reviewId, label, options 
 }
 
 function validateRecoveryReviewMatchesRequest(event, state, review, request) {
-  const subjectType = normalizeReviewText(review.subjectType || review.subjectRef?.type);
+  const subjectType = normalizeType(review.subjectType || review.subjectRef?.type);
   const subjectId = review.subjectId || review.subjectRef?.id;
   if (!["recovery", "recovery_request"].includes(subjectType) || subjectId !== request.id) {
     addError(state, event, "recovery review must reference the recovery request");
@@ -3377,7 +3377,7 @@ function validateRecoveryReviewMatchesRequest(event, state, review, request) {
 }
 
 function recoverySubjectForType(state, subjectType, subjectId) {
-  const normalized = normalizeRecoveryText(subjectType);
+  const normalized = normalizeType(subjectType);
   const collections = {
     invalid_event: state.processedEventsById,
     event_hash_mismatch: state.processedEventsById,
@@ -3397,7 +3397,7 @@ function recoverySubjectForType(state, subjectType, subjectId) {
 }
 
 function reviewSubjectForType(state, subjectType, subjectId) {
-  const normalized = normalizeReviewText(subjectType);
+  const normalized = normalizeType(subjectType);
   const collections = {
     thread: state.threads,
     evidence: state.evidence,
@@ -3514,27 +3514,6 @@ function validateIdsExist(event, state, ids, collection, label) {
   }
 }
 
-function normalizeDelegationText(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s-]+/g, "_");
-}
-
-function normalizeReviewText(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s-]+/g, "_");
-}
-
-function normalizeRecoveryText(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s-]+/g, "_");
-}
-
 function normalizeOutcomeEffect(value) {
   return String(value || "").trim();
 }
@@ -3550,7 +3529,7 @@ function arrayValues(value) {
 }
 
 function validateAuthorityName(event, state, authority) {
-  const normalized = String(authority || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  const normalized = normalizeType(authority);
   if (!VALID_AUTHORITIES.has(normalized)) {
     addError(state, event, `unsupported authority ${authority}`);
   }
