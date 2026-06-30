@@ -13,6 +13,25 @@ const {
 const STORE_DIR = ".clista";
 const EVENTS_FILE = "events.ndjson";
 
+// Upper bound on an event log we will load into memory. The CLI is meant to read
+// foreign logs (`--events <path>`, import, continuity), so cap the read before
+// pulling the whole file in — a hostile or runaway NDJSON file should fail fast,
+// not exhaust memory. Generous by default (no real log is near it); override with
+// CLISTA_MAX_EVENT_LOG_BYTES for legitimately larger logs.
+const DEFAULT_MAX_EVENT_LOG_BYTES = 64 * 1024 * 1024;
+
+function maxEventLogBytes() {
+  const raw = process.env.CLISTA_MAX_EVENT_LOG_BYTES;
+  if (raw === undefined || raw === "") {
+    return DEFAULT_MAX_EVENT_LOG_BYTES;
+  }
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return DEFAULT_MAX_EVENT_LOG_BYTES;
+  }
+  return parsed;
+}
+
 function storeDir(cwd = process.cwd()) {
   return path.join(cwd, STORE_DIR);
 }
@@ -72,6 +91,14 @@ function initStore(cwd = process.cwd()) {
 function readEventsAt(eventsPath) {
   if (!fs.existsSync(eventsPath)) {
     return [];
+  }
+  const limit = maxEventLogBytes();
+  const { size } = fs.statSync(eventsPath);
+  if (size > limit) {
+    throw new Error(
+      `Event log ${eventsPath} is ${size} bytes, over the ${limit}-byte limit. ` +
+      "Set CLISTA_MAX_EVENT_LOG_BYTES to raise it."
+    );
   }
   const raw = fs.readFileSync(eventsPath, "utf8").trim();
   if (!raw) {
