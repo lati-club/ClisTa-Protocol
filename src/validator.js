@@ -494,6 +494,7 @@ function validateEvents(events) {
         validateCrossThreadEvidence(event, state);
         break;
       case "AlignmentCalculated":
+        validateAlignmentCalculated(event, state);
         break;
       default:
         addError(state, event, `unsupported event_type ${event.event_type}`);
@@ -2823,6 +2824,32 @@ function validateResolution(event, objection, state) {
   }
   if (!isAuthorizedToResolve(event.actor_id, objection, state)) {
     addError(state, event, `objection ${objection.id} resolved by unauthorized actor ${event.actor_id}`);
+  }
+}
+
+function validateAlignmentCalculated(event, state) {
+  const snapshot = event.payload.alignmentSnapshot;
+  if (!snapshot) {
+    addError(state, event, "AlignmentCalculated payload missing alignmentSnapshot");
+    return;
+  }
+  if (!snapshot.id) {
+    addError(state, event, "alignmentSnapshot missing id");
+  }
+  if (snapshot.object !== "alignmentSnapshot") {
+    addError(state, event, 'alignmentSnapshot object must be "alignmentSnapshot"');
+  }
+  validateThreadObject(event, snapshot, state, "alignment snapshot");
+  if (typeof snapshot.createdAt !== "string" || !snapshot.createdAt) {
+    addError(state, event, "alignmentSnapshot missing createdAt");
+  }
+  for (const field of ["evidenceAlignment", "positionAlignment", "riskAlignment", "overallAlignment"]) {
+    const value = snapshot[field];
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      addError(state, event, `alignmentSnapshot ${field} must be a number`);
+    } else if (value < 0 || value > 1) {
+      addError(state, event, `alignmentSnapshot ${field} must be between 0 and 1`);
+    }
   }
 }
 
