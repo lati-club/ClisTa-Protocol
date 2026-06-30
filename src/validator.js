@@ -2270,7 +2270,13 @@ function validateCrossThreadEvidence(event, state) {
     addError(state, event, "CrossThreadEvidence missing finding");
   }
   validateThreadObject(event, cte, state, "crossThreadEvidence");
-  if (cte.committedByParticipantId && !state.participants.has(cte.committedByParticipantId)) {
+  // Require an attributed committer, matching validateEvidenceCommitted. Cross-
+  // thread evidence is registered into the same state.evidence map that claims,
+  // assumptions, and positions reference, so it must not enter the decision graph
+  // unattributed — that would weaken the "who put this in the record" guarantee.
+  if (!cte.committedByParticipantId) {
+    addError(state, event, "CrossThreadEvidence missing committedByParticipantId");
+  } else if (!state.participants.has(cte.committedByParticipantId)) {
     addError(state, event, `crossThreadEvidence committed by unknown participant ${cte.committedByParticipantId}`);
   }
   // Register as evidence so downstream claims, assumptions, positions can reference it
