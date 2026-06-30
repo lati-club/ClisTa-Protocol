@@ -69,6 +69,9 @@ for (const ex of published) {
       assert.ok(report.summary.verified >= 1, "expected at least one verified cross-thread item");
       assert.equal(report.summary.mismatch, 0);
       assert.equal(report.summary.decisionNotFound, 0);
+      // A published bundle declares all its own arms, so nothing should degrade to
+      // "skipped" — a typo'd/dangling sourceThreadId would otherwise pass silently.
+      assert.equal(report.summary.skipped, 0);
     });
   }
 }
