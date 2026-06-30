@@ -75,6 +75,7 @@ const {
   selectProvenanceForThread
 } = require("./provenance");
 const { unique } = require("./utils");
+const { primaryObject } = require("./event-types");
 
 function emptyProjection() {
   return {
@@ -1888,69 +1889,6 @@ function eventActorId(event) {
 
 function eventThreadId(event) {
   return event.thread_id || event.threadId;
-}
-
-function primaryObject(event) {
-  const payload = event.payload || {};
-  return payload.thread
-    || payload.threadFork
-    || payload.participant
-    || payload.participantRole
-    || payload.participantAuthority
-    || payload.participantAuthorityRevocation
-    || payload.contributionAttribution
-    || payload.attributionCorrection
-    || payload.attributionDispute
-    || payload.attributionRevocation
-    || payload.evidence
-    || payload.assumption
-    || payload.claim
-    || payload.position
-    || payload.objection
-    || payload.alignmentSnapshot
-    || payload.decisionRequest
-    || payload.review
-    || payload.decisionRecord
-    || payload.minorityReport
-    || payload.mergeRequest
-    || payload.mergeReview
-    || payload.mergeConflict
-    || payload.mergeConflictResolution
-    || payload.mergeCompletion
-    || payload.expectedOutcome
-    || payload.outcomeAudit
-    || payload.decisionScore
-    || payload.learningSignal
-    || payload.patternObservation
-    || payload.outcomeReview
-    || payload.learningRecommendation
-    || payload.adaptationReview
-    || payload.governanceReviewRecommendation
-    || payload.evidenceRequirementReviewRecommendation
-    || payload.revisitTriggerReviewRecommendation
-    || payload.decisionGateReviewRecommendation
-    || payload.protocolAmendment
-    || payload.amendment
-    || payload.protocolAmendmentReview
-    || payload.amendmentReview
-    || payload.protocolAmendmentApproval
-    || payload.amendmentApproval
-    || payload.protocolAmendmentRejection
-    || payload.amendmentRejection
-    || payload.protocolAmendmentSupersession
-    || payload.amendmentSupersession
-    || payload.federationContext
-    || payload.federationPeer
-    || payload.federatedStateReference
-    || payload.federatedPacketVerification
-    || payload.federatedPacketRejection
-    || payload.federationBoundary
-    || payload.negotiationRequest
-    || payload.negotiationConstraint
-    || payload.negotiationDifference
-    || payload.negotiationTerms
-    || payload.negotiationFailure
-    || null;
 }
 
 function summarizeEvent(event) {

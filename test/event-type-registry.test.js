@@ -8,7 +8,9 @@ const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 
-const { EVENT_TYPES, EVENT_TYPE_SET, isKnownEventType } = require("../src/event-types");
+const {
+  EVENT_TYPES, EVENT_TYPE_SET, PRIMARY_OBJECT_KEYS, isKnownEventType, primaryObject
+} = require("../src/event-types");
 
 const root = path.resolve(__dirname, "..");
 const validatorSrc = fs.readFileSync(path.join(root, "src", "validator.js"), "utf8");
@@ -89,4 +91,22 @@ test("no event type is projected into state while the validator no-ops it (fail-
     [],
     `these event types mutate projected state but their validator case is a no-op: ${offenders.join(", ")}`
   );
+});
+
+test("primaryObject resolves every registered primary-object key", () => {
+  assert.ok(PRIMARY_OBJECT_KEYS.length >= 77);
+  for (const key of PRIMARY_OBJECT_KEYS) {
+    const obj = { id: `obj_${key}` };
+    assert.equal(primaryObject({ payload: { [key]: obj } }), obj, `primaryObject missed key ${key}`);
+  }
+  assert.equal(primaryObject({ payload: {} }), null);
+});
+
+test("validator and projector use the shared primaryObject (no local re-divergence)", () => {
+  // #51 phase 4: the two files previously defined their own primaryObject with
+  // divergent key sets. Both must now import the single registry implementation.
+  for (const [name, src] of [["validator.js", validatorSrc], ["projector.js", projectorSrc]]) {
+    assert.doesNotMatch(src, /\nfunction primaryObject\(/, `${name} redefines primaryObject locally`);
+    assert.match(src, /require\("\.\/event-types"\)/, `${name} does not import from the registry`);
+  }
 });
