@@ -713,6 +713,86 @@ function isKnownContribution(projection, contributionId) {
   );
 }
 
+// Offline cross-thread provenance check: confirm every CrossThreadEvidence item
+// in a parent event log anchors on the actual DecisionMerged event in the arm
+// log it cites. The validator deliberately never requires the source thread to
+// be present in the same log (cross-thread refs are inherently cross-file), so
+// `sourceEventHash` is only trustworthy once both logs are held together and
+// compared — which is what this does. Pure over event arrays (no IO) so the
+// CLI, the Worker, and tests all run the identical check.
+//
+// `parentEvents` is one thread's event array; `armEventLogs` is an array of
+// arm event arrays. Returns { valid, summary, results }; each result is one
+// CrossThreadEvidence item with status verified | mismatch | decision_not_found
+// | skipped (source thread not among the provided arm logs — unverified, not
+// failed). `valid` is false only on a real break (mismatch or decision_not_found).
+function verifyCrossThreadProvenance(parentEvents = [], armEventLogs = []) {
+  // Index every DecisionMerged across the arm logs:
+  //   sourceThreadId -> decisionRecordId -> { hash, eventId }
+  const armDecisions = new Map();
+  for (const armEvents of armEventLogs) {
+    for (const event of armEvents || []) {
+      if (event.event_type !== "DecisionMerged") {
+        continue;
+      }
+      const record = event.payload && event.payload.decisionRecord;
+      if (!record || !record.id) {
+        continue;
+      }
+      if (!armDecisions.has(event.thread_id)) {
+        armDecisions.set(event.thread_id, new Map());
+      }
+      armDecisions.get(event.thread_id).set(record.id, {
+        hash: event.content_hash,
+        eventId: event.event_id
+      });
+    }
+  }
+
+  const results = [];
+  for (const event of parentEvents) {
+    if (event.event_type !== "CrossThreadEvidence") {
+      continue;
+    }
+    const cte = event.payload && event.payload.crossThreadEvidence;
+    if (!cte) {
+      continue;
+    }
+    const base = {
+      crossThreadEvidenceId: cte.id,
+      derivation: cte.derivation,
+      sourceThreadId: cte.sourceThreadId,
+      sourceDecisionRecordId: cte.sourceDecisionRecordId,
+      sourceEventHash: cte.sourceEventHash
+    };
+    const decisions = armDecisions.get(cte.sourceThreadId);
+    if (!decisions) {
+      results.push({ ...base, status: "skipped", reason: `source thread ${cte.sourceThreadId} not present in provided arm log(s)` });
+      continue;
+    }
+    const decision = decisions.get(cte.sourceDecisionRecordId);
+    if (!decision) {
+      results.push({ ...base, status: "decision_not_found", reason: `no DecisionMerged ${cte.sourceDecisionRecordId} in arm thread ${cte.sourceThreadId}` });
+      continue;
+    }
+    if (decision.hash === cte.sourceEventHash) {
+      results.push({ ...base, status: "verified", sourceEventId: decision.eventId });
+    } else {
+      results.push({ ...base, status: "mismatch", expectedHash: decision.hash, sourceEventId: decision.eventId, reason: "sourceEventHash does not match the DecisionMerged content hash in the arm" });
+    }
+  }
+
+  const summary = {
+    total: results.length,
+    verified: results.filter((r) => r.status === "verified").length,
+    mismatch: results.filter((r) => r.status === "mismatch").length,
+    decisionNotFound: results.filter((r) => r.status === "decision_not_found").length,
+    skipped: results.filter((r) => r.status === "skipped").length
+  };
+  const valid = summary.mismatch === 0 && summary.decisionNotFound === 0;
+  return { valid, summary, results };
+}
+
 module.exports = {
   PROVENANCE_SCHEMA,
   PROVENANCE_VERIFY_SCHEMA,
@@ -726,5 +806,6 @@ module.exports = {
   provenanceForContribution,
   selectProvenanceForThread,
   traceProvenance,
-  validateContributionProvenance
+  validateContributionProvenance,
+  verifyCrossThreadProvenance
 };

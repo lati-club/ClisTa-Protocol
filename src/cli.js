@@ -104,7 +104,8 @@ const {
 const {
   isKnownContribution,
   provenanceForContribution,
-  traceProvenance
+  traceProvenance,
+  verifyCrossThreadProvenance
 } = require("./provenance");
 const {
   buildIdentityState,
@@ -4302,10 +4303,9 @@ function validateCommand(options, cwd) {
 
 // Offline verification of cross-thread provenance: confirm that every
 // CrossThreadEvidence item in a parent log anchors on the actual DecisionMerged
-// event in the arm log it cites. This closes the loop the validator leaves open
-// by design — the validator never requires the source thread to be present, so
-// sourceEventHash is only as trustworthy as whoever wrote it. Here we hold both
-// logs and compare the cited hash against the arm's real decision hash.
+// event in the arm log it cites. The check itself lives in the (vendored) engine
+// — verifyCrossThreadProvenance — so the CLI, the Worker, and tests run the same
+// logic; this wrapper only does file IO, option parsing, and exit-code mapping.
 function verifyCrossThreadCommand(options, cwd) {
   if (!options.parent) {
     throw new Error("verify-cross-thread requires --parent <path>");
@@ -4315,71 +4315,9 @@ function verifyCrossThreadCommand(options, cwd) {
   }
   const armSpecs = Array.isArray(options.arm) ? options.arm : [options.arm];
   const parentEvents = readEventsAt(path.resolve(cwd, options.parent));
+  const armEventLogs = armSpecs.map((spec) => readEventsAt(path.resolve(cwd, spec)));
 
-  // Index every DecisionMerged across the provided arm logs:
-  //   sourceThreadId -> decisionRecordId -> { hash, eventId }
-  const armDecisions = new Map();
-  for (const spec of armSpecs) {
-    const armEvents = readEventsAt(path.resolve(cwd, spec));
-    for (const event of armEvents) {
-      if (event.event_type !== "DecisionMerged") {
-        continue;
-      }
-      const record = event.payload && event.payload.decisionRecord;
-      if (!record || !record.id) {
-        continue;
-      }
-      if (!armDecisions.has(event.thread_id)) {
-        armDecisions.set(event.thread_id, new Map());
-      }
-      armDecisions.get(event.thread_id).set(record.id, {
-        hash: event.content_hash,
-        eventId: event.event_id
-      });
-    }
-  }
-
-  const results = [];
-  for (const event of parentEvents) {
-    if (event.event_type !== "CrossThreadEvidence") {
-      continue;
-    }
-    const cte = event.payload && event.payload.crossThreadEvidence;
-    if (!cte) {
-      continue;
-    }
-    const base = {
-      crossThreadEvidenceId: cte.id,
-      derivation: cte.derivation,
-      sourceThreadId: cte.sourceThreadId,
-      sourceDecisionRecordId: cte.sourceDecisionRecordId,
-      sourceEventHash: cte.sourceEventHash
-    };
-    const decisions = armDecisions.get(cte.sourceThreadId);
-    if (!decisions) {
-      results.push({ ...base, status: "skipped", reason: `source thread ${cte.sourceThreadId} not present in provided arm log(s)` });
-      continue;
-    }
-    const decision = decisions.get(cte.sourceDecisionRecordId);
-    if (!decision) {
-      results.push({ ...base, status: "decision_not_found", reason: `no DecisionMerged ${cte.sourceDecisionRecordId} in arm thread ${cte.sourceThreadId}` });
-      continue;
-    }
-    if (decision.hash === cte.sourceEventHash) {
-      results.push({ ...base, status: "verified", sourceEventId: decision.eventId });
-    } else {
-      results.push({ ...base, status: "mismatch", expectedHash: decision.hash, sourceEventId: decision.eventId, reason: "sourceEventHash does not match the DecisionMerged content hash in the arm" });
-    }
-  }
-
-  const summary = {
-    total: results.length,
-    verified: results.filter((r) => r.status === "verified").length,
-    mismatch: results.filter((r) => r.status === "mismatch").length,
-    decisionNotFound: results.filter((r) => r.status === "decision_not_found").length,
-    skipped: results.filter((r) => r.status === "skipped").length
-  };
-  const valid = summary.mismatch === 0 && summary.decisionNotFound === 0;
+  const { valid, summary, results } = verifyCrossThreadProvenance(parentEvents, armEventLogs);
   const report = { valid, parent: options.parent, arms: armSpecs, summary, results };
   if (summary.verified === 0) {
     report.note = "no cross-thread evidence in the parent referenced the provided arm log(s); check that --arm matches a thread the parent imports from";
