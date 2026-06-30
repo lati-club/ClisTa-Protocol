@@ -4813,13 +4813,38 @@ function inferReviewSubjectType(id) {
   return inferTargetType(id);
 }
 
+function optionFlag(key) {
+  return `--${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
+}
+
+// Required options that are legitimately repeatable (consumed via parseList).
+// requireOption is the only scalar gate they pass through, so they must be
+// exempt from the "given once" arity check. Every other required option is a
+// scalar — a repeated flag is a user error, not a list.
+const REPEATABLE_REQUIRED_OPTIONS = new Set([
+  "evidence", "evidences",
+  "participant", "participants",
+  "audits", "learning", "learnings", "limit", "limits"
+]);
+
 function requireOption(options, key) {
-  if (!options[key]) {
-    throw new Error(`Missing required option --${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`);
+  const value = options[key];
+  // Presence by identity, not truthiness: a legitimately falsy value
+  // (e.g. "0", "false") is present, not missing.
+  if (value === undefined) {
+    throw new Error(`Missing required option ${optionFlag(key)}`);
+  }
+  // A repeated flag arrives as an array (see parseOptions). For a scalar option
+  // that silently broke downstream string comparisons; fail loudly instead.
+  if (Array.isArray(value) && !REPEATABLE_REQUIRED_OPTIONS.has(key)) {
+    throw new Error(`Option ${optionFlag(key)} may only be given once`);
   }
 }
 
 function numberOption(value) {
+  if (Array.isArray(value)) {
+    throw new Error("Option may only be given once (got multiple values)");
+  }
   if (value === undefined || value === null || value === "") {
     return undefined;
   }
@@ -4831,6 +4856,9 @@ function numberOption(value) {
 }
 
 function scalarOption(value) {
+  if (Array.isArray(value)) {
+    throw new Error("Option may only be given once (got multiple values)");
+  }
   if (value === undefined || value === null || value === "") {
     return undefined;
   }
@@ -4842,6 +4870,9 @@ function scalarOption(value) {
 }
 
 function booleanOption(value, defaultValue) {
+  if (Array.isArray(value)) {
+    throw new Error("Option may only be given once (got multiple values)");
+  }
   if (value === undefined || value === null || value === "") {
     return defaultValue;
   }
