@@ -1,4 +1,3 @@
-const { nowIso } = require("./events");
 const {
   buildAdaptationState,
   projectAdaptation,
@@ -80,7 +79,10 @@ const { unique } = require("./utils");
 function emptyProjection() {
   return {
     schema: "clista.projection.v0",
-    projectedAt: nowIso(),
+    // Deterministic by construction: set to the latest event's timestamp after the
+    // fold in projectEvents (null for an empty log). Never wall-clock, so the same
+    // events always project to byte-identical state.
+    projectedAt: null,
     participants: {},
     threads: {},
     forks: {},
@@ -879,6 +881,10 @@ function projectEvents(events) {
     }
   }
 
+  // Stamp the projection's "as of" time from the log itself (latest event), not
+  // the wall clock, so repeated projections of the same events are byte-identical.
+  projection.projectedAt = projection.events.at(-1)?.timestamp ?? null;
+
   const identityState = buildIdentityState(projection.events);
   projection.identity = projectIdentity(identityState);
   projection.participants = projection.identity.participants.reduce((participants, participant) => {
@@ -935,7 +941,7 @@ function selectThreadState(projection, requestedThreadId) {
   const decisionRecord = latestBy(decisionRecords, "decidedAt");
   const supportingEvidence = selectSupportingEvidence(evidence, claims, currentProposal, decisionRecord);
   const alignmentSnapshot = latestBy(valuesForThread(projection.alignmentSnapshots, threadId), "createdAt")
-    || calculateAlignment(threadId, claims, positions, objections);
+    || calculateAlignment(threadId, claims, positions, objections, projection.projectedAt);
   const assumptionsWithParticipants = assumptions.map((assumption) => ({
     ...assumption,
     participant: projection.participants[assumption.declaredByParticipantId] || null
@@ -1720,11 +1726,22 @@ function latestThreadId(projection) {
   return latestBy(Object.values(projection.threads), "updatedAt")?.id;
 }
 
+// Locale-independent, code-point string ordering. localeCompare with no locale is
+// ICU/Node-build dependent; this matches the bare .sort() used for hashing in
+// integrity.js, keeping ordering deterministic across environments.
+function compareStrings(a, b) {
+  const left = String(a);
+  const right = String(b);
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
+}
+
 function latestBy(items, field) {
   return items
     .filter(Boolean)
     .slice()
-    .sort((a, b) => String(a[field] || "").localeCompare(String(b[field] || "")))
+    .sort((a, b) => compareStrings(a[field] || "", b[field] || ""))
     .at(-1);
 }
 
@@ -1733,7 +1750,7 @@ function latestPositions(positions) {
   for (const position of positions) {
     const key = `${position.participantId}:${position.targetObjectId || "thread"}`;
     const existing = byParticipantAndTarget.get(key);
-    if (!existing || String(existing.takenAt).localeCompare(String(position.takenAt)) < 0) {
+    if (!existing || compareStrings(existing.takenAt, position.takenAt) < 0) {
       byParticipantAndTarget.set(key, position);
     }
   }
@@ -1762,7 +1779,7 @@ function selectSupportingEvidence(evidence, claims, currentProposal, decisionRec
   return evidence.filter((item) => evidenceIds.has(item.id));
 }
 
-function calculateAlignment(threadId, claims, positions, objections) {
+function calculateAlignment(threadId, claims, positions, objections, asOf = null) {
   const evidencedClaims = claims.filter((claim) => (claim.evidenceIds || []).length > 0).length;
   const evidenceAlignment = claims.length ? evidencedClaims / claims.length : 1;
   const positionCounts = positions.reduce((counts, position) => {
@@ -1779,7 +1796,9 @@ function calculateAlignment(threadId, claims, positions, objections) {
     id: "aln_calculated",
     object: "alignmentSnapshot",
     threadId,
-    createdAt: nowIso(),
+    // Derived "as of" time (latest event), passed in from the projection — never
+    // wall-clock, so this computed fallback snapshot is reproducible.
+    createdAt: asOf,
     evidenceAlignment: round(evidenceAlignment),
     positionAlignment: round(positionAlignment),
     riskAlignment: round(riskAlignment),
