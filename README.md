@@ -52,7 +52,7 @@ Prerequisites: Node.js >= 18, plus Python 3 (used only to re-ingest the session)
 
 ```sh
 git clone https://github.com/lati-club/ClisTa-Protocol.git
-cd clista-protocol
+cd ClisTa-Protocol
 npm run replay
 ```
 
@@ -69,7 +69,7 @@ Prerequisite: Node.js >= 18.
 
 ```sh
 git clone https://github.com/lati-club/ClisTa-Protocol.git
-cd clista-protocol
+cd ClisTa-Protocol
 npm install
 npm run clista -- help
 ```
