@@ -668,11 +668,11 @@ function validateAuditIntegrity(event, index, state) {
     }
   }
 
-  if (event.content_hash) {
-    state.lastContentHash = event.content_hash;
-  } else if (index === 0) {
-    state.lastContentHash = undefined;
-  }
+  // Advance (or reset) the chain anchor for every event, matching
+  // verifyEventIntegrity in integrity.js. Previously the anchor only moved when
+  // content_hash was present, so a hash-less event mid-log left a stale anchor and
+  // the next event's previous_hash was validated against the wrong predecessor.
+  state.lastContentHash = event.content_hash || undefined;
 }
 
 function validateActor(event, state) {
