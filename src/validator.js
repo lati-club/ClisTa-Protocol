@@ -490,6 +490,9 @@ function validateEvents(events) {
       case "MergeCompleted":
         validateMergeCompleted(event, state);
         break;
+      case "CrossThreadEvidence":
+        validateCrossThreadEvidence(event, state);
+        break;
       case "AlignmentCalculated":
         break;
       default:
@@ -2238,6 +2241,56 @@ function validateThreadForked(event, index, state) {
   state.forks.set(fork.forkThreadId, fork);
   state.threads.set(fork.forkThreadId, thread);
   state.forkInheritedObjectIds.set(fork.forkThreadId, inheritedObjectIds);
+}
+
+function validateCrossThreadEvidence(event, state) {
+  const cte = event.payload.crossThreadEvidence;
+  if (!cte?.id) {
+    addError(state, event, "CrossThreadEvidence payload missing crossThreadEvidence.id");
+    return;
+  }
+  if (!cte.sourceThreadId) {
+    addError(state, event, "CrossThreadEvidence missing sourceThreadId");
+  }
+  if (!cte.sourceDecisionRecordId) {
+    addError(state, event, "CrossThreadEvidence missing sourceDecisionRecordId");
+  }
+  if (!cte.sourceEventHash) {
+    addError(state, event, "CrossThreadEvidence missing sourceEventHash");
+  }
+  if (!cte.derivation) {
+    addError(state, event, "CrossThreadEvidence missing derivation");
+  }
+  const validDerivations = ["decision_output", "preserved_objection", "minority_report", "assumption_propagation", "evidence_propagation"];
+  if (cte.derivation && !validDerivations.includes(cte.derivation)) {
+    addError(state, event, `CrossThreadEvidence unsupported derivation ${cte.derivation}`);
+  }
+  if (!cte.finding) {
+    addError(state, event, "CrossThreadEvidence missing finding");
+  }
+  validateThreadObject(event, cte, state, "crossThreadEvidence");
+  if (cte.committedByParticipantId && !state.participants.has(cte.committedByParticipantId)) {
+    addError(state, event, `crossThreadEvidence committed by unknown participant ${cte.committedByParticipantId}`);
+  }
+  // Register as evidence so downstream claims, assumptions, positions can reference it
+  state.evidence.set(cte.id, {
+    id: cte.id,
+    object: "evidence",
+    threadId: cte.threadId,
+    source: `CrossThread:${cte.sourceThreadId}:${cte.sourceDecisionRecordId}`,
+    finding: cte.finding,
+    confidence: cte.confidence,
+    committedByParticipantId: cte.committedByParticipantId,
+    committedAt: cte.committedAt,
+    artifactIds: [],
+    contentHash: cte.contentHash,
+    crossThreadRef: {
+      sourceThreadId: cte.sourceThreadId,
+      sourceDecisionRecordId: cte.sourceDecisionRecordId,
+      sourceEventHash: cte.sourceEventHash,
+      derivation: cte.derivation,
+    },
+  });
 }
 
 function validateEvidenceCommitted(event, state) {
