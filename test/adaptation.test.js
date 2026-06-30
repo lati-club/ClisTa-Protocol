@@ -122,6 +122,24 @@ test("explicit adaptation events project without mutating governance", () => {
   assert.equal(projected.reviews.some((review) => review.id === "adr_explicit_review"), true);
 });
 
+test("AdaptationReviewRecorded with a missing payload is rejected (regression: was fail-open)", () => {
+  // Before the dispatch fix, AdaptationReviewRecorded shared a no-op `case` with
+  // ObjectDeprecated and its validator call sat after an unconditional `break`, so
+  // the event type validated clean no matter the payload. Guard that hole.
+  const cwd = createAdaptationOutcomeStore();
+  const events = readStoreEvents(cwd);
+  events.push(makeLearningSignalEvent({ id: "lrn_explicit_adaptation_pattern" }));
+  events.push({
+    event_id: "evt_malformed_adaptation_review",
+    event_type: "AdaptationReviewRecorded",
+    thread_id: "thd_adaptation",
+    actor_id: "par_troy",
+    timestamp: "2027-03-03T00:00:00.000Z",
+    payload: {}
+  });
+  assertInvalid(events, /AdaptationReviewRecorded payload missing adaptationReview/);
+});
+
 test("adaptation validation rejects governance mutation and scoring", () => {
   const cwd = createAdaptationOutcomeStore();
   const events = readStoreEvents(cwd);
