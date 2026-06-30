@@ -703,12 +703,12 @@ function projectEvents(events) {
     const payload = clone(event.payload || {});
 
     switch (eventType(event)) {
+      // Participant lifecycle is derived from identity.js — projection.participants
+      // is rebuilt from projection.identity below, which is the single source of
+      // truth. The earlier upserts here were dead: that map is overwritten before
+      // anything reads it. Leave these as no-ops so the two paths can't diverge.
       case "ParticipantAdded":
-        upsert(projection.participants, payload.participant);
-        break;
       case "ParticipantDeclared":
-        upsert(projection.participants, payload.participant);
-        break;
       case "ParticipantRoleAssigned":
       case "ParticipantAuthorityGranted":
       case "ParticipantAuthorityRevoked":
