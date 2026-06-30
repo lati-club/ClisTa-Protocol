@@ -131,6 +131,7 @@ const {
   threadDescendsFrom
 } = require("./merges");
 const { normalizeType, unique } = require("./utils");
+const { primaryObject } = require("./event-types");
 
 class ValidationError extends Error {
   constructor(errors) {
@@ -3659,77 +3660,6 @@ function eventBelongsToThread(event, threadId) {
     || event?.threadId === threadId
     || event?.payload?.thread?.id === threadId
     || event?.payload?.threadFork?.forkThreadId === threadId;
-}
-
-function primaryObject(event) {
-  const payload = event?.payload || {};
-  return payload.thread
-    || payload.threadFork
-    || payload.participant
-    || payload.participantRole
-    || payload.participantAuthority
-    || payload.participantAuthorityRevocation
-    || payload.contributionAttribution
-    || payload.attributionCorrection
-    || payload.attributionDispute
-    || payload.attributionRevocation
-    || payload.learningSignal
-    || payload.patternObservation
-    || payload.outcomeReview
-    || payload.learningRecommendation
-    || payload.adaptationReview
-    || payload.governanceReviewRecommendation
-    || payload.evidenceRequirementReviewRecommendation
-    || payload.revisitTriggerReviewRecommendation
-    || payload.decisionGateReviewRecommendation
-    || payload.protocolAmendment
-    || payload.amendment
-    || payload.protocolAmendmentReview
-    || payload.amendmentReview
-    || payload.protocolAmendmentApproval
-    || payload.amendmentApproval
-    || payload.protocolAmendmentRejection
-    || payload.amendmentRejection
-    || payload.protocolAmendmentSupersession
-    || payload.amendmentSupersession
-    || payload.evidence
-    || payload.assumption
-    || payload.claim
-    || payload.position
-    || payload.objection
-    || payload.alignmentSnapshot
-    || payload.decisionRequest
-    || payload.review
-    || payload.decisionRecord
-    || payload.minorityReport
-    || payload.mergeRequest
-    || payload.mergeReview
-    || payload.mergeConflict
-    || payload.mergeConflictResolution
-    || payload.mergeCompletion
-    || payload.expectedOutcome
-    || payload.outcomeAudit
-    || payload.decisionScore
-    || payload.executionRecord
-    || payload.executionViolation
-    || payload.outcomeRecord
-    || payload.outcomeDispute
-    || payload.outcomeViolation
-    || payload.outcomeLearningSignal
-    || payload.outcomeLesson
-    || payload.outcomeLearningDispute
-    || payload.outcomeLearningViolation
-    || payload.protocolReview
-    || payload.protocolReviewCompletion
-    || payload.protocolReviewDispute
-    || payload.protocolReviewViolation
-    || payload.recoveryRequest
-    || payload.recoveryPlan
-    || payload.recoveryQuarantine
-    || payload.recoveryApplication
-    || payload.recoveryVerification
-    || payload.recoveryViolation
-    || null;
 }
 
 function isValidDateString(value) {
