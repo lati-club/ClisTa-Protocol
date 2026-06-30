@@ -1827,15 +1827,20 @@ function auditTrail(events, threadId) {
     }));
 }
 
-function auditTrailForThread(projection, threadId) {
+function auditTrailForThread(projection, threadId, visited = new Set()) {
   const thread = projection.threads[threadId];
-  if (!thread?.fork) {
+  // Stop at a non-fork thread, or if we've already walked this thread — a
+  // malformed fork chain (e.g. a self- or mutually-referential parentThreadId)
+  // would otherwise recurse forever. Mirrors the visited-set guard in
+  // valuesForThreadScope; projection.events here may be unvalidated.
+  if (!thread?.fork || visited.has(threadId)) {
     return auditTrail(projection.events, threadId);
   }
 
+  visited.add(threadId);
   const parentProjection = projectEvents(eventsThroughBoundary(projection.events, thread.fork.inheritedThroughEventId));
   return [
-    ...auditTrailForThread(parentProjection, thread.fork.parentThreadId).map((entry) => ({
+    ...auditTrailForThread(parentProjection, thread.fork.parentThreadId, visited).map((entry) => ({
       ...entry,
       inherited: true,
       inheritedFromThreadId: entry.thread_id
