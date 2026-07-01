@@ -1022,6 +1022,7 @@ function selectThreadState(projection, requestedThreadId) {
     thread,
     currentProposal: currentProposal || null,
     supportingEvidence,
+    allEvidence: evidence,
     assumptions: assumptionsWithParticipants,
     claims,
     participantPositions: positionsWithParticipants,

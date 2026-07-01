@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const fs = require("node:fs");
 const path = require("node:path");
+const { proposeDecision } = require("./gate");
 const {
   appendEvent,
   contentHash,
@@ -228,6 +229,8 @@ function main(argv = process.argv.slice(2), cwd = process.cwd()) {
         return threadFork(options, cwd);
       case "evidence commit":
         return evidenceCommit(options, cwd);
+      case "evidence list":
+        return evidenceList(options, cwd);
       case "assumption declare":
         return assumptionDeclare(options, cwd);
       case "assumptions list":
@@ -240,6 +243,8 @@ function main(argv = process.argv.slice(2), cwd = process.cwd()) {
         return objectionRaise(options, cwd);
       case "decision open":
         return decisionOpen(options, cwd);
+      case "decision propose":
+        return decisionPropose(options, cwd);
       case "decision summary":
         return decisionSummary(options, cwd);
       case "decision eligibility":
@@ -1019,11 +1024,13 @@ function evidenceCommit(options, cwd) {
     committedByParticipantId: actor.id,
     committedAt: at,
     artifactIds: parseList(options.artifacts),
+    tags: parseList(options.tags),
     contentHash: contentHash({
       source: options.source,
       finding: options.finding,
       confidence: numberOption(options.confidence),
-      artifactIds: parseList(options.artifacts)
+      artifactIds: parseList(options.artifacts),
+      tags: parseList(options.tags)
     })
   };
   stripUndefined(evidence);
@@ -1054,11 +1061,13 @@ function assumptionDeclare(options, cwd) {
     confidence: numberOption(options.confidence),
     declaredByParticipantId: actor.id,
     declaredAt: at,
+    tags: parseList(options.tags),
     contentHash: contentHash({
       text: options.text,
       status: options.status || "active",
       evidenceIds: parseList(options.evidence),
-      confidence: numberOption(options.confidence)
+      confidence: numberOption(options.confidence),
+      tags: parseList(options.tags)
     })
   };
   stripUndefined(assumption);
@@ -1195,6 +1204,29 @@ function decisionOpen(options, cwd) {
   });
   appendEvent(event, cwd);
   return print({ decisionRequest, event });
+}
+
+function decisionPropose(options, cwd) {
+  requireOption(options, "thread");
+  requireOption(options, "proposal");
+  const actor = participantFrom(options.actor || options.participant || "Author", options.role);
+  appendParticipant(actor, cwd, options.thread);
+  const at = nowIso();
+  const decisionRequest = {
+    id: options.id || newId("drq", options.proposal),
+    object: "decisionRequest",
+    threadId: options.thread,
+    proposal: options.proposal,
+    status: "review",
+    supportingEvidenceIds: parseList(options.evidence || options.supportingEvidence),
+    supportingClaimIds: parseList(options.claims || options.supportingClaims),
+    supportingAssumptionIds: parseList(options.assumptions || options.supportingAssumptions),
+    objectionIds: parseList(options.objections),
+    openedByParticipantId: actor.id,
+    openedAt: at
+  };
+  const result = proposeDecision(decisionRequest, cwd);
+  return print(result);
 }
 
 function decisionEligibility(options, cwd) {
@@ -3097,7 +3129,21 @@ function applyDefaultProposedIds(mergeRequest, proposed) {
 function assumptionsList(options, cwd) {
   const projection = projectEvents(readValidEventsForOptions(options, cwd));
   const state = selectThreadState(projection, options.thread);
-  return print(state.error ? state : state.assumptions);
+  if (state.error) return print(state);
+  const items = options.tag
+    ? state.assumptions.filter((a) => Array.isArray(a.tags) && a.tags.includes(options.tag))
+    : state.assumptions;
+  return print(items);
+}
+
+function evidenceList(options, cwd) {
+  const projection = projectEvents(readValidEventsForOptions(options, cwd));
+  const state = selectThreadState(projection, options.thread);
+  if (state.error) return print(state);
+  const items = options.tag
+    ? state.allEvidence.filter((e) => Array.isArray(e.tags) && e.tags.includes(options.tag))
+    : state.allEvidence;
+  return print(items);
 }
 
 function exportShow(options, cwd) {
@@ -3819,7 +3865,7 @@ function executionStartFromDecision(options, projection, at) {
     decisionId: decision.id,
     actionType: options.action || decision.nextAction || decision.summary,
     scope: options.scope || `thread:${decision.threadId}`,
-    constraints: constraints.length ? constraints : (decision.conditions || ["decision_authorization"]),
+    constraints: constraints.length ? constraints : (decision.conditions.length ? decision.conditions : ["decision_authorization"]),
     summary: options.summary,
     startedAt: at
   });

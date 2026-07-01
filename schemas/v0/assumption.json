@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clista.ai/schemas/v0/assumption.json",
+  "title": "Assumption",
+  "description": "A stated premise, required to cite the evidence that grounds it. Field names here match the actual AssumptionDeclared runtime payload (src/cli.js assumptionDeclare, src/validator.js validateAssumptionDeclared) rather than the snake_case convention used by evidence.json and claim.json, which has drifted from runtime. See the schemas/v0-vs-runtime sync item before treating any sibling file in this directory as ground truth.",
+  "type": "object",
+  "properties": {
+    "id": { "type": "string" },
+    "object": { "type": "string", "const": "assumption" },
+    "threadId": { "type": "string" },
+    "text": { "type": "string" },
+    "status": { "type": "string" },
+    "evidenceIds": { "type": "array", "items": { "type": "string" } },
+    "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "declaredByParticipantId": { "type": "string" },
+    "declaredAt": { "type": "string", "format": "date-time" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "contentHash": { "type": ["string", "null"] }
+  },
+  "required": [
+    "id", "object", "threadId", "text", "evidenceIds", "declaredByParticipantId", "declaredAt"
+  ],
+  "additionalProperties": false
+}

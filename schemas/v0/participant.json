@@ -2,19 +2,17 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://clista.ai/schemas/v0/participant.json",
   "title": "Participant",
-  "description": "Human or AI entity.",
+  "description": "Human or AI entity. Field names here match the actual ParticipantAdded/ParticipantDeclared runtime payloads (src/events.js createParticipant, src/cli.js participantDeclare, src/validator.js validateParticipantAdded/validateParticipantDeclared), not the older snake_case shape (display_name/type/organization/identity_ref/...) this file previously described. Two creation paths exist at runtime: ParticipantAdded (auto-added when a participant first acts in a thread, carrying only id/object/kind/name/role) and ParticipantDeclared (an explicit `participant declare`, additionally carrying declaredBy/declaredAt). Only the fields common to both are required here. See the schemas/v0-vs-runtime sync item before treating any sibling file in this directory as ground truth.",
   "type": "object",
   "properties": {
     "id": { "type": "string" },
-    "object_type": { "type": "string", "const": "participant" },
-    "display_name": { "type": "string" },
-    "type": { "type": "string", "enum": ["human", "ai_agent", "system"] },
-    "organization": { "type": ["string", "null"] },
-    "identity_ref": { "type": ["string", "null"] },
-    "agent_model_ref": { "type": ["string", "null"] },
-    "public_key": { "type": ["string", "null"] },
-    "created_at": { "type": "string", "format": "date-time" }
+    "object": { "type": "string", "const": "participant" },
+    "kind": { "type": "string" },
+    "name": { "type": "string" },
+    "role": { "type": ["string", "null"] },
+    "declaredBy": { "type": "string" },
+    "declaredAt": { "type": "string", "format": "date-time" }
   },
-  "required": ["id", "object_type", "display_name", "type", "created_at"],
+  "required": ["id", "object", "kind", "name"],
   "additionalProperties": false
 }

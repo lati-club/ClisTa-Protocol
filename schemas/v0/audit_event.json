@@ -2,23 +2,23 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://clista.ai/schemas/v0/audit_event.json",
   "title": "Audit Event",
-  "description": "Immutable protocol history.",
+  "description": "Immutable protocol history: one entry per line of .clista/events.ndjson. There is no distinct 'AuditEvent' object type at runtime -- this describes the actual envelope every event is appended in (src/events.js createEvent, src/integrity.js prepareEventForAppend), not the older snake_case shape (action_type/target_object_type/target_object_id/payload_hash/previous_event_id) this file previously described, which does not correspond to anything the engine emits. `payload` varies per `event_type` and is not modeled here -- see the per-object-type schemas in this directory for the shapes nested inside `payload`. See the schemas/v0-vs-runtime sync item before treating any sibling file in this directory as ground truth.",
   "type": "object",
   "properties": {
-    "id": { "type": "string" },
-    "object_type": { "type": "string", "const": "audit_event" },
-    "thread_id": { "type": "string" },
-    "actor_participant_id": { "type": "string" },
-    "action_type": { "type": "string" },
-    "target_object_type": { "type": "string" },
-    "target_object_id": { "type": "string" },
-    "payload_hash": { "type": "string" },
-    "previous_event_id": { "type": ["string", "null"] },
-    "created_at": { "type": "string", "format": "date-time" }
+    "event_id": { "type": "string" },
+    "event_type": { "type": "string" },
+    "thread_id": { "type": ["string", "null"] },
+    "actor_id": { "type": ["string", "null"] },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "payload": { "type": "object" },
+    "protocol_version": { "type": "string" },
+    "hash_version": { "type": "string" },
+    "previous_hash": { "type": "string" },
+    "content_hash": { "type": "string" },
+    "metadata": { "type": "object" }
   },
   "required": [
-    "id", "object_type", "thread_id", "actor_participant_id", "action_type",
-    "target_object_type", "target_object_id", "payload_hash", "created_at"
+    "event_id", "event_type", "timestamp", "payload", "protocol_version", "hash_version", "content_hash"
   ],
   "additionalProperties": false
 }

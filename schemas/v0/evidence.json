@@ -2,25 +2,23 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://clista.ai/schemas/v0/evidence.json",
   "title": "Evidence",
-  "description": "A verifiable observation or source.",
+  "description": "A verifiable observation or source. Field names here match the actual EvidenceCommitted runtime payload (src/cli.js evidenceCommit, src/validator.js validateEvidenceCommitted), not the older snake_case shape (title/summary/source_type/source_url/category/credibility_score) this file previously described. See the schemas/v0-vs-runtime sync item before treating any sibling file in this directory as ground truth.",
   "type": "object",
   "properties": {
     "id": { "type": "string" },
-    "object_type": { "type": "string", "const": "evidence" },
-    "thread_id": { "type": "string" },
-    "title": { "type": "string" },
-    "source_type": { "type": "string" },
-    "source_url": { "type": ["string", "null"] },
-    "source_ref": { "type": ["string", "null"] },
-    "summary": { "type": "string" },
-    "content_hash": { "type": ["string", "null"] },
-    "category": { "type": ["string", "null"] },
-    "credibility_score": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
-    "added_by_participant_id": { "type": "string" },
-    "created_at": { "type": "string", "format": "date-time" }
+    "object": { "type": "string", "const": "evidence" },
+    "threadId": { "type": "string" },
+    "source": { "type": "string" },
+    "finding": { "type": "string" },
+    "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "committedByParticipantId": { "type": "string" },
+    "committedAt": { "type": "string", "format": "date-time" },
+    "artifactIds": { "type": "array", "items": { "type": "string" } },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "contentHash": { "type": ["string", "null"] }
   },
   "required": [
-    "id", "object_type", "thread_id", "title", "source_type", "summary", "added_by_participant_id", "created_at"
+    "id", "object", "threadId", "source", "finding", "committedByParticipantId", "committedAt"
   ],
   "additionalProperties": false
 }
