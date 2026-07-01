@@ -261,6 +261,111 @@ test("execution validation rejects authority creation guard fields", () => {
   assert.match(message, /execution field authorityCreated must be false/);
 });
 
+test("execution start from a decision merged without --conditions defaults constraints to decision_authorization", () => {
+  const cwd = mkdtempSync(path.join(os.tmpdir(), "clista-execution-no-conditions-"));
+  runCli(cwd, ["init"]);
+  runCli(cwd, [
+    "thread",
+    "create",
+    "--id",
+    "thd_no_conditions",
+    "--title",
+    "No-conditions merge thread",
+    "--question",
+    "Does execution start default constraints when the decision has none?",
+    "--participant",
+    "Troy:decision owner"
+  ]);
+  runCli(cwd, [
+    "evidence",
+    "commit",
+    "--id",
+    "evd_no_conditions",
+    "--thread",
+    "thd_no_conditions",
+    "--source",
+    "Test",
+    "--finding",
+    "Evidence exists."
+  ]);
+  runCli(cwd, [
+    "assumption",
+    "declare",
+    "--id",
+    "asm_no_conditions",
+    "--thread",
+    "thd_no_conditions",
+    "--text",
+    "Assumption exists.",
+    "--evidence",
+    "evd_no_conditions"
+  ]);
+  runCli(cwd, [
+    "claim",
+    "create",
+    "--id",
+    "clm_no_conditions",
+    "--thread",
+    "thd_no_conditions",
+    "--text",
+    "Claim is supported.",
+    "--evidence",
+    "evd_no_conditions",
+    "--assumptions",
+    "asm_no_conditions"
+  ]);
+  runCli(cwd, [
+    "decision",
+    "open",
+    "--id",
+    "drq_no_conditions",
+    "--thread",
+    "thd_no_conditions",
+    "--proposal",
+    "Ship without explicit conditions.",
+    "--evidence",
+    "evd_no_conditions",
+    "--claims",
+    "clm_no_conditions",
+    "--assumptions",
+    "asm_no_conditions"
+  ]);
+  runCli(cwd, [
+    "review",
+    "submit",
+    "--id",
+    "rev_no_conditions",
+    "--thread",
+    "thd_no_conditions",
+    "--request",
+    "drq_no_conditions",
+    "--reviewer",
+    "Troy",
+    "--status",
+    "approve"
+  ]);
+  const merge = runCli(cwd, [
+    "decision",
+    "merge",
+    "--id",
+    "dcr_no_conditions",
+    "--thread",
+    "thd_no_conditions",
+    "--request",
+    "drq_no_conditions",
+    "--decider",
+    "Troy"
+  ]);
+  assert.deepEqual(merge.decisionRecord.conditions, []);
+
+  const started = runCli(cwd, ["execution", "start", "--decision", merge.decisionRecord.id]);
+  const validated = runCli(cwd, ["validate"]);
+
+  assert.equal(started.started, true);
+  assert.deepEqual(started.executionRecord.constraints, ["decision_authorization"]);
+  assert.equal(validated.valid, true);
+});
+
 test("export schema defines execution records and exported execution records satisfy it", () => {
   const cwd = createExecutionStore();
   const granted = grantViaCli(cwd);

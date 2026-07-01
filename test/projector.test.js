@@ -5,7 +5,7 @@ const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 
-const { readEventsAt } = require("../src/events");
+const { createEvent, readEventsAt } = require("../src/events");
 const { exportProtocol, projectEvents, selectAudit, selectThreadState } = require("../src/projector");
 
 const root = path.resolve(__dirname, "..");
@@ -215,4 +215,65 @@ test("thread-0001 reasoning state is reconstructed from .clista/events.ndjson on
   assert.equal(reasoning.next_action, "Implement and prove Milestone 0: Protocol Spine Proven.");
   assert.equal(reasoning.audit_summary.source, "append_only_event_log");
   assert.equal(reasoning.audit_summary.external_state_used, false);
+});
+
+test("allEvidence surfaces the full committed set while supportingEvidence narrows to what a decision request cites", () => {
+  const threadId = "thd_allevidence_test";
+  const events = [
+    createEvent({
+      type: "ThreadCreated",
+      threadId,
+      payload: { thread: { id: threadId, object: "thread", title: "t", question: "q", status: "active", participantIds: [], createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" } }
+    }),
+    createEvent({
+      type: "EvidenceCommitted",
+      threadId,
+      payload: { evidence: { id: "evd_cited", object: "evidence", threadId, source: "s1", finding: "cited by the decision", tags: ["smoke"], committedByParticipantId: "par_x", committedAt: "2026-01-01T00:00:01.000Z" } }
+    }),
+    createEvent({
+      type: "EvidenceCommitted",
+      threadId,
+      payload: { evidence: { id: "evd_uncited", object: "evidence", threadId, source: "s2", finding: "never cited by any decision", tags: ["smoke"], committedByParticipantId: "par_x", committedAt: "2026-01-01T00:00:02.000Z" } }
+    }),
+    createEvent({
+      type: "DecisionRequestOpened",
+      threadId,
+      payload: { decisionRequest: { id: "drq_x", object: "decisionRequest", threadId, proposal: "Ship it", status: "review", supportingEvidenceIds: ["evd_cited"], supportingClaimIds: [], supportingAssumptionIds: [], objectionIds: [], openedByParticipantId: "par_x", openedAt: "2026-01-01T00:00:03.000Z" } }
+    })
+  ];
+
+  const projection = projectEvents(events);
+  const state = selectThreadState(projection, threadId);
+
+  assert.equal(state.allEvidence.length, 2, "allEvidence must include the uncited item");
+  assert.equal(state.supportingEvidence.length, 1, "supportingEvidence narrows to what the open decision request cites");
+  assert.equal(state.supportingEvidence[0].id, "evd_cited");
+  assert.ok(state.allEvidence.some((e) => e.id === "evd_uncited"), "the uncited item must not be silently dropped from allEvidence");
+});
+
+test("tags round-trip through EvidenceCommitted and AssumptionDeclared payloads unchanged", () => {
+  const threadId = "thd_tags_roundtrip";
+  const events = [
+    createEvent({
+      type: "ThreadCreated",
+      threadId,
+      payload: { thread: { id: threadId, object: "thread", title: "t", question: "q", status: "active", participantIds: [], createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" } }
+    }),
+    createEvent({
+      type: "EvidenceCommitted",
+      threadId,
+      payload: { evidence: { id: "evd_tagged", object: "evidence", threadId, source: "s", finding: "f", tags: ["mrm-beta", "phase2"], committedByParticipantId: "par_x", committedAt: "2026-01-01T00:00:01.000Z" } }
+    }),
+    createEvent({
+      type: "AssumptionDeclared",
+      threadId,
+      payload: { assumption: { id: "asm_tagged", object: "assumption", threadId, text: "a", status: "active", evidenceIds: ["evd_tagged"], declaredByParticipantId: "par_x", declaredAt: "2026-01-01T00:00:02.000Z", tags: ["enrollment"] } }
+    })
+  ];
+
+  const projection = projectEvents(events);
+  const state = selectThreadState(projection, threadId);
+
+  assert.deepEqual(state.allEvidence[0].tags, ["mrm-beta", "phase2"]);
+  assert.deepEqual(state.assumptions[0].tags, ["enrollment"]);
 });

@@ -2,27 +2,43 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://clista.ai/schemas/v0/decision.json",
   "title": "Decision",
-  "description": "Authorized outcome.",
+  "description": "The merged, authorized outcome of a decision request. Field names here match the actual DecisionMerged runtime payload (src/cli.js decisionMerge, src/validator.js validateDecisionMerged), not the older snake_case shape (outcome/decision_text/deciding_participant_ids/alignment_state_id) this file previously described -- there is no alignment_state_id in the runtime; accountability instead runs through decisionRequestId, reviewIds, and preservedObjectionIds. See the schemas/v0-vs-runtime sync item before treating any sibling file in this directory as ground truth.",
   "type": "object",
   "properties": {
     "id": { "type": "string" },
-    "object_type": { "type": "string", "const": "decision" },
-    "thread_id": { "type": "string" },
-    "outcome": { "type": "string", "enum": ["approved", "rejected", "deferred", "modified"] },
-    "decision_text": { "type": "string" },
-    "rationale": { "type": "string" },
-    "deciding_participant_ids": { "type": "array", "items": { "type": "string" } },
-    "approver_participant_ids": { "type": "array", "items": { "type": "string" } },
-    "rejected_alternatives": { "type": "array", "items": { "type": "string" } },
-    "evidence_snapshot_ids": { "type": "array", "items": { "type": "string" } },
-    "alignment_state_id": { "type": "string" },
-    "minority_report_ids": { "type": "array", "items": { "type": "string" } },
-    "effective_at": { "type": ["string", "null"], "format": "date-time" },
-    "created_at": { "type": "string", "format": "date-time" }
+    "object": { "type": "string", "const": "decisionRecord" },
+    "threadId": { "type": "string" },
+    "decisionRequestId": { "type": "string" },
+    "status": { "type": "string" },
+    "summary": { "type": "string" },
+    "rationale": { "type": ["string", "null"] },
+    "conditions": { "type": "array", "items": { "type": "string" } },
+    "supportingEvidenceIds": { "type": "array", "items": { "type": "string" } },
+    "supportingClaimIds": { "type": "array", "items": { "type": "string" } },
+    "supportingAssumptionIds": { "type": "array", "items": { "type": "string" } },
+    "objectionIds": { "type": "array", "items": { "type": "string" } },
+    "reviewIds": { "type": "array", "items": { "type": "string" } },
+    "authorityTrail": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "participantId": { "type": "string" },
+          "role": { "type": ["string", "null"] },
+          "source": { "type": "string" }
+        }
+      }
+    },
+    "preservedObjectionIds": { "type": "array", "items": { "type": "string" } },
+    "minorityReportIds": { "type": "array", "items": { "type": "string" } },
+    "nextAction": { "type": ["string", "null"] },
+    "nextReviewAt": { "type": ["string", "null"], "format": "date-time" },
+    "decidedByParticipantId": { "type": "string" },
+    "decidedAt": { "type": "string", "format": "date-time" },
+    "contentHash": { "type": ["string", "null"] }
   },
   "required": [
-    "id", "object_type", "thread_id", "outcome", "decision_text", "rationale",
-    "deciding_participant_ids", "alignment_state_id", "created_at"
+    "id", "object", "threadId", "decisionRequestId", "status", "summary", "decidedByParticipantId", "decidedAt"
   ],
   "additionalProperties": false
 }
