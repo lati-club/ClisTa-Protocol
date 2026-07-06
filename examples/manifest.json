@@ -18,6 +18,18 @@
       ],
       "verifyCrossThread": true,
       "published": true
+    },
+    {
+      "id": "ongoing-monitoring-concept-drift",
+      "title": "Ongoing Monitoring Effective Challenge — Concept Drift (SR 11-7)",
+      "summary": "A model risk challenger shows that consumer credit model M-471 posted four PSI-green quarters while matured vintages defaulted 35% above predicted PD — concept drift that input-distribution monitoring structurally cannot see. The sealed log records the challenge (what watches P(y|X)?), the line's remediation, the challenger's disposition, and a decision that preserves the residual label-lag exposure as a surviving objection.",
+      "domain": "model-risk",
+      "kind": "single-thread",
+      "entryThreadId": "thd_ongoing_monitoring_concept_drift_m471",
+      "threads": [
+        { "role": "single", "threadId": "thd_ongoing_monitoring_concept_drift_m471", "file": "examples/ongoing-monitoring-concept-drift/challenge.ndjson" }
+      ],
+      "published": true
     }
   ]
 }
