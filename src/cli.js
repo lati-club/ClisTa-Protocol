@@ -15,10 +15,6 @@ const {
   writeEvents
 } = require("./events");
 const { auditRuntimeUsage, verifyRuntime } = require("./runtime");
-const {
-  summarizeProtocolCompatibility,
-  verifyProtocolCompatibility
-} = require("./compatibility");
 const { verifyCrossThreadProvenance } = require("./provenance");
 const {
   PROTOCOL_VERSION,
@@ -26,11 +22,6 @@ const {
   verifyEventIntegrity,
   verifyEventSuffix
 } = require("./integrity");
-const {
-  summarizeProtocolInteroperability,
-  verifyProtocolInteroperability
-} = require("./interoperability");
-const { verifyContinuityPacket } = require("./continuity");
 const {
   exportProtocol,
   projectEvents,
@@ -44,14 +35,11 @@ const { stripUndefined, unique } = require("./utils");
 const {
   appendParticipant,
   booleanOption,
-  compatibilityOptionsFromCli,
   fail,
   inferTargetType,
-  interoperabilityOptionsFromCli,
   numberOption,
   participantFrom,
   print,
-  readContinuityPacketForOptions,
   readEventsForOptions,
   readValidEventsForOptions,
   requireOption,
@@ -195,6 +183,14 @@ const {
   releaseShow,
   releaseVerify
 } = require("./cli/release");
+const {
+  compatibilityCheck,
+  compatibilityShow,
+  compatibilityVerify,
+  interoperabilityCheck,
+  interoperabilityShow,
+  interoperabilityVerify
+} = require("./cli/compatibility");
 
 function main(argv = process.argv.slice(2), cwd = process.cwd()) {
   let { command, options } = parseCommand(argv);
@@ -1039,61 +1035,6 @@ function integrityVerifySuffix(options, cwd) {
   if (!result.valid) {
     process.exitCode = 1;
   }
-}
-
-function compatibilityCheck(options, cwd) {
-  const packet = readContinuityPacketForOptions(options, cwd);
-  const continuityVerification = verifyContinuityPacket(packet);
-  const result = verifyProtocolCompatibility(packet, compatibilityOptionsFromCli(options, continuityVerification));
-  print(result);
-  if (!result.valid) {
-    process.exitCode = 1;
-  }
-}
-
-function compatibilityShow(options, cwd) {
-  const packet = readContinuityPacketForOptions(options, cwd);
-  const continuityVerification = verifyContinuityPacket(packet);
-  const result = verifyProtocolCompatibility(packet, compatibilityOptionsFromCli(options, continuityVerification));
-  const summary = summarizeProtocolCompatibility(result);
-  print(summary);
-  if (!summary.valid) {
-    process.exitCode = 1;
-  }
-}
-
-function compatibilityVerify(options, cwd) {
-  return compatibilityCheck(options, cwd);
-}
-
-function interoperabilityCheck(options, cwd) {
-  const packet = readContinuityPacketForOptions(options, cwd);
-  const compatibilityResult = compatibilityResultFromCli(packet, options);
-  const result = verifyProtocolInteroperability(packet, interoperabilityOptionsFromCli(options, compatibilityResult));
-  print(result);
-  if (!result.valid) {
-    process.exitCode = 1;
-  }
-}
-
-function interoperabilityShow(options, cwd) {
-  const packet = readContinuityPacketForOptions(options, cwd);
-  const compatibilityResult = compatibilityResultFromCli(packet, options);
-  const result = verifyProtocolInteroperability(packet, interoperabilityOptionsFromCli(options, compatibilityResult));
-  const summary = summarizeProtocolInteroperability(result);
-  print(summary);
-  if (!summary.valid) {
-    process.exitCode = 1;
-  }
-}
-
-function interoperabilityVerify(options, cwd) {
-  return interoperabilityCheck(options, cwd);
-}
-
-function compatibilityResultFromCli(packet, options) {
-  const continuityVerification = verifyContinuityPacket(packet);
-  return verifyProtocolCompatibility(packet, compatibilityOptionsFromCli(options, continuityVerification));
 }
 
 function validateCommand(options, cwd) {
