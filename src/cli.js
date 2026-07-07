@@ -39,12 +39,7 @@ const {
 const {
   learningForId
 } = require("./learning");
-const {
-  isKnownContribution,
-  provenanceForContribution,
-  traceProvenance,
-  verifyCrossThreadProvenance
-} = require("./provenance");
+const { verifyCrossThreadProvenance } = require("./provenance");
 const {
   buildIdentityState,
   identityForParticipant
@@ -180,6 +175,12 @@ const {
   federationShow,
   federationVerify
 } = require("./cli/federation");
+const {
+  provenanceList,
+  provenanceShow,
+  provenanceTrace,
+  provenanceVerify
+} = require("./cli/provenance");
 
 function main(argv = process.argv.slice(2), cwd = process.cwd()) {
   let { command, options } = parseCommand(argv);
@@ -666,64 +667,6 @@ function attributionVerify(options, cwd) {
     valid: true,
     errors: [],
     attributionValidationStatus: projection.attribution.attributionValidationStatus
-  });
-}
-
-function provenanceList(options, cwd) {
-  const projection = projectEvents(readValidEventsForOptions(options, cwd));
-  const provenance = options.thread
-    ? projection.provenance.provenance.filter((record) => record.threadId === options.thread)
-    : projection.provenance.provenance;
-  return print({
-    schema: "clista.provenance.list.v0",
-    threadId: options.thread || null,
-    count: provenance.length,
-    provenance
-  });
-}
-
-function provenanceShow(options, cwd) {
-  const contributionId = options.contribution || options.contributionId || options.id;
-  if (!contributionId) {
-    throw new Error("Missing required option --contribution");
-  }
-  const projection = projectEvents(readValidEventsForOptions(options, cwd));
-  if (!isKnownContribution(projection, contributionId)) {
-    throw new Error(`Unknown contribution id: ${contributionId}`);
-  }
-  return print(provenanceForContribution(projection.provenance, contributionId));
-}
-
-function provenanceTrace(options, cwd) {
-  const contributionId = options.contribution || options.contributionId || options.id;
-  if (!contributionId) {
-    throw new Error("Missing required option --contribution");
-  }
-  const projection = projectEvents(readValidEventsForOptions(options, cwd));
-  if (!isKnownContribution(projection, contributionId)) {
-    throw new Error(`Unknown contribution id: ${contributionId}`);
-  }
-  return print(traceProvenance(projection.provenance, contributionId));
-}
-
-function provenanceVerify(options, cwd) {
-  const events = readEventsForOptions(options, cwd);
-  const result = validateEvents(events);
-  if (!result.valid) {
-    print({
-      schema: "clista.provenance.verify.v0",
-      valid: false,
-      errors: result.errors
-    });
-    process.exitCode = 1;
-    return;
-  }
-  const projection = projectEvents(events);
-  return print({
-    schema: "clista.provenance.verify.v0",
-    valid: true,
-    errors: [],
-    provenanceValidationStatus: projection.provenance.provenanceValidationStatus
   });
 }
 
