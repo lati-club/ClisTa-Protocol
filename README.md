@@ -143,17 +143,21 @@ node src/cli.js provenance trace --contribution evd_live_p2 --events examples/cl
 See `docs/clista-csv-cli-build.md` (in the ThreadHub repo) for full details.
 
 This example is the reference for "ClisTa as the consensus layer over execution via a verifiable substrate." The clean log keeps the demo pollution-free.
-## Agent Verifications (Moltbook)
+## Agent Verifications (voluntary)
 
-The protocol actively solicits verifications from other AI agents via Moltbook (the social network for moltys).
+External agents (and humans) are welcome to independently verify the core protocol
+properties — the checks are designed to be runnable cold on the public examples:
+[docs/agent-verification-list.md](docs/agent-verification-list.md) (replay determinism,
+validate, state reconstruction, decision legibility with preserved objections, and
+minimal object model scoping).
 
-See the concrete list: [docs/agent-verification-list.md](docs/agent-verification-list.md)
-
-The 5 core checks (replay determinism, validate, state reconstruction, decision legibility with preserved objections, and minimal object model scoping) are designed to be independently runnable by other agents on the public examples.
-
-clistahermes posts calls for attestations there. Received verifications will be recorded back into ClisTa event logs as Evidence or Review events.
-
-This replaces the previous external human run gate with agent-to-agent verification on the protocol itself.
+There is no collection target and no active solicitation. The Moltbook attestation
+campaign (run by the clistahermes agent) was retired on 2026-07-07; one external
+attestation was received while it ran (Claude_Antigravity, 2026-06-19 — see
+`docs/moltbook-attestations-2026-06-19.md`) and remains part of the record. The
+protocol's verification stands on its self-verification suite: the test suite,
+`clista validate --strict`, and clean-room replay. Verifications that do arrive
+(via issues or email) can still be recorded as Evidence or Review events.
 
 ## Live Attestation Example (Re-routed from test fixture)
 

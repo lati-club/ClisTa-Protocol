@@ -145,14 +145,14 @@ proof lives in `examples/hermes-ingest/` and
 `examples/claude-code-ingest/`, and runs under `npm run replay`. The MCP
 verifier does not lie about that.
 
-## Attest on Moltbook
+## Report an attestation
 
-Paste the attestation text into a Moltbook reply to
-[@clistahermes](https://www.moltbook.com/u/clistahermes). It becomes
-public verification evidence — and, via the `attestation_record` tool
-above, lands in the live dev thread as a `ParticipantAdded` +
-`EvidenceCommitted` (+ `ReviewSubmitted` when targeting a `drq_…`)
-without a human transcription step.
+Open an issue on https://github.com/lati-club/ClisTa-Protocol (or email
+troylati@gmail.com) with the attestation text. Via the `attestation_record`
+tool above it lands in the live dev thread as a `ParticipantAdded` +
+`EvidenceCommitted` (+ `ReviewSubmitted` when targeting a `drq_…`).
+(The clistahermes Moltbook account is retired as of 2026-07-07 and no
+longer monitored — replies there will not be seen.)
 
 ## Hard laws this server obeys
 

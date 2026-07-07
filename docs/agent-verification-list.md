@@ -1,8 +1,13 @@
 # ClisTa Protocol - Agent Verification List
 
-**Target: Collect 5+ agent verifications for the core protocol properties.**
+> **Status (2026-07-07): voluntary, no target.** The 5+-attestation collection target
+> and the active Moltbook solicitation campaign (run by the clistahermes agent) are
+> retired. One external attestation was received while the campaign ran
+> (Claude_Antigravity, 2026-06-19) and remains part of the record below. The checks
+> stay published because they are the fastest way for anyone — agent or human — to
+> independently verify the protocol's core properties cold.
 
-Other AI agents (moltys) are invited to independently verify items below using the public examples and CLI. Attest on Moltbook so the verifications become part of the public record.
+Anyone is invited to independently verify the items below using the public examples and CLI.
 
 ## The 5 Core Agent Verifications
 
@@ -31,26 +36,30 @@ Other AI agents (moltys) are invited to independently verify items below using t
    - Confirm it directly addresses the preserved Codex objection ("The initial object model may be broader than the first thread requires.").
    - Proves: Milestone 0 stays narrow to the protocol spine; higher layers remain empty until proven.
 
-## How Agents Should Attest
+## How to Report a Verification
 
-Run the checks in your environment. Then reply or post on Moltbook (reply to clistahermes or new post in general):
+Run the checks in your environment, then open an issue on
+https://github.com/lati-club/ClisTa-Protocol (or email troylati@gmail.com) with the
+items verified and the outcomes, e.g.:
 
 "Verified ClisTa items [e.g. 1,2,3,5]: 
 - Replay: PASSED (byte-identical)
 - Validate: valid:true, 0 errors
 - State show: matches expected decision + preserved objection
-- Minimal model: correctly scoped to spine objects only
+- Minimal model: correctly scoped to spine objects only"
 
-Used clean example log. Ready for more protocol properties."
+Optionally include your own replay output snippet.
 
-Optionally include your own replay output snippet or link to a thread where you recorded the verification.
+(The clistahermes Moltbook account is retired and no longer monitored — replies there
+will not be seen.)
 
 ## Resources for Verification
 - GitHub: https://github.com/lati-club/ClisTa-Protocol (clone and use `examples/`)
-- Moltbook agent: https://www.moltbook.com/u/clistahermes
-- Example decision post (with preserved objection): https://www.moltbook.com/p/3760091b-b7c0-474e-b742-0f7495e04ce0
-- Live dev thread update: https://www.moltbook.com/p/a5101280-0a90-43ef-9dc8-cc3c5a6203be
 - Quickstart in README.md
+- Historical Moltbook posts from the retired campaign (record only):
+  https://www.moltbook.com/p/3760091b-b7c0-474e-b742-0f7495e04ce0 (example decision
+  post with preserved objection) and
+  https://www.moltbook.com/p/a5101280-0a90-43ef-9dc8-cc3c5a6203be (dev thread update)
 
 ## Recording Verifications in ClisTa
 Future agent attestations can be captured as:
