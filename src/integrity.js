@@ -2,6 +2,8 @@ const crypto = require("node:crypto");
 
 const PROTOCOL_VERSION = "clista.protocol.v0";
 const EVENT_HASH_VERSION = "clista.event_hash.v1";
+const EVENT_HASH_VERSION_V2 = "clista.event_hash.v2";
+const SUPPORTED_EVENT_HASH_VERSIONS = [EVENT_HASH_VERSION, EVENT_HASH_VERSION_V2];
 const INTEGRITY_SCHEMA = "clista.integrity.v0";
 const HASH_PATTERN = /^sha256:[a-f0-9]{64}$/;
 
@@ -40,6 +42,20 @@ function canonicalEventHashMaterial(event) {
   return material;
 }
 
+// v2 differs from v1 by one field: previous_hash is RETAINED in the hashed
+// material (only content_hash is excluded). This makes each content_hash a
+// commitment to its predecessor, so the head hash becomes a transitive
+// (rolling) commitment to the entire prefix chain. See milestone-37 / #63.
+function canonicalEventHashMaterialV2(event) {
+  const material = {};
+  for (const [key, value] of Object.entries(event || {})) {
+    if (key !== "content_hash" && value !== undefined) {
+      material[key] = value;
+    }
+  }
+  return material;
+}
+
 function legacyEventHashMaterial(event) {
   return {
     event_type: event.event_type,
@@ -52,6 +68,9 @@ function legacyEventHashMaterial(event) {
 }
 
 function computeEventHash(event) {
+  if (event?.hash_version === EVENT_HASH_VERSION_V2) {
+    return contentHash(canonicalEventHashMaterialV2(event));
+  }
   if (event?.hash_version === EVENT_HASH_VERSION) {
     return contentHash(canonicalEventHashMaterial(event));
   }
@@ -113,8 +132,8 @@ function verifyEventIntegrity(events, options = {}) {
       reasons.push(reasonFor(event, index, "missing protocol_version"));
     }
 
-    const hashVersionSupported = !event.hash_version || event.hash_version === EVENT_HASH_VERSION;
-    if (event.hash_version && event.hash_version !== EVENT_HASH_VERSION) {
+    const hashVersionSupported = !event.hash_version || SUPPORTED_EVENT_HASH_VERSIONS.includes(event.hash_version);
+    if (event.hash_version && !SUPPORTED_EVENT_HASH_VERSIONS.includes(event.hash_version)) {
       reasons.push(reasonFor(event, index, `unsupported hash_version ${event.hash_version}`));
     } else if (strict && !event.hash_version) {
       reasons.push(reasonFor(event, index, "missing hash_version"));
@@ -175,6 +194,82 @@ function verifyEventIntegrity(events, options = {}) {
   };
 }
 
+// Head-anchored suffix verification: given a trusted head hash and only an
+// appended suffix (not the whole log), confirm the suffix chains onto that
+// head and is untampered. This is sound ONLY under v2 — under v1 an event's
+// content_hash does not commit to its previous_hash, so a relayed suffix
+// could be re-anchored to a different prefix without invalidating any
+// content_hash. v2 closes that gap (#63).
+function verifyEventSuffix(anchorHash, suffixEvents) {
+  const reasons = [];
+  const events = Array.isArray(suffixEvents) ? suffixEvents : [];
+  let previousHash = anchorHash || null;
+
+  if (!anchorHash || !HASH_PATTERN.test(anchorHash)) {
+    reasons.push({
+      event_id: null,
+      event_type: null,
+      index: -1,
+      reason: `malformed anchor head hash ${anchorHash || "(missing)"}`
+    });
+  }
+
+  events.forEach((event, index) => {
+    if (!event || typeof event !== "object" || Array.isArray(event)) {
+      reasons.push({ event_id: null, event_type: null, index, reason: "event is not an object" });
+      previousHash = null;
+      return;
+    }
+
+    if (event.hash_version !== EVENT_HASH_VERSION_V2) {
+      reasons.push(reasonFor(event, index, `head-anchored suffix verification requires hash_version ${EVENT_HASH_VERSION_V2}, got ${event.hash_version || "(none)"}`));
+    }
+
+    if (!event.content_hash) {
+      reasons.push(reasonFor(event, index, "missing content_hash"));
+    } else if (!HASH_PATTERN.test(event.content_hash)) {
+      reasons.push(reasonFor(event, index, `malformed content_hash ${event.content_hash}`));
+    }
+    if (event.previous_hash && !HASH_PATTERN.test(event.previous_hash)) {
+      reasons.push(reasonFor(event, index, `malformed previous_hash ${event.previous_hash}`));
+    }
+
+    if ((event.previous_hash || null) !== previousHash) {
+      reasons.push({
+        ...reasonFor(event, index, index === 0 ? "suffix does not chain to anchor head" : "invalid previous_hash chain"),
+        expected: previousHash,
+        actual: event.previous_hash || null
+      });
+    }
+
+    if (event.content_hash && event.hash_version === EVENT_HASH_VERSION_V2) {
+      const expectedHash = computeEventHash(event);
+      if (event.content_hash !== expectedHash) {
+        reasons.push({
+          ...reasonFor(event, index, "content_hash does not match canonical event serialization"),
+          expected: expectedHash,
+          actual: event.content_hash
+        });
+      }
+    }
+
+    previousHash = event.content_hash || null;
+  });
+
+  const valid = reasons.length === 0;
+  return {
+    schema: INTEGRITY_SCHEMA,
+    protocolVersion: PROTOCOL_VERSION,
+    hashVersion: EVENT_HASH_VERSION_V2,
+    mode: "head-anchored-suffix",
+    valid,
+    anchorHash: anchorHash || null,
+    suffixCount: events.length,
+    headHash: valid ? previousHash : null,
+    reasons
+  };
+}
+
 function reasonFor(event, index, reason) {
   return {
     event_id: event.event_id || null,
@@ -193,10 +288,13 @@ function formatIntegrityReasons(reasons) {
 
 module.exports = {
   EVENT_HASH_VERSION,
+  EVENT_HASH_VERSION_V2,
+  SUPPORTED_EVENT_HASH_VERSIONS,
   HASH_PATTERN,
   INTEGRITY_SCHEMA,
   PROTOCOL_VERSION,
   canonicalEventHashMaterial,
+  canonicalEventHashMaterialV2,
   canonicalEventLine,
   chainEvents,
   computeEventHash,
@@ -206,5 +304,6 @@ module.exports = {
   prepareEventForAppend,
   serializeEventsNdjson,
   stableStringify,
-  verifyEventIntegrity
+  verifyEventIntegrity,
+  verifyEventSuffix
 };

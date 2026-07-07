@@ -113,7 +113,8 @@ const {
 const {
   PROTOCOL_VERSION,
   formatIntegrityReasons,
-  verifyEventIntegrity
+  verifyEventIntegrity,
+  verifyEventSuffix
 } = require("./integrity");
 const {
   summarizeProtocolInteroperability,
@@ -329,6 +330,8 @@ function main(argv = process.argv.slice(2), cwd = process.cwd()) {
         return verifyCrossThreadCommand(options, cwd);
       case "integrity verify":
         return integrityVerify(options, cwd);
+      case "integrity verify-suffix":
+        return integrityVerifySuffix(options, cwd);
       case "continuity export":
         return continuityExport(options, cwd);
       case "continuity verify":
@@ -3230,6 +3233,16 @@ function integrityVerify(options, cwd) {
   }
 }
 
+function integrityVerifySuffix(options, cwd) {
+  requireOption(options, "anchor");
+  const events = readEventsForOptions(options, cwd);
+  const result = verifyEventSuffix(options.anchor, events);
+  print(result);
+  if (!result.valid) {
+    process.exitCode = 1;
+  }
+}
+
 function continuityExport(options, cwd) {
   const events = readEventsForOptions(options, cwd);
   const packet = exportContinuityPacket(events, { threadId: options.thread });
@@ -5063,6 +5076,7 @@ function usage() {
   clista validate [--events <path>]
   clista verify-cross-thread --parent <path> --arm <path> [--arm <path>...]
   clista integrity verify [--events <path>] [--strict]
+  clista integrity verify-suffix --anchor <headHash> [--events <suffix path>]
   clista continuity export [--events <path>] [--thread <threadId>] [--out <path>]
   clista continuity verify [--packet <path>]
   clista continuity import <path> [--replace true]
