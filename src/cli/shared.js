@@ -9,6 +9,12 @@ const {
 } = require("../events");
 const { projectEvents } = require("../projector");
 const { assertValidEvents } = require("../validator");
+const {
+  continuityPacketPath,
+  exportContinuityPacket,
+  readContinuityPacketAt
+} = require("../continuity");
+const fs = require("node:fs");
 
 // OUT is the single sink for stdout-bound output produced by command handlers.
 // Default: write straight through to the real process stdout, so the CLI's
@@ -167,6 +173,17 @@ function inferTargetType(id) {
   return "thread";
 }
 
+function readContinuityPacketForOptions(options, cwd) {
+  if (options.packet) {
+    return readContinuityPacketAt(path.resolve(cwd, options.packet));
+  }
+  const packetPath = continuityPacketPath(cwd);
+  if (fs.existsSync(packetPath)) {
+    return readContinuityPacketAt(packetPath);
+  }
+  return exportContinuityPacket(readEventsForOptions(options, cwd), { threadId: options.thread });
+}
+
 // writeOut is the raw-text sibling of print() for callers that need to emit
 // non-JSON output (usage text, formatted summaries) through the same OUT seam.
 function writeOut(chunk) {
@@ -182,6 +199,7 @@ module.exports = {
   optionFlag,
   participantFrom,
   print,
+  readContinuityPacketForOptions,
   readEventsForOptions,
   readValidEventsForOptions,
   requireOption,
