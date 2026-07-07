@@ -145,6 +145,28 @@ function readValidEventsForOptions(options, cwd) {
   return events;
 }
 
+function inferTargetType(id) {
+  if (!id) {
+    return undefined;
+  }
+  if (id.startsWith("clm_")) {
+    return "claim";
+  }
+  if (id.startsWith("asm_")) {
+    return "assumption";
+  }
+  if (id.startsWith("drq_")) {
+    return "decisionRequest";
+  }
+  if (id.startsWith("pos_")) {
+    return "position";
+  }
+  if (id.startsWith("evd_")) {
+    return "evidence";
+  }
+  return "thread";
+}
+
 // writeOut is the raw-text sibling of print() for callers that need to emit
 // non-JSON output (usage text, formatted summaries) through the same OUT seam.
 function writeOut(chunk) {
@@ -155,6 +177,7 @@ module.exports = {
   appendParticipant,
   booleanOption,
   fail,
+  inferTargetType,
   numberOption,
   optionFlag,
   participantFrom,
