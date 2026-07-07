@@ -707,12 +707,14 @@ function projectEvents(events) {
     const payload = clone(event.payload || {});
 
     switch (eventType(event)) {
+      // Participants have a single source of truth: projection.participants is
+      // rebuilt below from projection.identity.participants (see the
+      // buildIdentityState/projectIdentity block after this loop). Projecting
+      // ParticipantAdded/ParticipantDeclared here as well would be a second,
+      // divergent derivation path whose result is immediately discarded, so
+      // these are explicit no-ops (issue #51).
       case "ParticipantAdded":
-        upsert(projection.participants, payload.participant);
-        break;
       case "ParticipantDeclared":
-        upsert(projection.participants, payload.participant);
-        break;
       case "ParticipantRoleAssigned":
       case "ParticipantAuthorityGranted":
       case "ParticipantAuthorityRevoked":
@@ -880,6 +882,16 @@ function projectEvents(events) {
       case "MergeCompleted":
         upsert(projection.mergeCompletions, payload.mergeCompletion);
         applyMergeCompletion(projection, payload.mergeCompletion, eventTimestamp(event));
+        break;
+      // Validated and integrity-chained, but they mutate no projected
+      // reasoning-state field (cross-thread evidence is checked by the
+      // `verify-cross-thread` command; pruning/deprecation events are
+      // record-only). Declared here as explicit no-ops so every known event
+      // type has a case and none silently reaches `default` (issue #51).
+      case "CrossThreadEvidence":
+      case "ModelPruned":
+      case "ObjectDeprecated":
+      case "PruningReviewInitiated":
         break;
       default:
         break;
