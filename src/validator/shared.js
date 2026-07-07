@@ -42,8 +42,16 @@ function validateIdsExist(event, state, ids, collection, label) {
   }
 }
 
+function addToMapList(map, key, value) {
+  if (!map.has(key)) {
+    map.set(key, []);
+  }
+  map.get(key).push(value);
+}
+
 module.exports = {
   addError,
+  addToMapList,
   arrayValues,
   isDecisionOwner,
   validateIdsExist,
