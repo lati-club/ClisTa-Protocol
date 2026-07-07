@@ -34,9 +34,18 @@ function arrayValues(value) {
   return [value];
 }
 
+function validateIdsExist(event, state, ids, collection, label) {
+  for (const id of ids || []) {
+    if (!collection.has(id)) {
+      addError(state, event, `${label} reference does not exist: ${id}`);
+    }
+  }
+}
+
 module.exports = {
   addError,
   arrayValues,
   isDecisionOwner,
+  validateIdsExist,
   validateThreadObject
 };
