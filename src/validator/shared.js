@@ -1,6 +1,7 @@
 // Cross-domain helpers shared by the src/validator/ domain modules.
 // Moved verbatim from src/validator.js during the #49 split.
 
+const { participantHasAuthority } = require("../identity");
 
 function addError(state, event, reason) {
   state.errors.push({
@@ -10,6 +11,11 @@ function addError(state, event, reason) {
   });
 }
 
+function isDecisionOwner(participantId, state, threadId) {
+  return participantHasAuthority(state.identity, participantId, "decision_owner", threadId);
+}
+
 module.exports = {
-  addError
+  addError,
+  isDecisionOwner
 };

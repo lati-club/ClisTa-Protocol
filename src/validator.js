@@ -43,15 +43,6 @@ const {
   validateFederationPeer
 } = require("./federation");
 const {
-  validateAttributionCorrection,
-  validateAttributionDispute,
-  validateAttributionRevocation,
-  validateContributionAttribution
-} = require("./attribution");
-const {
-  validateContributionProvenance
-} = require("./provenance");
-const {
   EVENT_HASH_VERSION,
   HASH_PATTERN,
   PROTOCOL_VERSION,
@@ -128,7 +119,8 @@ const {
 const { normalizeType, unique } = require("./utils");
 const { primaryObject } = require("./event-types");
 const {
-  addError
+  addError,
+  isDecisionOwner
 } = require("./validator/shared");
 const {
   validateParticipantAdded,
@@ -137,6 +129,12 @@ const {
   validateParticipantDeclared,
   validateParticipantRoleAssigned
 } = require("./validator/participant");
+const {
+  validateContributionAttributed,
+  validateContributionAttributionCorrected,
+  validateContributionAttributionDisputed,
+  validateContributionAttributionRevoked
+} = require("./validator/attribution");
 
 class ValidationError extends Error {
   constructor(errors) {
@@ -694,70 +692,6 @@ function validateActor(event, state) {
   }
   if (event.actor_id && !state.participants.has(event.actor_id)) {
     addError(state, event, `actor_id ${event.actor_id} is not a known participant`);
-  }
-}
-
-function validateContributionAttributed(event, index, state) {
-  const attribution = event.payload.contributionAttribution;
-  if (!attribution) {
-    addError(state, event, "ContributionAttributed payload missing contributionAttribution");
-    return;
-  }
-  if (attribution.participantId && !state.participants.has(attribution.participantId)) {
-    addError(state, event, `attribution references unknown participant ${attribution.participantId}`);
-  }
-  validateAttributionSourceBoundary(event, state, attribution.sourceEventId || attribution.eventId, index);
-  for (const reason of validateContributionAttribution(attribution, state.events)) {
-    addError(state, event, reason);
-  }
-  for (const reason of validateContributionProvenance(attribution, state.events)) {
-    addError(state, event, reason);
-  }
-}
-
-function validateContributionAttributionCorrected(event, state) {
-  const correction = event.payload.attributionCorrection;
-  if (!correction) {
-    addError(state, event, "ContributionAttributionCorrected payload missing attributionCorrection");
-    return;
-  }
-  if (!state.participants.has(correction.correctedBy || event.actor_id)) {
-    addError(state, event, `attribution correction references unknown participant ${correction.correctedBy || event.actor_id}`);
-  }
-  for (const reason of validateAttributionCorrection(correction, state.events)) {
-    addError(state, event, reason);
-  }
-}
-
-function validateContributionAttributionDisputed(event, state) {
-  const dispute = event.payload.attributionDispute;
-  if (!dispute) {
-    addError(state, event, "ContributionAttributionDisputed payload missing attributionDispute");
-    return;
-  }
-  if (!state.participants.has(dispute.disputedBy || event.actor_id)) {
-    addError(state, event, `attribution dispute references unknown participant ${dispute.disputedBy || event.actor_id}`);
-  }
-  for (const reason of validateAttributionDispute(dispute, state.events)) {
-    addError(state, event, reason);
-  }
-}
-
-function validateContributionAttributionRevoked(event, state) {
-  const revocation = event.payload.attributionRevocation;
-  if (!revocation) {
-    addError(state, event, "ContributionAttributionRevoked payload missing attributionRevocation");
-    return;
-  }
-  const revokedBy = revocation.revokedBy || event.actor_id;
-  if (!state.participants.has(revokedBy)) {
-    addError(state, event, `attribution revocation references unknown participant ${revokedBy}`);
-  }
-  if (!isDecisionOwner(revokedBy, state, event.thread_id) && !isDecisionOwner(event.actor_id, state, event.thread_id)) {
-    addError(state, event, `attribution revocation requires decision_owner authority ${revokedBy}`);
-  }
-  for (const reason of validateAttributionRevocation(revocation, state.events)) {
-    addError(state, event, reason);
   }
 }
 
@@ -3467,18 +3401,6 @@ function arrayValues(value) {
   return [value];
 }
 
-function validateAttributionSourceBoundary(event, state, sourceEventId, index) {
-  if (!sourceEventId) {
-    return;
-  }
-  const sourceIndex = state.allEventIndexById.get(sourceEventId);
-  if (sourceIndex === undefined) {
-    addError(state, event, `attribution source event does not exist: ${sourceEventId}`);
-  } else if (sourceIndex >= index) {
-    addError(state, event, `attribution cannot reference future event ${sourceEventId}`);
-  }
-}
-
 function validateIdsBelongToThread(event, state, ids, collection, label, threadId) {
   for (const id of ids || []) {
     const object = collection.get(id);
@@ -3597,10 +3519,6 @@ function addToMapList(map, key, value) {
 
 function isAuthorizedToResolve(actorId, objection, state) {
   return actorId === objection.participantId || isDecisionOwner(actorId, state, objection.threadId);
-}
-
-function isDecisionOwner(participantId, state, threadId) {
-  return participantHasAuthority(state.identity, participantId, "decision_owner", threadId);
 }
 
 
