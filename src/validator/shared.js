@@ -15,7 +15,17 @@ function isDecisionOwner(participantId, state, threadId) {
   return participantHasAuthority(state.identity, participantId, "decision_owner", threadId);
 }
 
+function validateThreadObject(event, object, state, label) {
+  if (object.threadId !== event.thread_id) {
+    addError(state, event, `${label} threadId must match event thread_id`);
+  }
+  if (!state.threads.has(object.threadId)) {
+    addError(state, event, `${label} references unknown thread ${object.threadId}`);
+  }
+}
+
 module.exports = {
   addError,
-  isDecisionOwner
+  isDecisionOwner,
+  validateThreadObject
 };
