@@ -1,3 +1,21 @@
+// Canonical registry of every protocol event type.
+//
+// This is the SINGLE SOURCE OF TRUTH for which event types exist. The
+// validator's `switch (event.event_type)` and the projector's
+// `switch (eventType(event))` must each enumerate exactly this set — no more,
+// no less. `test/event-type-registry.test.js` enforces that agreement by
+// extracting both switches' case labels and asserting they equal this list.
+//
+// Why this exists: validator and projector historically drifted (a type added
+// to one switch but not the other silently fell through — validator to a
+// loud `unsupported event_type` error, projector to a silent `default: break`).
+// That is the #40 / #45 fail-open class. Adding a new event type now forces
+// three coordinated edits — this registry, the validator switch, and the
+// projector switch — or the conformance test fails loudly. See issue #51.
+//
+// Maintenance: keep this array sorted and unique. When you add an event type,
+// add it here AND to both switches.
+const PROTOCOL_EVENT_TYPES = Object.freeze([
 // Canonical registry of ClisTa event types — the single declared list of every
 // event_type the engine knows. Phase 1 of the event-type registry (#51): this is
 // the source of truth the validator and projector switches are checked against by
@@ -113,6 +131,17 @@ const EVENT_TYPES = Object.freeze([
   "ThreadForked"
 ]);
 
+const PROTOCOL_EVENT_TYPE_SET = new Set(PROTOCOL_EVENT_TYPES);
+
+function isKnownEventType(eventType) {
+  return PROTOCOL_EVENT_TYPE_SET.has(eventType);
+}
+
+module.exports = {
+  PROTOCOL_EVENT_TYPES,
+  PROTOCOL_EVENT_TYPE_SET,
+  isKnownEventType
+};
 const EVENT_TYPE_SET = new Set(EVENT_TYPES);
 
 function isKnownEventType(type) {
