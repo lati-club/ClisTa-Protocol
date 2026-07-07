@@ -24,8 +24,19 @@ function validateThreadObject(event, object, state, label) {
   }
 }
 
+function arrayValues(value) {
+  if (Array.isArray(value)) {
+    return value.filter(Boolean);
+  }
+  if (value === undefined || value === null || value === "") {
+    return [];
+  }
+  return [value];
+}
+
 module.exports = {
   addError,
+  arrayValues,
   isDecisionOwner,
   validateThreadObject
 };
