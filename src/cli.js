@@ -17,9 +17,7 @@ const {
 const {
   exportProtocol,
   projectEvents,
-  selectAudit,
-  selectDecisionSummary,
-  selectThreadState
+  selectDecisionSummary
 } = require("./projector");
 const { assertValidEvents, validateEvents } = require("./validator");
 const {
@@ -198,6 +196,10 @@ const {
   integrityVerifySuffix,
   validateCommand
 } = require("./cli/integrity");
+const {
+  auditShow,
+  stateShow
+} = require("./cli/state");
 
 function main(argv = process.argv.slice(2), cwd = process.cwd()) {
   let { command, options } = parseCommand(argv);
@@ -519,16 +521,6 @@ function runtimeAudit(options, cwd) {
   if (!result.valid) {
     process.exitCode = 1;
   }
-}
-
-function stateShow(options, cwd) {
-  const projection = projectEvents(readValidEventsForOptions(options, cwd));
-  return print(selectThreadState(projection, options.thread));
-}
-
-function auditShow(options, cwd) {
-  const projection = projectEvents(readValidEventsForOptions(options, cwd));
-  return print(selectAudit(projection, options.thread));
 }
 
 function exportShow(options, cwd) {
