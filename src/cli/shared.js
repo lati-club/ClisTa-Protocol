@@ -5,10 +5,17 @@ const {
   createParticipant,
   nowIso,
   readEvents,
-  readEventsAt
+  readEventsAt,
+  parseList
 } = require("../events");
 const { projectEvents } = require("../projector");
 const { assertValidEvents } = require("../validator");
+const {
+  continuityPacketPath,
+  exportContinuityPacket,
+  readContinuityPacketAt
+} = require("../continuity");
+const fs = require("node:fs");
 
 // OUT is the single sink for stdout-bound output produced by command handlers.
 // Default: write straight through to the real process stdout, so the CLI's
@@ -167,6 +174,67 @@ function inferTargetType(id) {
   return "thread";
 }
 
+function readContinuityPacketForOptions(options, cwd) {
+  if (options.packet) {
+    return readContinuityPacketAt(path.resolve(cwd, options.packet));
+  }
+  const packetPath = continuityPacketPath(cwd);
+  if (fs.existsSync(packetPath)) {
+    return readContinuityPacketAt(packetPath);
+  }
+  return exportContinuityPacket(readEventsForOptions(options, cwd), { threadId: options.thread });
+}
+
+function compatibilityOptionsFromCli(options, continuityVerification) {
+  const result = { continuityVerification };
+  const supportedAmendmentIds = parseList(options.supportAmendment || options.supportedAmendment || options.supportedAmendments);
+  const supportedCapabilities = parseList(options.supportCapability || options.supportedCapability || options.supportedCapabilities);
+  const supportedVerificationLayers = parseList(options.supportLayer || options.supportedLayer || options.supportedVerificationLayers);
+  if (supportedAmendmentIds.length) {
+    result.supportedAmendmentIds = supportedAmendmentIds;
+  }
+  if (supportedCapabilities.length) {
+    result.supportedCapabilities = supportedCapabilities;
+  }
+  if (supportedVerificationLayers.length) {
+    result.supportedVerificationLayers = supportedVerificationLayers;
+  }
+  return result;
+}
+
+function interoperabilityOptionsFromCli(options, compatibilityResult) {
+  const result = { compatibilityResult };
+  const supportedSemantics = parseList(options.supportSemantic || options.supportedSemantic || options.supportedSemantics);
+  const supportedEventTypes = parseList(options.supportEventType || options.supportedEventType || options.supportedEventTypes);
+  const supportedExchangeFormats = parseList(options.supportExchangeFormat || options.supportedExchangeFormat || options.supportedExchangeFormats);
+  if (supportedSemantics.length) {
+    result.supportedSemantics = supportedSemantics;
+  }
+  if (supportedEventTypes.length) {
+    result.supportedEventTypes = supportedEventTypes;
+  }
+  if (supportedExchangeFormats.length) {
+    result.supportedExchangeFormats = supportedExchangeFormats;
+  }
+  return result;
+}
+
+function federationOptionsFromCli(options, results) {
+  return {
+    ...results,
+    sharedAuthority: booleanOption(options.sharedAuthority, false),
+    remoteAuthorityImported: booleanOption(options.remoteAuthorityImported, false),
+    automaticAuthorityImport: booleanOption(options.automaticAuthorityImport, false),
+    localGovernanceMutation: booleanOption(options.localGovernanceMutation, false),
+    remoteGovernanceMerged: booleanOption(options.remoteGovernanceMerged, false),
+    automaticAmendmentImport: booleanOption(options.automaticAmendmentImport, false),
+    remoteAmendmentsImported: booleanOption(options.remoteAmendmentsImported, false),
+    automaticConsensus: booleanOption(options.automaticConsensus, false),
+    remoteStateMutation: booleanOption(options.remoteStateMutation, false),
+    networkConsensus: booleanOption(options.networkConsensus, false)
+  };
+}
+
 // writeOut is the raw-text sibling of print() for callers that need to emit
 // non-JSON output (usage text, formatted summaries) through the same OUT seam.
 function writeOut(chunk) {
@@ -176,12 +244,16 @@ function writeOut(chunk) {
 module.exports = {
   appendParticipant,
   booleanOption,
+  compatibilityOptionsFromCli,
   fail,
+  federationOptionsFromCli,
   inferTargetType,
+  interoperabilityOptionsFromCli,
   numberOption,
   optionFlag,
   participantFrom,
   print,
+  readContinuityPacketForOptions,
   readEventsForOptions,
   readValidEventsForOptions,
   requireOption,
