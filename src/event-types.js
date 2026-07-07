@@ -15,15 +15,6 @@
 //
 // Maintenance: keep this array sorted and unique. When you add an event type,
 // add it here AND to both switches.
-const PROTOCOL_EVENT_TYPES = Object.freeze([
-// Canonical registry of ClisTa event types — the single declared list of every
-// event_type the engine knows. Phase 1 of the event-type registry (#51): this is
-// the source of truth the validator and projector switches are checked against by
-// test/event-type-registry.test.js, so a type added to one switch but not the
-// other (the #40 / #45 fail-open class) fails CI. Later phases make validateEvents
-// and projectEvents consume this table directly instead of parallel switches.
-//
-// Keep sorted; add a new event_type here when you add its case to either switch.
 const EVENT_TYPES = Object.freeze([
   "AdaptationReviewRecorded",
   "AlignmentCalculated",
@@ -131,18 +122,13 @@ const EVENT_TYPES = Object.freeze([
   "ThreadForked"
 ]);
 
-const PROTOCOL_EVENT_TYPE_SET = new Set(PROTOCOL_EVENT_TYPES);
+// The M39 branch introduced the same registry under these names; both are
+// public API (test/event-type-registry.test.js imports both spellings), so
+// they alias the one canonical list rather than duplicating it.
+const PROTOCOL_EVENT_TYPES = EVENT_TYPES;
 
-function isKnownEventType(eventType) {
-  return PROTOCOL_EVENT_TYPE_SET.has(eventType);
-}
-
-module.exports = {
-  PROTOCOL_EVENT_TYPES,
-  PROTOCOL_EVENT_TYPE_SET,
-  isKnownEventType
-};
 const EVENT_TYPE_SET = new Set(EVENT_TYPES);
+const PROTOCOL_EVENT_TYPE_SET = EVENT_TYPE_SET;
 
 function isKnownEventType(type) {
   return EVENT_TYPE_SET.has(type);
@@ -246,4 +232,12 @@ function primaryObject(event) {
   return null;
 }
 
-module.exports = { EVENT_TYPES, EVENT_TYPE_SET, PRIMARY_OBJECT_KEYS, isKnownEventType, primaryObject };
+module.exports = {
+  EVENT_TYPES,
+  EVENT_TYPE_SET,
+  PRIMARY_OBJECT_KEYS,
+  PROTOCOL_EVENT_TYPES,
+  PROTOCOL_EVENT_TYPE_SET,
+  isKnownEventType,
+  primaryObject
+};
