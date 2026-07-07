@@ -77,6 +77,13 @@ const {
 } = require("./provenance");
 const { unique } = require("./utils");
 
+// Identity of the projector's OUTPUT CONTRACT, not the source file. Bump this
+// whenever a projector change alters projected-state output (and therefore the
+// projection_hash a continuity packet seals). Packets record the version that
+// sealed them so `continuity verify` can report an honest "projector mismatch"
+// instead of a bare projection_hash failure that looks like tampering (#64).
+const PROJECTION_VERSION = "clista.projection.v1";
+
 function emptyProjection() {
   return {
     schema: "clista.projection.v0",
@@ -1945,6 +1952,7 @@ function summarizeEvent(event) {
 
 
 module.exports = {
+  PROJECTION_VERSION,
   exportProtocol,
   projectEvents,
   selectAudit,

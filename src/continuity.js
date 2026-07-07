@@ -8,7 +8,7 @@ const {
   verifyEventIntegrity
 } = require("./integrity");
 const { buildInteroperabilityProfile } = require("./interoperability");
-const { projectEvents, selectThreadState } = require("./projector");
+const { PROJECTION_VERSION, projectEvents, selectThreadState } = require("./projector");
 const { validateEvents } = require("./validator");
 
 const CONTINUITY_FILE = "continuity.json";
@@ -103,6 +103,7 @@ function exportContinuityPacket(events, options = {}) {
     clista_protocol_version: PROTOCOL_VERSION,
     source_thread_id: materials.threadId,
     event_log_hash: materials.eventLogHash,
+    projection_version: PROJECTION_VERSION,
     projection_hash: materials.projectionHash,
     state_hash: materials.stateHash,
     capability_set: CONTINUITY_CAPABILITY_SET,
@@ -188,29 +189,52 @@ function verifyContinuityPacket(packet) {
         reasons.push(reason("source_events", error.reason, { event_id: error.event_id }));
       }
     } else if (packet?.source_thread_id) {
-      const materials = buildContinuityMaterials(events, packet.source_thread_id);
-      if (materials.state.error) {
-        reasons.push(reason("source_thread_id", materials.state.error));
-      } else {
-        compareHash(reasons, "projection_hash", materials.projectionHash, packet?.projection_hash);
-        compareHash(reasons, "state_hash", materials.stateHash, packet?.state_hash);
-        if (packet?.resume_status !== materials.verificationState.status) {
-          reasons.push(reason("resume_status", "resume_status does not match verification state", {
-            expected: materials.verificationState.status,
-            actual: packet?.resume_status
-          }));
-        }
-
+      // A continuity packet is a portability artifact: a different party, on a
+      // different checkout, verifies it later. The recomputed projection_hash
+      // is only comparable if this checkout's projector shares the OUTPUT
+      // CONTRACT the packet was sealed under. If the packet declares a
+      // projection_version that differs from ours, recomputing here would emit
+      // a bare projection_hash mismatch — indistinguishable from a corrupt
+      // packet — even when the events are byte-identical and valid. Report the
+      // mismatch honestly instead, and skip the projector-dependent recompute
+      // comparisons (the events are still fully integrity- and validity-checked
+      // above; only the projection is version-gated). See #64 / milestone-38.
+      const sealedVersion = packet.projection_version;
+      if (sealedVersion !== undefined && sealedVersion !== null && sealedVersion !== PROJECTION_VERSION) {
+        reasons.push(reason(
+          "projection_version",
+          `projector mismatch: packet sealed under projection_version ${sealedVersion}, this checkout is ${PROJECTION_VERSION} — regenerate the packet or align the checkout`,
+          { expected: PROJECTION_VERSION, actual: sealedVersion }
+        ));
+        // Projector-independent self-consistency still holds the packet honest:
+        // its own state_hash must commit to its own continuity_state.
         const packetStateHash = contentHash(packet.continuity_state || {});
         compareHash(reasons, "state_hash", packetStateHash, packet?.state_hash, "state_hash does not match continuity_state");
-        if (stableStringify(packet.continuity_state || {}) !== stableStringify(materials.continuityState)) {
-          reasons.push(reason("continuity_state", "continuity_state does not match projected thread state"));
-        }
-        if (stableStringify(packet.verification_state || {}) !== stableStringify(materials.verificationState)) {
-          reasons.push(reason("verification_state", "verification_state does not match recomputed verification state"));
-        }
-        if (stableStringify(packet.interoperability_profile || {}) !== stableStringify(materials.interoperabilityProfile)) {
-          reasons.push(reason("interoperability_profile", "interoperability_profile does not match recomputed semantic profile"));
+      } else {
+        const materials = buildContinuityMaterials(events, packet.source_thread_id);
+        if (materials.state.error) {
+          reasons.push(reason("source_thread_id", materials.state.error));
+        } else {
+          compareHash(reasons, "projection_hash", materials.projectionHash, packet?.projection_hash);
+          compareHash(reasons, "state_hash", materials.stateHash, packet?.state_hash);
+          if (packet?.resume_status !== materials.verificationState.status) {
+            reasons.push(reason("resume_status", "resume_status does not match verification state", {
+              expected: materials.verificationState.status,
+              actual: packet?.resume_status
+            }));
+          }
+
+          const packetStateHash = contentHash(packet.continuity_state || {});
+          compareHash(reasons, "state_hash", packetStateHash, packet?.state_hash, "state_hash does not match continuity_state");
+          if (stableStringify(packet.continuity_state || {}) !== stableStringify(materials.continuityState)) {
+            reasons.push(reason("continuity_state", "continuity_state does not match projected thread state"));
+          }
+          if (stableStringify(packet.verification_state || {}) !== stableStringify(materials.verificationState)) {
+            reasons.push(reason("verification_state", "verification_state does not match recomputed verification state"));
+          }
+          if (stableStringify(packet.interoperability_profile || {}) !== stableStringify(materials.interoperabilityProfile)) {
+            reasons.push(reason("interoperability_profile", "interoperability_profile does not match recomputed semantic profile"));
+          }
         }
       }
     }
@@ -226,6 +250,8 @@ function verifyContinuityPacket(packet) {
     verificationMode: packet?.verification_mode || null,
     resumeStatus: packet?.resume_status || null,
     eventLogHash: packet?.event_log_hash || null,
+    projectionVersion: packet?.projection_version || null,
+    projectorMismatch: reasons.some((item) => item.field === "projection_version"),
     projectionHash: packet?.projection_hash || null,
     stateHash: packet?.state_hash || null,
     verificationState: packet?.verification_state || null,
