@@ -52,7 +52,7 @@ Prerequisites: Node.js >= 18, plus Python 3 (used only to re-ingest the session)
 
 ```sh
 git clone https://github.com/lati-club/ClisTa-Protocol.git
-cd clista-protocol
+cd ClisTa-Protocol
 npm run replay
 ```
 
@@ -69,7 +69,7 @@ Prerequisite: Node.js >= 18.
 
 ```sh
 git clone https://github.com/lati-club/ClisTa-Protocol.git
-cd clista-protocol
+cd ClisTa-Protocol
 npm install
 npm run clista -- help
 ```
@@ -89,7 +89,7 @@ See `docs/quickstart.md` for more.
 
 The event log is the source of truth. Everything else is derived.
 
-- `clista validate` checks structural and protocol rules.
+- `clista validate` checks structural and protocol rules. It verifies any hashes that are present but does **not** by itself assert tamper-evidence — an unsigned log still passes. For a fail-closed integrity gate that requires a complete, intact hash chain, use `clista validate --strict` (or `clista integrity verify --strict`).
 - `clista state show` reconstructs the current reasoning state.
 - `clista decision summary` surfaces the concise "answer view": what was decided, why, who dissented, what next.
 - Replays (`npm run replay`) prove that the same events always produce the same state, even in a clean room.

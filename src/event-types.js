@@ -16,6 +16,15 @@
 // Maintenance: keep this array sorted and unique. When you add an event type,
 // add it here AND to both switches.
 const PROTOCOL_EVENT_TYPES = Object.freeze([
+// Canonical registry of ClisTa event types — the single declared list of every
+// event_type the engine knows. Phase 1 of the event-type registry (#51): this is
+// the source of truth the validator and projector switches are checked against by
+// test/event-type-registry.test.js, so a type added to one switch but not the
+// other (the #40 / #45 fail-open class) fails CI. Later phases make validateEvents
+// and projectEvents consume this table directly instead of parallel switches.
+//
+// Keep sorted; add a new event_type here when you add its case to either switch.
+const EVENT_TYPES = Object.freeze([
   "AdaptationReviewRecorded",
   "AlignmentCalculated",
   "AssumptionDeclared",
@@ -133,3 +142,108 @@ module.exports = {
   PROTOCOL_EVENT_TYPE_SET,
   isKnownEventType
 };
+const EVENT_TYPE_SET = new Set(EVENT_TYPES);
+
+function isKnownEventType(type) {
+  return EVENT_TYPE_SET.has(type);
+}
+
+
+// The payload key holding each event primary domain object, in resolution
+// order. This is the UNION of the keys validator.js and projector.js previously
+// resolved separately (they had drifted: ~30 event types differed), so both now
+// agree via one shared primaryObject (#51 phase 4). Order is immaterial in
+// practice: every event carries at most one of these keys.
+const PRIMARY_OBJECT_KEYS = Object.freeze([
+  "thread",
+  "threadFork",
+  "participant",
+  "participantRole",
+  "participantAuthority",
+  "participantAuthorityRevocation",
+  "contributionAttribution",
+  "attributionCorrection",
+  "attributionDispute",
+  "attributionRevocation",
+  "learningSignal",
+  "patternObservation",
+  "outcomeReview",
+  "learningRecommendation",
+  "adaptationReview",
+  "governanceReviewRecommendation",
+  "evidenceRequirementReviewRecommendation",
+  "revisitTriggerReviewRecommendation",
+  "decisionGateReviewRecommendation",
+  "protocolAmendment",
+  "amendment",
+  "protocolAmendmentReview",
+  "amendmentReview",
+  "protocolAmendmentApproval",
+  "amendmentApproval",
+  "protocolAmendmentRejection",
+  "amendmentRejection",
+  "protocolAmendmentSupersession",
+  "amendmentSupersession",
+  "evidence",
+  "assumption",
+  "claim",
+  "position",
+  "objection",
+  "alignmentSnapshot",
+  "decisionRequest",
+  "review",
+  "decisionRecord",
+  "minorityReport",
+  "mergeRequest",
+  "mergeReview",
+  "mergeConflict",
+  "mergeConflictResolution",
+  "mergeCompletion",
+  "expectedOutcome",
+  "outcomeAudit",
+  "decisionScore",
+  "executionRecord",
+  "executionViolation",
+  "outcomeRecord",
+  "outcomeDispute",
+  "outcomeViolation",
+  "outcomeLearningSignal",
+  "outcomeLesson",
+  "outcomeLearningDispute",
+  "outcomeLearningViolation",
+  "protocolReview",
+  "protocolReviewCompletion",
+  "protocolReviewDispute",
+  "protocolReviewViolation",
+  "recoveryRequest",
+  "recoveryPlan",
+  "recoveryQuarantine",
+  "recoveryApplication",
+  "recoveryVerification",
+  "recoveryViolation",
+  "federationContext",
+  "federationPeer",
+  "federatedStateReference",
+  "federatedPacketVerification",
+  "federatedPacketRejection",
+  "federationBoundary",
+  "negotiationRequest",
+  "negotiationConstraint",
+  "negotiationDifference",
+  "negotiationTerms",
+  "negotiationFailure"
+]);
+
+// The event primary domain object, or null. Faithful to the prior `||` chains
+// (first truthy payload value, else null).
+function primaryObject(event) {
+  const payload = (event && event.payload) || {};
+  for (const key of PRIMARY_OBJECT_KEYS) {
+    if (payload[key]) {
+      return payload[key];
+    }
+  }
+  return null;
+}
+
+module.exports = { EVENT_TYPES, EVENT_TYPE_SET, PRIMARY_OBJECT_KEYS, isKnownEventType, primaryObject };

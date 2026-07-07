@@ -2,21 +2,22 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://clista.ai/schemas/v0/claim.json",
   "title": "Claim",
-  "description": "An assertion.",
+  "description": "An assertion, citing the evidence and assumptions it rests on. Field names here match the actual ClaimCreated runtime payload (src/cli.js claimCreate, src/validator.js validateClaimCreated), not the older snake_case shape (content/claim_type/confidence_score/author_participant_id) this file previously described. There is no claim_type enum in the runtime -- claims are not typed. See the schemas/v0-vs-runtime sync item before treating any sibling file in this directory as ground truth.",
   "type": "object",
   "properties": {
     "id": { "type": "string" },
-    "object_type": { "type": "string", "const": "claim" },
-    "thread_id": { "type": "string" },
-    "author_participant_id": { "type": "string" },
-    "content": { "type": "string" },
-    "claim_type": { "type": "string", "enum": ["factual", "normative", "predictive", "interpretive"] },
-    "evidence_ids": { "type": "array", "items": { "type": "string" } },
-    "confidence_score": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
-    "created_at": { "type": "string", "format": "date-time" }
+    "object": { "type": "string", "const": "claim" },
+    "threadId": { "type": "string" },
+    "text": { "type": "string" },
+    "status": { "type": "string" },
+    "evidenceIds": { "type": "array", "items": { "type": "string" } },
+    "assumptionIds": { "type": "array", "items": { "type": "string" } },
+    "contradictingEvidenceIds": { "type": "array", "items": { "type": "string" } },
+    "createdByParticipantId": { "type": "string" },
+    "createdAt": { "type": "string", "format": "date-time" }
   },
   "required": [
-    "id", "object_type", "thread_id", "author_participant_id", "content", "claim_type", "created_at"
+    "id", "object", "threadId", "text", "createdByParticipantId", "createdAt"
   ],
   "additionalProperties": false
 }

@@ -1,4 +1,3 @@
-const { nowIso } = require("./events");
 const {
   buildAdaptationState,
   projectAdaptation,
@@ -76,6 +75,7 @@ const {
   selectProvenanceForThread
 } = require("./provenance");
 const { unique } = require("./utils");
+const { primaryObject } = require("./event-types");
 
 // Identity of the projector's OUTPUT CONTRACT, not the source file. Bump this
 // whenever a projector change alters projected-state output (and therefore the
@@ -87,7 +87,10 @@ const PROJECTION_VERSION = "clista.projection.v1";
 function emptyProjection() {
   return {
     schema: "clista.projection.v0",
-    projectedAt: nowIso(),
+    // Deterministic by construction: set to the latest event's timestamp after the
+    // fold in projectEvents (null for an empty log). Never wall-clock, so the same
+    // events always project to byte-identical state.
+    projectedAt: null,
     participants: {},
     threads: {},
     forks: {},
@@ -713,6 +716,10 @@ function projectEvents(events) {
       // ParticipantAdded/ParticipantDeclared here as well would be a second,
       // divergent derivation path whose result is immediately discarded, so
       // these are explicit no-ops (issue #51).
+      // Participant lifecycle is derived from identity.js — projection.participants
+      // is rebuilt from projection.identity below, which is the single source of
+      // truth. The earlier upserts here were dead: that map is overwritten before
+      // anything reads it. Leave these as no-ops so the two paths can't diverge.
       case "ParticipantAdded":
       case "ParticipantDeclared":
       case "ParticipantRoleAssigned":
@@ -898,6 +905,10 @@ function projectEvents(events) {
     }
   }
 
+  // Stamp the projection's "as of" time from the log itself (latest event), not
+  // the wall clock, so repeated projections of the same events are byte-identical.
+  projection.projectedAt = projection.events.at(-1)?.timestamp ?? null;
+
   const identityState = buildIdentityState(projection.events);
   projection.identity = projectIdentity(identityState);
   projection.participants = projection.identity.participants.reduce((participants, participant) => {
@@ -954,7 +965,7 @@ function selectThreadState(projection, requestedThreadId) {
   const decisionRecord = latestBy(decisionRecords, "decidedAt");
   const supportingEvidence = selectSupportingEvidence(evidence, claims, currentProposal, decisionRecord);
   const alignmentSnapshot = latestBy(valuesForThread(projection.alignmentSnapshots, threadId), "createdAt")
-    || calculateAlignment(threadId, claims, positions, objections);
+    || calculateAlignment(threadId, claims, positions, objections, projection.projectedAt);
   const assumptionsWithParticipants = assumptions.map((assumption) => ({
     ...assumption,
     participant: projection.participants[assumption.declaredByParticipantId] || null
@@ -1034,6 +1045,7 @@ function selectThreadState(projection, requestedThreadId) {
     thread,
     currentProposal: currentProposal || null,
     supportingEvidence,
+    allEvidence: evidence,
     assumptions: assumptionsWithParticipants,
     claims,
     participantPositions: positionsWithParticipants,
@@ -1739,11 +1751,22 @@ function latestThreadId(projection) {
   return latestBy(Object.values(projection.threads), "updatedAt")?.id;
 }
 
+// Locale-independent, code-point string ordering. localeCompare with no locale is
+// ICU/Node-build dependent; this matches the bare .sort() used for hashing in
+// integrity.js, keeping ordering deterministic across environments.
+function compareStrings(a, b) {
+  const left = String(a);
+  const right = String(b);
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
+}
+
 function latestBy(items, field) {
   return items
     .filter(Boolean)
     .slice()
-    .sort((a, b) => String(a[field] || "").localeCompare(String(b[field] || "")))
+    .sort((a, b) => compareStrings(a[field] || "", b[field] || ""))
     .at(-1);
 }
 
@@ -1752,7 +1775,7 @@ function latestPositions(positions) {
   for (const position of positions) {
     const key = `${position.participantId}:${position.targetObjectId || "thread"}`;
     const existing = byParticipantAndTarget.get(key);
-    if (!existing || String(existing.takenAt).localeCompare(String(position.takenAt)) < 0) {
+    if (!existing || compareStrings(existing.takenAt, position.takenAt) < 0) {
       byParticipantAndTarget.set(key, position);
     }
   }
@@ -1781,7 +1804,7 @@ function selectSupportingEvidence(evidence, claims, currentProposal, decisionRec
   return evidence.filter((item) => evidenceIds.has(item.id));
 }
 
-function calculateAlignment(threadId, claims, positions, objections) {
+function calculateAlignment(threadId, claims, positions, objections, asOf = null) {
   const evidencedClaims = claims.filter((claim) => (claim.evidenceIds || []).length > 0).length;
   const evidenceAlignment = claims.length ? evidencedClaims / claims.length : 1;
   const positionCounts = positions.reduce((counts, position) => {
@@ -1798,7 +1821,9 @@ function calculateAlignment(threadId, claims, positions, objections) {
     id: "aln_calculated",
     object: "alignmentSnapshot",
     threadId,
-    createdAt: nowIso(),
+    // Derived "as of" time (latest event), passed in from the projection — never
+    // wall-clock, so this computed fallback snapshot is reproducible.
+    createdAt: asOf,
     evidenceAlignment: round(evidenceAlignment),
     positionAlignment: round(positionAlignment),
     riskAlignment: round(riskAlignment),
@@ -1827,15 +1852,20 @@ function auditTrail(events, threadId) {
     }));
 }
 
-function auditTrailForThread(projection, threadId) {
+function auditTrailForThread(projection, threadId, visited = new Set()) {
   const thread = projection.threads[threadId];
-  if (!thread?.fork) {
+  // Stop at a non-fork thread, or if we've already walked this thread — a
+  // malformed fork chain (e.g. a self- or mutually-referential parentThreadId)
+  // would otherwise recurse forever. Mirrors the visited-set guard in
+  // valuesForThreadScope; projection.events here may be unvalidated.
+  if (!thread?.fork || visited.has(threadId)) {
     return auditTrail(projection.events, threadId);
   }
 
+  visited.add(threadId);
   const parentProjection = projectEvents(eventsThroughBoundary(projection.events, thread.fork.inheritedThroughEventId));
   return [
-    ...auditTrailForThread(parentProjection, thread.fork.parentThreadId).map((entry) => ({
+    ...auditTrailForThread(parentProjection, thread.fork.parentThreadId, visited).map((entry) => ({
       ...entry,
       inherited: true,
       inheritedFromThreadId: entry.thread_id
@@ -1883,69 +1913,6 @@ function eventActorId(event) {
 
 function eventThreadId(event) {
   return event.thread_id || event.threadId;
-}
-
-function primaryObject(event) {
-  const payload = event.payload || {};
-  return payload.thread
-    || payload.threadFork
-    || payload.participant
-    || payload.participantRole
-    || payload.participantAuthority
-    || payload.participantAuthorityRevocation
-    || payload.contributionAttribution
-    || payload.attributionCorrection
-    || payload.attributionDispute
-    || payload.attributionRevocation
-    || payload.evidence
-    || payload.assumption
-    || payload.claim
-    || payload.position
-    || payload.objection
-    || payload.alignmentSnapshot
-    || payload.decisionRequest
-    || payload.review
-    || payload.decisionRecord
-    || payload.minorityReport
-    || payload.mergeRequest
-    || payload.mergeReview
-    || payload.mergeConflict
-    || payload.mergeConflictResolution
-    || payload.mergeCompletion
-    || payload.expectedOutcome
-    || payload.outcomeAudit
-    || payload.decisionScore
-    || payload.learningSignal
-    || payload.patternObservation
-    || payload.outcomeReview
-    || payload.learningRecommendation
-    || payload.adaptationReview
-    || payload.governanceReviewRecommendation
-    || payload.evidenceRequirementReviewRecommendation
-    || payload.revisitTriggerReviewRecommendation
-    || payload.decisionGateReviewRecommendation
-    || payload.protocolAmendment
-    || payload.amendment
-    || payload.protocolAmendmentReview
-    || payload.amendmentReview
-    || payload.protocolAmendmentApproval
-    || payload.amendmentApproval
-    || payload.protocolAmendmentRejection
-    || payload.amendmentRejection
-    || payload.protocolAmendmentSupersession
-    || payload.amendmentSupersession
-    || payload.federationContext
-    || payload.federationPeer
-    || payload.federatedStateReference
-    || payload.federatedPacketVerification
-    || payload.federatedPacketRejection
-    || payload.federationBoundary
-    || payload.negotiationRequest
-    || payload.negotiationConstraint
-    || payload.negotiationDifference
-    || payload.negotiationTerms
-    || payload.negotiationFailure
-    || null;
 }
 
 function summarizeEvent(event) {

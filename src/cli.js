@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const fs = require("node:fs");
 const path = require("node:path");
+const { proposeDecision } = require("./gate");
 const {
   appendEvent,
   contentHash,
@@ -104,7 +105,8 @@ const {
 const {
   isKnownContribution,
   provenanceForContribution,
-  traceProvenance
+  traceProvenance,
+  verifyCrossThreadProvenance
 } = require("./provenance");
 const {
   buildIdentityState,
@@ -228,6 +230,8 @@ function main(argv = process.argv.slice(2), cwd = process.cwd()) {
         return threadFork(options, cwd);
       case "evidence commit":
         return evidenceCommit(options, cwd);
+      case "evidence list":
+        return evidenceList(options, cwd);
       case "assumption declare":
         return assumptionDeclare(options, cwd);
       case "assumptions list":
@@ -240,6 +244,8 @@ function main(argv = process.argv.slice(2), cwd = process.cwd()) {
         return objectionRaise(options, cwd);
       case "decision open":
         return decisionOpen(options, cwd);
+      case "decision propose":
+        return decisionPropose(options, cwd);
       case "decision summary":
         return decisionSummary(options, cwd);
       case "decision eligibility":
@@ -1021,11 +1027,13 @@ function evidenceCommit(options, cwd) {
     committedByParticipantId: actor.id,
     committedAt: at,
     artifactIds: parseList(options.artifacts),
+    tags: parseList(options.tags),
     contentHash: contentHash({
       source: options.source,
       finding: options.finding,
       confidence: numberOption(options.confidence),
-      artifactIds: parseList(options.artifacts)
+      artifactIds: parseList(options.artifacts),
+      tags: parseList(options.tags)
     })
   };
   stripUndefined(evidence);
@@ -1056,11 +1064,13 @@ function assumptionDeclare(options, cwd) {
     confidence: numberOption(options.confidence),
     declaredByParticipantId: actor.id,
     declaredAt: at,
+    tags: parseList(options.tags),
     contentHash: contentHash({
       text: options.text,
       status: options.status || "active",
       evidenceIds: parseList(options.evidence),
-      confidence: numberOption(options.confidence)
+      confidence: numberOption(options.confidence),
+      tags: parseList(options.tags)
     })
   };
   stripUndefined(assumption);
@@ -1197,6 +1207,29 @@ function decisionOpen(options, cwd) {
   });
   appendEvent(event, cwd);
   return print({ decisionRequest, event });
+}
+
+function decisionPropose(options, cwd) {
+  requireOption(options, "thread");
+  requireOption(options, "proposal");
+  const actor = participantFrom(options.actor || options.participant || "Author", options.role);
+  appendParticipant(actor, cwd, options.thread);
+  const at = nowIso();
+  const decisionRequest = {
+    id: options.id || newId("drq", options.proposal),
+    object: "decisionRequest",
+    threadId: options.thread,
+    proposal: options.proposal,
+    status: "review",
+    supportingEvidenceIds: parseList(options.evidence || options.supportingEvidence),
+    supportingClaimIds: parseList(options.claims || options.supportingClaims),
+    supportingAssumptionIds: parseList(options.assumptions || options.supportingAssumptions),
+    objectionIds: parseList(options.objections),
+    openedByParticipantId: actor.id,
+    openedAt: at
+  };
+  const result = proposeDecision(decisionRequest, cwd);
+  return print(result);
 }
 
 function decisionEligibility(options, cwd) {
@@ -3099,7 +3132,21 @@ function applyDefaultProposedIds(mergeRequest, proposed) {
 function assumptionsList(options, cwd) {
   const projection = projectEvents(readValidEventsForOptions(options, cwd));
   const state = selectThreadState(projection, options.thread);
-  return print(state.error ? state : state.assumptions);
+  if (state.error) return print(state);
+  const items = options.tag
+    ? state.assumptions.filter((a) => Array.isArray(a.tags) && a.tags.includes(options.tag))
+    : state.assumptions;
+  return print(items);
+}
+
+function evidenceList(options, cwd) {
+  const projection = projectEvents(readValidEventsForOptions(options, cwd));
+  const state = selectThreadState(projection, options.thread);
+  if (state.error) return print(state);
+  const items = options.tag
+    ? state.allEvidence.filter((e) => Array.isArray(e.tags) && e.tags.includes(options.tag))
+    : state.allEvidence;
+  return print(items);
 }
 
 function exportShow(options, cwd) {
@@ -3831,7 +3878,7 @@ function executionStartFromDecision(options, projection, at) {
     decisionId: decision.id,
     actionType: options.action || decision.nextAction || decision.summary,
     scope: options.scope || `thread:${decision.threadId}`,
-    constraints: constraints.length ? constraints : (decision.conditions || ["decision_authorization"]),
+    constraints: constraints.length ? constraints : (decision.conditions.length ? decision.conditions : ["decision_authorization"]),
     summary: options.summary,
     startedAt: at
   });
@@ -4307,6 +4354,25 @@ function negotiationOptionsFromCli(options, results) {
 function validateCommand(options, cwd) {
   const events = readEventsForOptions(options, cwd);
   const result = validateEvents(events);
+  // Plain `validate` checks protocol structure and (lax) any hashes present, but
+  // does not assert tamper-evidence: an unsigned log passes. `--strict` adds a
+  // fail-closed integrity pass that requires a complete, intact hash chain
+  // (content_hash + previous_hash on every event), so it can be used as the
+  // gate for logs that claim to be chained.
+  if (booleanOption(options.strict, false)) {
+    const integrity = verifyEventIntegrity(events, { strict: true });
+    result.integrity = integrity;
+    if (!integrity.valid) {
+      result.valid = false;
+      result.errors = [
+        ...result.errors,
+        ...integrity.reasons.map((reason) => ({
+          event_id: reason.event_id,
+          reason: reason.reason
+        }))
+      ];
+    }
+  }
   print(result);
   if (!result.valid) {
     process.exitCode = 1;
@@ -4315,10 +4381,9 @@ function validateCommand(options, cwd) {
 
 // Offline verification of cross-thread provenance: confirm that every
 // CrossThreadEvidence item in a parent log anchors on the actual DecisionMerged
-// event in the arm log it cites. This closes the loop the validator leaves open
-// by design — the validator never requires the source thread to be present, so
-// sourceEventHash is only as trustworthy as whoever wrote it. Here we hold both
-// logs and compare the cited hash against the arm's real decision hash.
+// event in the arm log it cites. The check itself lives in the (vendored) engine
+// — verifyCrossThreadProvenance — so the CLI, the Worker, and tests run the same
+// logic; this wrapper only does file IO, option parsing, and exit-code mapping.
 function verifyCrossThreadCommand(options, cwd) {
   if (!options.parent) {
     throw new Error("verify-cross-thread requires --parent <path>");
@@ -4328,71 +4393,9 @@ function verifyCrossThreadCommand(options, cwd) {
   }
   const armSpecs = Array.isArray(options.arm) ? options.arm : [options.arm];
   const parentEvents = readEventsAt(path.resolve(cwd, options.parent));
+  const armEventLogs = armSpecs.map((spec) => readEventsAt(path.resolve(cwd, spec)));
 
-  // Index every DecisionMerged across the provided arm logs:
-  //   sourceThreadId -> decisionRecordId -> { hash, eventId }
-  const armDecisions = new Map();
-  for (const spec of armSpecs) {
-    const armEvents = readEventsAt(path.resolve(cwd, spec));
-    for (const event of armEvents) {
-      if (event.event_type !== "DecisionMerged") {
-        continue;
-      }
-      const record = event.payload && event.payload.decisionRecord;
-      if (!record || !record.id) {
-        continue;
-      }
-      if (!armDecisions.has(event.thread_id)) {
-        armDecisions.set(event.thread_id, new Map());
-      }
-      armDecisions.get(event.thread_id).set(record.id, {
-        hash: event.content_hash,
-        eventId: event.event_id
-      });
-    }
-  }
-
-  const results = [];
-  for (const event of parentEvents) {
-    if (event.event_type !== "CrossThreadEvidence") {
-      continue;
-    }
-    const cte = event.payload && event.payload.crossThreadEvidence;
-    if (!cte) {
-      continue;
-    }
-    const base = {
-      crossThreadEvidenceId: cte.id,
-      derivation: cte.derivation,
-      sourceThreadId: cte.sourceThreadId,
-      sourceDecisionRecordId: cte.sourceDecisionRecordId,
-      sourceEventHash: cte.sourceEventHash
-    };
-    const decisions = armDecisions.get(cte.sourceThreadId);
-    if (!decisions) {
-      results.push({ ...base, status: "skipped", reason: `source thread ${cte.sourceThreadId} not present in provided arm log(s)` });
-      continue;
-    }
-    const decision = decisions.get(cte.sourceDecisionRecordId);
-    if (!decision) {
-      results.push({ ...base, status: "decision_not_found", reason: `no DecisionMerged ${cte.sourceDecisionRecordId} in arm thread ${cte.sourceThreadId}` });
-      continue;
-    }
-    if (decision.hash === cte.sourceEventHash) {
-      results.push({ ...base, status: "verified", sourceEventId: decision.eventId });
-    } else {
-      results.push({ ...base, status: "mismatch", expectedHash: decision.hash, sourceEventId: decision.eventId, reason: "sourceEventHash does not match the DecisionMerged content hash in the arm" });
-    }
-  }
-
-  const summary = {
-    total: results.length,
-    verified: results.filter((r) => r.status === "verified").length,
-    mismatch: results.filter((r) => r.status === "mismatch").length,
-    decisionNotFound: results.filter((r) => r.status === "decision_not_found").length,
-    skipped: results.filter((r) => r.status === "skipped").length
-  };
-  const valid = summary.mismatch === 0 && summary.decisionNotFound === 0;
+  const { valid, summary, results } = verifyCrossThreadProvenance(parentEvents, armEventLogs);
   const report = { valid, parent: options.parent, arms: armSpecs, summary, results };
   if (summary.verified === 0) {
     report.note = "no cross-thread evidence in the parent referenced the provided arm log(s); check that --arm matches a thread the parent imports from";
@@ -4869,13 +4872,38 @@ function inferReviewSubjectType(id) {
   return inferTargetType(id);
 }
 
+function optionFlag(key) {
+  return `--${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
+}
+
+// Required options that are legitimately repeatable (consumed via parseList).
+// requireOption is the only scalar gate they pass through, so they must be
+// exempt from the "given once" arity check. Every other required option is a
+// scalar — a repeated flag is a user error, not a list.
+const REPEATABLE_REQUIRED_OPTIONS = new Set([
+  "evidence", "evidences",
+  "participant", "participants",
+  "audits", "learning", "learnings", "limit", "limits"
+]);
+
 function requireOption(options, key) {
-  if (!options[key]) {
-    throw new Error(`Missing required option --${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`);
+  const value = options[key];
+  // Presence by identity, not truthiness: a legitimately falsy value
+  // (e.g. "0", "false") is present, not missing.
+  if (value === undefined) {
+    throw new Error(`Missing required option ${optionFlag(key)}`);
+  }
+  // A repeated flag arrives as an array (see parseOptions). For a scalar option
+  // that silently broke downstream string comparisons; fail loudly instead.
+  if (Array.isArray(value) && !REPEATABLE_REQUIRED_OPTIONS.has(key)) {
+    throw new Error(`Option ${optionFlag(key)} may only be given once`);
   }
 }
 
 function numberOption(value) {
+  if (Array.isArray(value)) {
+    throw new Error("Option may only be given once (got multiple values)");
+  }
   if (value === undefined || value === null || value === "") {
     return undefined;
   }
@@ -4887,6 +4915,9 @@ function numberOption(value) {
 }
 
 function scalarOption(value) {
+  if (Array.isArray(value)) {
+    throw new Error("Option may only be given once (got multiple values)");
+  }
   if (value === undefined || value === null || value === "") {
     return undefined;
   }
@@ -4898,6 +4929,9 @@ function scalarOption(value) {
 }
 
 function booleanOption(value, defaultValue) {
+  if (Array.isArray(value)) {
+    throw new Error("Option may only be given once (got multiple values)");
+  }
   if (value === undefined || value === null || value === "") {
     return defaultValue;
   }
@@ -5073,7 +5107,7 @@ function usage() {
   clista merge conflict resolve --request <mergeRequestId> --conflict <conflictId> --resolution <accept_parent|accept_fork|preserve_both|supersede|reject_fork> --rationale <rationale>
   clista merge eligibility --request <mergeRequestId> [--events <path>]
   clista merge complete --request <mergeRequestId>
-  clista validate [--events <path>]
+  clista validate [--events <path>] [--strict]
   clista verify-cross-thread --parent <path> --arm <path> [--arm <path>...]
   clista integrity verify [--events <path>] [--strict]
   clista integrity verify-suffix --anchor <headHash> [--events <suffix path>]

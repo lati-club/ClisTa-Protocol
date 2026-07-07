@@ -130,7 +130,8 @@ const {
   objectIdsForThreadScope,
   threadDescendsFrom
 } = require("./merges");
-const { unique } = require("./utils");
+const { normalizeType, unique } = require("./utils");
+const { primaryObject } = require("./event-types");
 
 class ValidationError extends Error {
   constructor(errors) {
@@ -226,14 +227,14 @@ function validateEvents(events) {
         validateLearningRecommendationRecorded(event, state);
         break;
       case "AdaptationReviewRecorded":
+        validateAdaptationReviewRecorded(event, state);
+        break;
       case "ObjectDeprecated":
-        // Pruning / deprecation event - basic acceptance for Milestone 0 pruning discipline
+        // Deprecation event - basic acceptance for Milestone 0 pruning discipline
         break;
       case "PruningReviewInitiated":
         break;
       case "ModelPruned":
-        break;
-        validateAdaptationReviewRecorded(event, state);
         break;
       case "GovernanceReviewRecommended":
         validateGovernanceReviewRecommendedEvent(event, state);
@@ -494,6 +495,7 @@ function validateEvents(events) {
         validateCrossThreadEvidence(event, state);
         break;
       case "AlignmentCalculated":
+        validateAlignmentCalculated(event, state);
         break;
       default:
         addError(state, event, `unsupported event_type ${event.event_type}`);
@@ -667,11 +669,11 @@ function validateAuditIntegrity(event, index, state) {
     }
   }
 
-  if (event.content_hash) {
-    state.lastContentHash = event.content_hash;
-  } else if (index === 0) {
-    state.lastContentHash = undefined;
-  }
+  // Advance (or reset) the chain anchor for every event, matching
+  // verifyEventIntegrity in integrity.js. Previously the anchor only moved when
+  // content_hash was present, so a hash-less event mid-log left a stale anchor and
+  // the next event's previous_hash was validated against the wrong predecessor.
+  state.lastContentHash = event.content_hash || undefined;
 }
 
 function validateActor(event, state) {
@@ -1288,7 +1290,7 @@ function validateDelegationGrantedEvent(event, state) {
   if (grant.delegatorParticipantId && event.actor_id !== grant.delegatorParticipantId) {
     addError(state, event, "delegation grant actor must be the delegator");
   }
-  const requiredAuthority = normalizeDelegationText(grant.authorityRequired || "decision_owner");
+  const requiredAuthority = normalizeType(grant.authorityRequired || "decision_owner");
   if (
     grant.delegatorParticipantId
     && !participantHasAuthority(state.identity, grant.delegatorParticipantId, requiredAuthority, grant.threadId)
@@ -2269,7 +2271,13 @@ function validateCrossThreadEvidence(event, state) {
     addError(state, event, "CrossThreadEvidence missing finding");
   }
   validateThreadObject(event, cte, state, "crossThreadEvidence");
-  if (cte.committedByParticipantId && !state.participants.has(cte.committedByParticipantId)) {
+  // Require an attributed committer, matching validateEvidenceCommitted. Cross-
+  // thread evidence is registered into the same state.evidence map that claims,
+  // assumptions, and positions reference, so it must not enter the decision graph
+  // unattributed — that would weaken the "who put this in the record" guarantee.
+  if (!cte.committedByParticipantId) {
+    addError(state, event, "CrossThreadEvidence missing committedByParticipantId");
+  } else if (!state.participants.has(cte.committedByParticipantId)) {
     addError(state, event, `crossThreadEvidence committed by unknown participant ${cte.committedByParticipantId}`);
   }
   // Register as evidence so downstream claims, assumptions, positions can reference it
@@ -2826,6 +2834,32 @@ function validateResolution(event, objection, state) {
   }
 }
 
+function validateAlignmentCalculated(event, state) {
+  const snapshot = event.payload.alignmentSnapshot;
+  if (!snapshot) {
+    addError(state, event, "AlignmentCalculated payload missing alignmentSnapshot");
+    return;
+  }
+  if (!snapshot.id) {
+    addError(state, event, "alignmentSnapshot missing id");
+  }
+  if (snapshot.object !== "alignmentSnapshot") {
+    addError(state, event, 'alignmentSnapshot object must be "alignmentSnapshot"');
+  }
+  validateThreadObject(event, snapshot, state, "alignment snapshot");
+  if (typeof snapshot.createdAt !== "string" || !snapshot.createdAt) {
+    addError(state, event, "alignmentSnapshot missing createdAt");
+  }
+  for (const field of ["evidenceAlignment", "positionAlignment", "riskAlignment", "overallAlignment"]) {
+    const value = snapshot[field];
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      addError(state, event, `alignmentSnapshot ${field} must be a number`);
+    } else if (value < 0 || value > 1) {
+      addError(state, event, `alignmentSnapshot ${field} must be between 0 and 1`);
+    }
+  }
+}
+
 function validateThreadObject(event, object, state, label) {
   if (object.threadId !== event.thread_id) {
     addError(state, event, `${label} threadId must match event thread_id`);
@@ -2853,10 +2887,10 @@ function validateDelegatedActionAgainstGrant(event, state, action, grant) {
   if (action.delegateId !== grant.delegateId) {
     addError(state, event, "delegated action delegateId must match delegation grant");
   }
-  if (normalizeDelegationText(action.action) !== normalizeDelegationText(grant.action)) {
+  if (normalizeType(action.action) !== normalizeType(grant.action)) {
     addError(state, event, "delegated action must match granted action");
   }
-  if (normalizeDelegationText(action.scope) !== normalizeDelegationText(grant.scope)) {
+  if (normalizeType(action.scope) !== normalizeType(grant.scope)) {
     addError(state, event, "delegated action must stay within granted scope");
   }
   if (action.attribution?.delegateId !== action.delegateId) {
@@ -2876,8 +2910,8 @@ function validateDelegationDelegateActor(event, state, delegateId, delegateType,
     addError(state, event, `delegation ${label} references unknown accountable delegate ${delegateId}`);
     return;
   }
-  const normalizedType = normalizeDelegationText(delegateType || "participant");
-  const normalizedKind = normalizeDelegationText(participant.kind || "human");
+  const normalizedType = normalizeType(delegateType || "participant");
+  const normalizedKind = normalizeType(participant.kind || "human");
   const permittedKinds = {
     participant: null,
     agent: new Set(["agent"]),
@@ -2947,7 +2981,7 @@ function validateExecutionRecordMatchesPrior(event, state, record, prior, label)
     addError(state, event, `execution ${label} actorId must match execution start`);
   }
   if (
-    normalizeDelegationText(record.authorizationRef?.type) !== normalizeDelegationText(prior.authorizationRef?.type)
+    normalizeType(record.authorizationRef?.type) !== normalizeType(prior.authorizationRef?.type)
     || record.authorizationRef?.id !== prior.authorizationRef?.id
   ) {
     addError(state, event, `execution ${label} authorizationRef must match execution start`);
@@ -2958,17 +2992,17 @@ function validateExecutionRecordMatchesPrior(event, state, record, prior, label)
   if (record.decisionId !== prior.decisionId) {
     addError(state, event, `execution ${label} decisionId must match execution start`);
   }
-  if (normalizeDelegationText(record.actionType) !== normalizeDelegationText(prior.actionType)) {
+  if (normalizeType(record.actionType) !== normalizeType(prior.actionType)) {
     addError(state, event, `execution ${label} actionType must match execution start`);
   }
-  if (normalizeDelegationText(record.scope) !== normalizeDelegationText(prior.scope)) {
+  if (normalizeType(record.scope) !== normalizeType(prior.scope)) {
     addError(state, event, `execution ${label} scope must match execution start`);
   }
 }
 
 function validateExecutionAuthorization(event, state, record) {
   const ref = record?.authorizationRef || {};
-  const type = normalizeDelegationText(ref.type);
+  const type = normalizeType(ref.type);
   if (type === "delegation") {
     const grant = ref.id ? state.delegationGrants.get(ref.id) : null;
     if (!grant) {
@@ -3006,10 +3040,10 @@ function validateExecutionAgainstDelegation(event, state, record, grant) {
   if (record.delegationId !== grant.id) {
     addError(state, event, "delegated execution must identify delegationId");
   }
-  if (normalizeDelegationText(record.actionType) !== normalizeDelegationText(grant.action)) {
+  if (normalizeType(record.actionType) !== normalizeType(grant.action)) {
     addError(state, event, "delegated execution must match granted action");
   }
-  if (normalizeDelegationText(record.scope) !== normalizeDelegationText(grant.scope)) {
+  if (normalizeType(record.scope) !== normalizeType(grant.scope)) {
     addError(state, event, "delegated execution must stay within granted scope");
   }
   requireExecutionConstraints(event, state, record, grant.limits || [], "delegation limits");
@@ -3038,8 +3072,8 @@ function validateExecutionAgainstDecision(event, state, record, decision) {
     `thread:${decision.threadId}`,
     decision.id,
     `decision:${decision.id}`
-  ].map(normalizeDelegationText));
-  if (!allowedScopes.has(normalizeDelegationText(record.scope))) {
+  ].map(normalizeType));
+  if (!allowedScopes.has(normalizeType(record.scope))) {
     addError(state, event, "decision execution must stay within decision scope");
   }
   requireExecutionConstraints(event, state, record, decision.conditions || [], "decision conditions");
@@ -3049,11 +3083,11 @@ function validateExecutionAgainstDecision(event, state, record, decision) {
 }
 
 function requireExecutionConstraints(event, state, record, requiredConstraints, label) {
-  const required = arrayValues(requiredConstraints).map(normalizeDelegationText).filter(Boolean);
+  const required = arrayValues(requiredConstraints).map(normalizeType).filter(Boolean);
   if (!required.length) {
     return;
   }
-  const actual = new Set(arrayValues(record.constraints).map(normalizeDelegationText));
+  const actual = new Set(arrayValues(record.constraints).map(normalizeType));
   for (const constraint of required) {
     if (!actual.has(constraint)) {
       addError(state, event, `execution constraints must include ${label} ${constraint}`);
@@ -3172,7 +3206,7 @@ function validateOutcomeLearningReferences(event, state, object, label, particip
   }
   if (
     object.evaluationResult
-    && normalizeDelegationText(object.evaluationResult) !== normalizeDelegationText(evaluation.evaluationResult)
+    && normalizeType(object.evaluationResult) !== normalizeType(evaluation.evaluationResult)
   ) {
     addError(state, event, `outcome learning ${label} evaluationResult must match evaluated outcome`);
   }
@@ -3216,7 +3250,7 @@ function validateReviewParticipant(event, state, participantId, label) {
 }
 
 function validateReviewSubject(event, state, review) {
-  const subjectType = normalizeReviewText(review.subjectType || review.subjectRef?.type);
+  const subjectType = normalizeType(review.subjectType || review.subjectRef?.type);
   const subjectId = review.subjectId || review.subjectRef?.id;
   if (!subjectType || !subjectId) {
     return;
@@ -3269,7 +3303,7 @@ function validateRecoveryParticipant(event, state, participantId, label) {
 }
 
 function validateRecoverySubject(event, state, record, label) {
-  const subjectType = normalizeRecoveryText(record.subjectType || record.subjectRef?.type);
+  const subjectType = normalizeType(record.subjectType || record.subjectRef?.type);
   const subjectId = record.subjectId || record.subjectRef?.id;
   if (!subjectType || !subjectId || !RECOVERY_SUBJECT_TYPES.has(subjectType)) {
     return;
@@ -3311,8 +3345,8 @@ function validateRecoverySubject(event, state, record, label) {
 }
 
 function validateRecoverySubjectMatchesRequest(event, state, record, request, label) {
-  const recordType = normalizeRecoveryText(record.subjectType || record.subjectRef?.type);
-  const requestType = normalizeRecoveryText(request.subjectType || request.subjectRef?.type);
+  const recordType = normalizeType(record.subjectType || record.subjectRef?.type);
+  const requestType = normalizeType(request.subjectType || request.subjectRef?.type);
   const recordId = record.subjectId || record.subjectRef?.id;
   const requestId = request.subjectId || request.subjectRef?.id;
   if (recordType !== requestType || recordId !== requestId) {
@@ -3339,7 +3373,7 @@ function validateRecoveryReviewReference(event, state, reviewId, label, options 
 }
 
 function validateRecoveryReviewMatchesRequest(event, state, review, request) {
-  const subjectType = normalizeReviewText(review.subjectType || review.subjectRef?.type);
+  const subjectType = normalizeType(review.subjectType || review.subjectRef?.type);
   const subjectId = review.subjectId || review.subjectRef?.id;
   if (!["recovery", "recovery_request"].includes(subjectType) || subjectId !== request.id) {
     addError(state, event, "recovery review must reference the recovery request");
@@ -3350,7 +3384,7 @@ function validateRecoveryReviewMatchesRequest(event, state, review, request) {
 }
 
 function recoverySubjectForType(state, subjectType, subjectId) {
-  const normalized = normalizeRecoveryText(subjectType);
+  const normalized = normalizeType(subjectType);
   const collections = {
     invalid_event: state.processedEventsById,
     event_hash_mismatch: state.processedEventsById,
@@ -3370,7 +3404,7 @@ function recoverySubjectForType(state, subjectType, subjectId) {
 }
 
 function reviewSubjectForType(state, subjectType, subjectId) {
-  const normalized = normalizeReviewText(subjectType);
+  const normalized = normalizeType(subjectType);
   const collections = {
     thread: state.threads,
     evidence: state.evidence,
@@ -3487,27 +3521,6 @@ function validateIdsExist(event, state, ids, collection, label) {
   }
 }
 
-function normalizeDelegationText(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s-]+/g, "_");
-}
-
-function normalizeReviewText(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s-]+/g, "_");
-}
-
-function normalizeRecoveryText(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s-]+/g, "_");
-}
-
 function normalizeOutcomeEffect(value) {
   return String(value || "").trim();
 }
@@ -3523,7 +3536,7 @@ function arrayValues(value) {
 }
 
 function validateAuthorityName(event, state, authority) {
-  const normalized = String(authority || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  const normalized = normalizeType(authority);
   if (!VALID_AUTHORITIES.has(normalized)) {
     addError(state, event, `unsupported authority ${authority}`);
   }
@@ -3647,77 +3660,6 @@ function eventBelongsToThread(event, threadId) {
     || event?.threadId === threadId
     || event?.payload?.thread?.id === threadId
     || event?.payload?.threadFork?.forkThreadId === threadId;
-}
-
-function primaryObject(event) {
-  const payload = event?.payload || {};
-  return payload.thread
-    || payload.threadFork
-    || payload.participant
-    || payload.participantRole
-    || payload.participantAuthority
-    || payload.participantAuthorityRevocation
-    || payload.contributionAttribution
-    || payload.attributionCorrection
-    || payload.attributionDispute
-    || payload.attributionRevocation
-    || payload.learningSignal
-    || payload.patternObservation
-    || payload.outcomeReview
-    || payload.learningRecommendation
-    || payload.adaptationReview
-    || payload.governanceReviewRecommendation
-    || payload.evidenceRequirementReviewRecommendation
-    || payload.revisitTriggerReviewRecommendation
-    || payload.decisionGateReviewRecommendation
-    || payload.protocolAmendment
-    || payload.amendment
-    || payload.protocolAmendmentReview
-    || payload.amendmentReview
-    || payload.protocolAmendmentApproval
-    || payload.amendmentApproval
-    || payload.protocolAmendmentRejection
-    || payload.amendmentRejection
-    || payload.protocolAmendmentSupersession
-    || payload.amendmentSupersession
-    || payload.evidence
-    || payload.assumption
-    || payload.claim
-    || payload.position
-    || payload.objection
-    || payload.alignmentSnapshot
-    || payload.decisionRequest
-    || payload.review
-    || payload.decisionRecord
-    || payload.minorityReport
-    || payload.mergeRequest
-    || payload.mergeReview
-    || payload.mergeConflict
-    || payload.mergeConflictResolution
-    || payload.mergeCompletion
-    || payload.expectedOutcome
-    || payload.outcomeAudit
-    || payload.decisionScore
-    || payload.executionRecord
-    || payload.executionViolation
-    || payload.outcomeRecord
-    || payload.outcomeDispute
-    || payload.outcomeViolation
-    || payload.outcomeLearningSignal
-    || payload.outcomeLesson
-    || payload.outcomeLearningDispute
-    || payload.outcomeLearningViolation
-    || payload.protocolReview
-    || payload.protocolReviewCompletion
-    || payload.protocolReviewDispute
-    || payload.protocolReviewViolation
-    || payload.recoveryRequest
-    || payload.recoveryPlan
-    || payload.recoveryQuarantine
-    || payload.recoveryApplication
-    || payload.recoveryVerification
-    || payload.recoveryViolation
-    || null;
 }
 
 function isValidDateString(value) {
