@@ -1,11 +1,5 @@
 #!/usr/bin/env node
-const fs = require("node:fs");
-const path = require("node:path");
-const {
-  initStore,
-  readEventsAt
-} = require("./events");
-const { verifyCrossThreadProvenance } = require("./provenance");
+const { initStore } = require("./events");
 const { auditRuntimeUsage, verifyRuntime } = require("./runtime");
 const {
   appendParticipant,
@@ -177,7 +171,8 @@ const {
 const {
   integrityVerify,
   integrityVerifySuffix,
-  validateCommand
+  validateCommand,
+  verifyCrossThreadCommand
 } = require("./cli/integrity");
 const {
   auditShow,
@@ -494,33 +489,6 @@ function main(argv = process.argv.slice(2), cwd = process.cwd()) {
 // Agent-executed checks (replays, validate, decision summary) are now sufficient.
 // decides that. Read-only: it appends no events and is deterministic for a
 // given log (no wall-clock timestamps leak into the printed report).
-// Offline verification of cross-thread provenance: confirm that every
-// CrossThreadEvidence item in a parent log anchors on the actual DecisionMerged
-// event in the arm log it cites. The check itself lives in the (vendored) engine
-// — verifyCrossThreadProvenance — so the CLI, the Worker, and tests run the same
-// logic; this wrapper only does file IO, option parsing, and exit-code mapping.
-function verifyCrossThreadCommand(options, cwd) {
-  if (!options.parent) {
-    throw new Error("verify-cross-thread requires --parent <path>");
-  }
-  if (!options.arm) {
-    throw new Error("verify-cross-thread requires --arm <path> (repeatable)");
-  }
-  const armSpecs = Array.isArray(options.arm) ? options.arm : [options.arm];
-  const parentEvents = readEventsAt(path.resolve(cwd, options.parent));
-  const armEventLogs = armSpecs.map((spec) => readEventsAt(path.resolve(cwd, spec)));
-
-  const { valid, summary, results } = verifyCrossThreadProvenance(parentEvents, armEventLogs);
-  const report = { valid, parent: options.parent, arms: armSpecs, summary, results };
-  if (summary.verified === 0) {
-    report.note = "no cross-thread evidence in the parent referenced the provided arm log(s); check that --arm matches a thread the parent imports from";
-  }
-  print(report);
-  if (!valid) {
-    process.exitCode = 1;
-  }
-}
-
 function parseCommand(argv) {
   const commandParts = [];
   const optionArgs = [];
