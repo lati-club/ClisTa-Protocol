@@ -30,6 +30,18 @@
         { "role": "single", "threadId": "thd_ongoing_monitoring_concept_drift_m471", "file": "examples/ongoing-monitoring-concept-drift/challenge.ndjson" }
       ],
       "published": true
+    },
+    {
+      "id": "clista-csv-cli-build",
+      "title": "CSV CLI Build Consensus — Octopus Execution + ClisTa Governance",
+      "summary": "A dogfood build log: a CSV reporting CLI built under Octopus multi-arm execution with ClisTa consensus governing it. Delegations scope each arm's authority, execution signals land as committed evidence, an assumption is declared rather than buried, and the owner's approval records exactly what the arms were authorized to do. The same log is notarized as ThreadHub thread clista-csv-cli-build-v4, whose record hashes the protocol's own test suite resolves.",
+      "domain": "engineering",
+      "kind": "single-thread",
+      "entryThreadId": "thd_csv_cli_build_consensus_mqa0yqno_95493e23",
+      "threads": [
+        { "role": "single", "threadId": "thd_csv_cli_build_consensus_mqa0yqno_95493e23", "file": "examples/clista-csv-cli-build.ndjson" }
+      ],
+      "published": true
     }
   ]
 }
