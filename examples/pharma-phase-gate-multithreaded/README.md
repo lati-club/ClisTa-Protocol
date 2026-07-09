@@ -7,17 +7,21 @@ parent imports each arm's decision as `CrossThreadEvidence`.
 
 | Thread | Events | Decision |
 |---|---|---|
-| `arm-pkpd-modeling.ndjson` | 13 | 200mg Q4W confirmed; early PK sampling required |
+| `arm-pkpd-modeling.ndjson` | 15 | 200mg Q4W maintenance dose confirmed; early PK sampling required; no hepatic exposure-response established |
 | `arm-safety-assessment.ndjson` | 14 | Safety acceptable; stopping-rules hard gate (preserved objection + minority report) |
 | `arm-subgroup-review.ndjson` | 13 | Bio-failure subgroup exploratory only (proactive minority report for TMF) |
-| `arm-regulatory-strategy.ndjson` | 12 | Single pivotal trial per FDA alignment |
-| `parent-go-nogo.ndjson` | 37 | Phase III approved with nine binding conditions propagated from the arms |
+| `arm-regulatory-strategy.ndjson` | 12 | Single pivotal (induction + maintenance treat-through) per FDA alignment |
+| `parent-go-nogo.ndjson` | 41 | Phase III approved with nine binding conditions; three dissents preserved |
 
 The parent imports six `CrossThreadEvidence` items: four `decision_output`, one
 `preserved_objection` (safety stopping rules), and one `minority_report`
-(subgroup discipline). Two objections propagate from arms and survive the parent
-decision; the biostatistician's minority report traces from the arm-level
-subgroup decision through the parent go/no-go — two threads deep, both
+(subgroup discipline). Three dissents survive the parent approval: two objections
+propagate from arms (safety stopping-rules hard gate, subgroup discipline), and a
+third originates at the go/no-go itself — the independent DSMB chair's objection
+that a single ~500-patient pivotal is an inadequate labeling safety database for a
+known hepatic signal (a dissent on *whether* to advance, not just *how*). The
+biostatistician's minority report traces two threads deep to the arm-level
+subgroup decision; all three dissents are preserved in the decision record and
 hash-verifiable.
 
 ## Regenerate
