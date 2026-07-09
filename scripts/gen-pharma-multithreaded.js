@@ -10,6 +10,7 @@ const OUT_DIR = path.join(__dirname, "..", "examples", "pharma-phase-gate-multit
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
 const BASE = "2026-06-29T09:00:00.000Z";
+const BASE_MS = Date.parse(BASE);
 let globalSeq = 0;
 
 function ts() {
@@ -19,10 +20,16 @@ function ts() {
   return d.toISOString();
 }
 
+// Deterministic on purpose: the same source produces byte-identical logs, so the
+// committed example is reproducible and a content change yields a minimal diff.
+// Both the time and entropy components derive from a stable per-event counter —
+// never Date.now()/randomBytes, which would re-churn every id and hash per run.
+let eidSeq = 0;
 function eid(type, hint) {
   const slug = hint.toLowerCase().replace(/[^a-z0-9]+/g, "_").slice(0, 40);
-  const entropy = crypto.randomBytes(4).toString("hex");
-  const time = Date.now().toString(36);
+  const n = eidSeq++;
+  const time = (BASE_MS + n * 22).toString(36);
+  const entropy = crypto.createHash("sha256").update(`${type}|${hint}|${n}`).digest("hex").slice(0, 8);
   return `evt_${type.toLowerCase()}_${slug}_${time}_${entropy}`;
 }
 
