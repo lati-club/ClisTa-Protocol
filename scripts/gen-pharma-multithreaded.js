@@ -10,6 +10,7 @@ const OUT_DIR = path.join(__dirname, "..", "examples", "pharma-phase-gate-multit
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
 const BASE = "2026-06-29T09:00:00.000Z";
+const BASE_MS = Date.parse(BASE);
 let globalSeq = 0;
 
 function ts() {
@@ -19,10 +20,16 @@ function ts() {
   return d.toISOString();
 }
 
+// Deterministic on purpose: the same source produces byte-identical logs, so the
+// committed example is reproducible and a content change yields a minimal diff.
+// Both the time and entropy components derive from a stable per-event counter —
+// never Date.now()/randomBytes, which would re-churn every id and hash per run.
+let eidSeq = 0;
 function eid(type, hint) {
   const slug = hint.toLowerCase().replace(/[^a-z0-9]+/g, "_").slice(0, 40);
-  const entropy = crypto.randomBytes(4).toString("hex");
-  const time = Date.now().toString(36);
+  const n = eidSeq++;
+  const time = (BASE_MS + n * 22).toString(36);
+  const entropy = crypto.createHash("sha256").update(`${type}|${hint}|${n}`).digest("hex").slice(0, 8);
   return `evt_${type.toLowerCase()}_${slug}_${time}_${entropy}`;
 }
 
@@ -212,8 +219,8 @@ function buildSafetyArm() {
   addParticipants(events, TH, parts);
   addThread(events, TH, "Safety Signal Assessment — LTN-4481 Hepatotoxicity", "Is the hepatotoxicity signal manageable for Phase III advancement?", parts.map(p=>p.id), "par_safety_officer");
 
-  addEvidence(events, TH, "evd_integrated_safety", "Integrated safety database (4481-ISS-001, N=612)", "SAE rate 6.8 percent vs 5.2 percent placebo. Two serious hepatotoxicity cases (ALT greater than 10x ULN) in 200mg arm, both resolved on discontinuation. No deaths. Infection rate 14.3 percent vs 11.7 percent placebo.", 0.88, "par_safety_officer");
-  addEvidence(events, TH, "evd_dili_panel_review", "DILI expert panel assessment (4481-SA-003)", "Panel consensus: probable drug-related hepatotoxicity, confounded by baseline hepatic steatosis. Recommends excluding baseline ALT greater than 2x ULN and biweekly liver monitoring for first 12 weeks.", 0.79, "par_dili_panel");
+  addEvidence(events, TH, "evd_integrated_safety", "Integrated safety database (4481-ISS-001, N=612)", "SAE rate 6.8 percent vs 5.2 percent placebo. Two serious hepatotoxicity cases (ALT greater than 10x ULN) in 200mg arm; in both, total bilirubin remained below 2x ULN, so neither met Hy's Law criteria (isolated transaminase elevation, Temple's Corollary), and both resolved on discontinuation. No deaths. Infection rate 14.3 percent vs 11.7 percent placebo.", 0.88, "par_safety_officer");
+  addEvidence(events, TH, "evd_dili_panel_review", "DILI expert panel assessment (4481-SA-003)", "Panel consensus: probable drug-related hepatotoxicity (RUCAM 'probable'). Baseline hepatic steatosis was considered and rejected as sole cause — steatosis does not produce ALT greater than 10x ULN. Recommends excluding baseline ALT greater than 2x ULN, biweekly liver monitoring for first 12 weeks, and protocol-defined Hy's Law stopping and rechallenge rules.", 0.79, "par_dili_panel");
   addEvidence(events, TH, "evd_class_context", "Hepatotoxicity class context (FDA safety communications 2024-2026)", "FDA has issued two safety-based label changes for UC drugs in the past 18 months related to hepatic signals. Heightened scrutiny expected.", 0.86, "par_safety_officer");
 
   addAssumption(events, TH, "asm_monitoring_sufficient", "Enhanced monitoring (biweekly ALT/AST for 12 weeks) and exclusion criteria (baseline ALT greater than 2x ULN) are sufficient to manage the hepatotoxicity risk in Phase III.", ["evd_dili_panel_review", "evd_integrated_safety"], 0.76, "par_safety_officer");
@@ -247,7 +254,7 @@ function buildSafetyArm() {
   const DR = "drq_safety_assessment";
   addDR(events, TH, DR, "Safety profile is acceptable for Phase III with DILI panel mitigation measures and hepatic stopping rules.", ["evd_integrated_safety","evd_dili_panel_review","evd_class_context"], ["clm_safety_manageable"], ["asm_monitoring_sufficient"], ["obj_arm_stopping_rules"], "par_safety_officer");
   addReview(events, TH, "rev_dili_panel", DR, "par_dili_panel", "approve_with_conditions", ["Baseline ALT greater than 2x ULN exclusion", "Biweekly ALT/AST monitoring first 12 weeks", "Quantitative stopping rules in protocol before FPD"], "Panel endorses advancement with mitigation.");
-  addDecision(events, TH, "dcr_safety_acceptable", DR, "Safety profile acceptable for Phase III with three hard-gated conditions.", "Two hepatotoxicity cases are concerning but confounded and resolved. DILI panel consensus supports advancement. Stopping rules objection is incorporated as a binding pre-FPD condition.", ["Baseline ALT greater than 2x ULN exclusion criterion", "Biweekly ALT/AST monitoring for first 12 weeks", "Quantitative hepatic stopping rules finalized before first patient dosed — hard gate"], ["evd_integrated_safety","evd_dili_panel_review","evd_class_context"], ["clm_safety_manageable"], ["asm_monitoring_sufficient"], ["obj_arm_stopping_rules"], ["rev_dili_panel"], ["obj_arm_stopping_rules"], ["mnr_arm_stopping_rules_gate"], "Stopping rules and DSMB charter are critical path items.", "par_safety_officer");
+  addDecision(events, TH, "dcr_safety_acceptable", DR, "Safety profile acceptable for Phase III with three hard-gated conditions.", "Two hepatotoxicity cases are concerning; neither met Hy's Law criteria and both resolved on discontinuation. DILI panel consensus supports advancement. Stopping rules objection is incorporated as a binding pre-FPD condition.", ["Baseline ALT greater than 2x ULN exclusion criterion", "Biweekly ALT/AST monitoring for first 12 weeks", "Quantitative hepatic stopping rules finalized before first patient dosed — hard gate"], ["evd_integrated_safety","evd_dili_panel_review","evd_class_context"], ["clm_safety_manageable"], ["asm_monitoring_sufficient"], ["obj_arm_stopping_rules"], ["rev_dili_panel"], ["obj_arm_stopping_rules"], ["mnr_arm_stopping_rules_gate"], "Stopping rules and DSMB charter are critical path items.", "par_safety_officer");
 
   events.push({
     event_id: eid("minorityreportfiled", "stopping_rules"),
@@ -286,7 +293,7 @@ function buildSubgroupArm() {
   addParticipants(events, TH, parts);
   addThread(events, TH, "Subgroup Analysis Review — LTN-4481 Bio-Failure Responders", "Should the post-hoc bio-failure subgroup finding influence Phase III trial design?", parts.map(p=>p.id), "par_biostat");
 
-  addEvidence(events, TH, "evd_subgroup_data", "Post-hoc subgroup analysis (4481-201-SGA)", "Bio-failure patients (n=89) showed 46.3 percent remission vs 34.1 percent bio-naive. Post-hoc, not pre-specified. CI: 32.8-59.8 percent. Sample size inadequate for confirmatory inference.", 0.62, "par_biostat");
+  addEvidence(events, TH, "evd_subgroup_data", "Post-hoc subgroup analysis (4481-201-SGA)", "Bio-failure patients (n=89) showed 46.3 percent remission (95 percent CI 35.9-56.7, Wald) vs 34.1 percent in bio-naive patients (n=258). Post-hoc, not pre-specified; the treatment-by-subgroup interaction is not statistically significant and the nominal difference is unadjusted for multiplicity. Sample size inadequate for confirmatory inference.", 0.62, "par_biostat");
   addEvidence(events, TH, "evd_fda_subgroup_guidance", "FDA guidance on subgroup analyses in clinical trials (2023)", "FDA expects subgroup analyses to be pre-specified in the SAP. Post-hoc findings may be hypothesis-generating but should not drive primary endpoint strategy or enrichment without independent confirmation.", 0.93, "par_biostat");
 
   addAssumption(events, TH, "asm_subgroup_exploratory_only", "The bio-failure subgroup finding is hypothesis-generating only and should not drive Phase III enrichment, stratification, or primary endpoint strategy.", ["evd_subgroup_data", "evd_fda_subgroup_guidance"], 0.72, "par_biostat");
@@ -313,7 +320,7 @@ function buildSubgroupArm() {
         threadId: TH,
         decisionRecordId: "dcr_subgroup_exploratory",
         participantId: "par_biostat",
-        text: "This minority report is filed proactively for the trial master file. The bio-failure subgroup finding (46.3 percent remission, n=89, CI 32.8-59.8) will generate organizational pressure to promote it from exploratory to confirmatory — as enrichment, stratification, or a co-primary endpoint. Any such promotion would compromise the statistical integrity of the Phase III trial and create regulatory risk. This dissent is recorded at the arm-level decision so that if a future protocol amendment attempts to change the subgroup designation, there is a traceable record that the lead biostatistician objected at the earliest decision point.",
+        text: "This minority report is filed proactively for the trial master file. The bio-failure subgroup finding (46.3 percent remission, n=89, 95 percent CI 35.9-56.7) will generate organizational pressure to promote it from exploratory to confirmatory — as enrichment, stratification, or a co-primary endpoint. Any such promotion would compromise the statistical integrity of the Phase III trial and create regulatory risk. This dissent is recorded at the arm-level decision so that if a future protocol amendment attempts to change the subgroup designation, there is a traceable record that the lead biostatistician objected at the earliest decision point.",
         objectionIds: [],
         filedAt: ts(),
         contentHash: "sha256:arm_mnr_subgroup_discipline",
