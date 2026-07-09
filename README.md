@@ -46,6 +46,16 @@ requirement or blocker for development.
 
 Everything below is the protocol tour — what the engine is, and how to verify it yourself.
 
+## Canonical Home & Ecosystem Docs
+
+This repository is the **canonical home for protocol facts** and the single entry point to
+the ClisTa ecosystem documentation (canonical-source decision, ThreadHub thread
+`canonical-source-designation`, 2026-07-08). The wider integration map — services, agents,
+identities, data flows — lives in
+[lati-club/clista-atlas](https://github.com/lati-club/clista-atlas) (private), which is
+explicitly derivative: authoritative for navigation, never for facts. In any conflict,
+this repository governs and the atlas yields.
+
 ## Try It in 30 Seconds
 
 Prerequisites: Node.js >= 18, plus Python 3 (used only to re-ingest the session). Nothing to install — the engine itself has zero npm dependencies.
