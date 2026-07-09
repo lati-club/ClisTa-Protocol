@@ -191,10 +191,12 @@ function buildPkpdArm() {
 
   addEvidence(events, TH, "evd_pkpd_pop_model", "Population PK/PD analysis (4481-PK-002)", "Exposure-response modeling on Phase II data (N=347). Cmin at steady state correlates with endoscopic improvement (R-squared 0.71). 200mg Q4W predicts 85 percent of patients achieve target exposure.", 0.84, "par_pk_modeler");
   addEvidence(events, TH, "evd_pkpd_internal_validation", "Internal model validation (bootstrap, VPC)", "1000-replicate bootstrap shows parameter stability. Visual predictive check covers 90 percent of observed data within prediction interval. No external dataset available for external validation.", 0.79, "par_pk_modeler");
-  addEvidence(events, TH, "evd_dose_response_phase2", "Phase II dose-response (100mg vs 200mg vs placebo)", "Clear dose-response: placebo 12.1 percent, 100mg 24.7 percent, 200mg 38.2 percent remission. Exposure-response is monotonic within the observed range.", 0.91, "par_clin_pharm");
+  addEvidence(events, TH, "evd_dose_response_phase2", "Phase II dose-response (100mg vs 200mg vs placebo)", "Clear dose-response: placebo 12.1 percent, 100mg 24.7 percent, 200mg 38.2 percent remission. Exposure-response is monotonic and still rising at 200mg — the top of the dose-response was not characterized above 200mg (only two active levels tested).", 0.91, "par_clin_pharm");
+  addEvidence(events, TH, "evd_hepatic_exposure_response", "Hepatic safety exposure-response check (4481-PK-005)", "Both serious transaminase elevations occurred at 200mg, but with two active dose levels and n=2 events no exposure-response for hepatotoxicity could be established. Dose selection therefore rests on the efficacy exposure-response; the hepatic signal is managed by monitoring and stopping rules, not by dose reduction.", 0.61, "par_pk_modeler");
 
   addAssumption(events, TH, "asm_pkpd_model_generalizes", "The PK/PD model developed on Phase II data will generalize to the larger, more heterogeneous Phase III population without external validation.", ["evd_pkpd_internal_validation"], 0.69, "par_clin_pharm");
-  addClaim(events, TH, "clm_dose_confirmed", "200mg Q4W is the confirmed Phase III dose based on exposure-response data and FDA alignment.", ["evd_pkpd_pop_model", "evd_dose_response_phase2"], ["asm_pkpd_model_generalizes"], "par_clin_pharm");
+  addAssumption(events, TH, "asm_no_hepatic_exposure_response", "No dose-safety exposure-response was established for the hepatic signal; the 200mg selection is efficacy-driven, and dose is not being used as a lever to manage hepatotoxicity.", ["evd_hepatic_exposure_response"], 0.6, "par_clin_pharm");
+  addClaim(events, TH, "clm_dose_confirmed", "200mg Q4W is the confirmed Phase III maintenance dose (with a defined induction regimen through week 12) based on the efficacy exposure-response and FDA alignment; safety is managed by monitoring rather than a dose-safety relationship.", ["evd_pkpd_pop_model", "evd_dose_response_phase2"], ["asm_pkpd_model_generalizes", "asm_no_hepatic_exposure_response"], "par_clin_pharm");
   addPosition(events, TH, "par_pk_modeler", "clm_dose_confirmed", "support", "Model supports 200mg. External validation gap is a monitoring item, not a blocker.");
   addPosition(events, TH, "par_clin_pharm", "clm_dose_confirmed", "support", "Dose-response is clear. Recommend protocol-specified PK sampling at weeks 4 and 12 for early model check.");
 
@@ -344,11 +346,11 @@ function buildRegArm() {
   addParticipants(events, TH, parts);
   addThread(events, TH, "Regulatory Strategy — LTN-4481 Phase III Path", "What is the viable regulatory path for LTN-4481 Phase III?", parts.map(p=>p.id), "par_reg_affairs");
 
-  addEvidence(events, TH, "evd_type_b_minutes", "FDA Type B End-of-Phase-2 meeting minutes (2026-02-14)", "FDA agreed 200mg Q4W reasonable. Single pivotal trial acceptable with at least 500 patients and pre-specified interim futility. Hepatic monitoring plan and stopping rules required.", 0.95, "par_reg_affairs");
+  addEvidence(events, TH, "evd_type_b_minutes", "FDA Type B End-of-Phase-2 meeting minutes (2026-02-14)", "FDA agreed 200mg Q4W reasonable. A single pivotal trial is acceptable as a treat-through study covering both induction and maintenance, at least 500 patients, with pre-specified interim futility — provided the induction study serves as the confirmatory source. Hepatic monitoring plan and stopping rules required.", 0.95, "par_reg_affairs");
   addEvidence(events, TH, "evd_competitive_landscape", "Competitive landscape memo (2026-05-22)", "Three JAK inhibitors and two IL-23 inhibitors approved for UC. FDA heightened scrutiny on hepatotoxicity. Bio-failure enrichment viewed favorably if supported by pre-specified analysis.", 0.86, "par_reg_writer");
 
   addAssumption(events, TH, "asm_fda_alignment_holds", "FDA Type B meeting agreements will hold through IND amendment review. No material change in FDA regulatory posture on UC drugs is expected.", ["evd_type_b_minutes"], 0.88, "par_reg_affairs");
-  addClaim(events, TH, "clm_single_pivotal_viable", "Single pivotal trial strategy is viable with adaptive design, interim futility, and hepatic monitoring per FDA feedback.", ["evd_type_b_minutes", "evd_competitive_landscape"], ["asm_fda_alignment_holds"], "par_reg_affairs");
+  addClaim(events, TH, "clm_single_pivotal_viable", "Single pivotal trial strategy is viable as a treat-through study covering induction and maintenance, with adaptive design, interim futility, and hepatic monitoring per FDA feedback; the induction phase supplies the confirmatory evidence the single-pivotal path requires.", ["evd_type_b_minutes", "evd_competitive_landscape"], ["asm_fda_alignment_holds"], "par_reg_affairs");
   addPosition(events, TH, "par_reg_affairs", "clm_single_pivotal_viable", "support", "FDA alignment de-risks the regulatory path substantially.");
   addPosition(events, TH, "par_reg_writer", "clm_single_pivotal_viable", "support", "Meeting minutes provide clear design guidance.");
 
@@ -373,6 +375,7 @@ function buildParentThread(armResults) {
     { id: "par_clin_pharm", kind: "human", name: "Dr. A. Osei", role: "clinical pharmacologist" },
     { id: "par_reg_affairs", kind: "human", name: "J. Markova", role: "vp regulatory affairs" },
     { id: "par_safety_officer", kind: "human", name: "Dr. T. Nakamura", role: "drug safety officer" },
+    { id: "par_dsmb_chair", kind: "human", name: "Dr. E. Rowe", role: "independent dsmb chair" },
     { id: "par_octopus", kind: "agent", name: "Octopus", role: "execution orchestrator" },
   ];
   addParticipants(events, TH, participants);
@@ -553,7 +556,7 @@ function buildParentThread(armResults) {
   addEvidence(events, TH, "evd_phase2_topline", "LTN-4481 Phase II top-line results (Study 4481-201, N=347)", "Modified Mayo Score remission at week 16: 38.2 percent (200mg) vs 12.1 percent (placebo), p<0.001. Endoscopic improvement: 52.4 percent vs 21.8 percent.", 0.91, "par_cmo");
 
   // Assumptions that synthesize across arms
-  addAssumption(events, TH, "asm_arms_converge", "All four arm-level decisions support advancement. No arm produced a blocking finding.", ["cte_pkpd_output", "cte_safety_output", "cte_subgroup_output", "cte_reg_output"], 0.85, "par_cmo");
+  addAssumption(events, TH, "asm_arms_converge", "All four arm-level decisions support advancement, each with binding conditions. Advancement is conditional, not unconditional: the safety arm's hepatic stopping-rules gate is a hard precondition, so 'no blocking finding' overstates — no arm blocked outright, but the safety gate must clear before dosing.", ["cte_pkpd_output", "cte_safety_output", "cte_subgroup_output", "cte_reg_output"], 0.8, "par_cmo");
 
   // Claims
   addClaim(events, TH, "clm_go_supported", "Phase III advancement is supported by converging arm-level decisions on dose, safety, subgroup discipline, and regulatory path.", ["cte_pkpd_output", "cte_safety_output", "cte_subgroup_output", "cte_reg_output", "evd_phase2_topline"], ["asm_arms_converge"], "par_cmo");
@@ -564,6 +567,34 @@ function buildParentThread(armResults) {
   addPosition(events, TH, "par_clin_pharm", "clm_go_supported", "support", "Dose is confirmed. PK monitoring conditions protect against model failure.");
   addPosition(events, TH, "par_safety_officer", "clm_go_supported", "support", "Safety is acceptable with conditions. Stopping rules are the critical path.");
   addPosition(events, TH, "par_reg_affairs", "clm_go_supported", "support", "Regulatory path is clear with FDA alignment.");
+  addPosition(events, TH, "par_dsmb_chair", "clm_go_supported", "oppose", "Not opposed to the science, but a single ~500-patient pivotal is too small a safety database to carry a known hepatic signal to a label. Advise delay for a larger exposed population or a second confirmatory study before committing.");
+
+  // A genuine advancement-level dissent (issue #79): the independent DSMB chair
+  // argues WHETHER to advance now, not just how — the single pivotal doubles as
+  // the labeling safety database for a known hepatic risk. Raised, preserved into
+  // the decision, and carried in its own minority report; the decision still
+  // proceeds to GO, so the dissent survives the approval rather than blocking it.
+  events.push({
+    event_id: eid("objectionraised", "advancement_premature"),
+    event_type: "ObjectionRaised",
+    thread_id: TH,
+    actor_id: "par_dsmb_chair",
+    timestamp: ts(),
+    payload: {
+      objection: {
+        id: "obj_advancement_premature",
+        object: "objection",
+        threadId: TH,
+        participantId: "par_dsmb_chair",
+        targetObjectId: "clm_go_supported",
+        targetObjectType: "claim",
+        assumption: "A single ~500-patient pivotal provides an adequate labeling safety database for a drug with a known hepatotoxicity signal.",
+        text: "The advancement decision itself is premature as scoped. A single ~500-patient pivotal doubles as the labeling safety database, but ICH E1 expects on the order of 1000-1500 exposed for a chronic, non-life-threatening indication — more so with an active hepatic signal. Recommend either an enlarged safety database or a second confirmatory study before committing to Phase III, rather than advancing on a single pivotal. Recorded as a dissent on the go decision, not merely on its conditions.",
+        status: "open",
+        raisedAt: ts(),
+      },
+    },
+  });
 
   // Objections that propagate from arms
   events.push({
@@ -612,7 +643,7 @@ function buildParentThread(armResults) {
 
   // Decision request
   const DR = "drq_go_nogo_ltn4481";
-  addDR(events, TH, DR, "Advance LTN-4481 to Phase III with all arm-level conditions incorporated as binding.", ["cte_pkpd_output","cte_safety_output","cte_safety_objection","cte_subgroup_output","cte_subgroup_minority","cte_reg_output","evd_phase2_topline"], ["clm_go_supported"], ["asm_arms_converge"], ["obj_stopping_rules_propagated","obj_subgroup_discipline_propagated"], "par_cmo");
+  addDR(events, TH, DR, "Advance LTN-4481 to Phase III with all arm-level conditions incorporated as binding.", ["cte_pkpd_output","cte_safety_output","cte_safety_objection","cte_subgroup_output","cte_subgroup_minority","cte_reg_output","evd_phase2_topline"], ["clm_go_supported"], ["asm_arms_converge"], ["obj_stopping_rules_propagated","obj_subgroup_discipline_propagated","obj_advancement_premature"], "par_cmo");
 
   // Reviews
   addReview(events, TH, "rev_biostat_parent", DR, "par_biostat", "approve_with_conditions", ["Subgroup exploratory-only designation is binding", "Enrollment capped at 60 percent before interim futility"], "Go decision supported. Subgroup conditions from arm thread must be enforced.");
@@ -622,7 +653,7 @@ function buildParentThread(armResults) {
   // Decision merged
   addDecision(events, TH, "dcr_go_nogo_ltn4481", DR,
     "LTN-4481 advances to Phase III. Single pivotal trial, 200mg Q4W, adaptive design. All arm-level conditions are binding. Scope narrower than requested: subgroup exploratory only, enrollment capped pre-interim, stopping rules before FPD.",
-    "Four arm-level workstreams converge: dose confirmed (PK/PD), safety acceptable with mitigation (safety assessment), subgroup disciplined to exploratory (subgroup review), regulatory path clear (regulatory strategy). Two objections propagate from arms and survive the parent decision: stopping rules hard gate and subgroup discipline. The CMO accepts residual risk on PK/PD model generalization, mitigated by in-stream sampling.",
+    "Four arm-level workstreams converge: dose confirmed (PK/PD), safety acceptable with mitigation (safety assessment), subgroup disciplined to exploratory (subgroup review), regulatory path clear (regulatory strategy). Two objections propagate from arms and survive the parent decision: stopping rules hard gate and subgroup discipline. A third, distinct dissent — the independent DSMB chair's objection that a single ~500-patient pivotal is an inadequate labeling safety database for a known hepatic signal — is on the go decision itself; the CMO acknowledges it, elects to advance on the FDA-aligned single-pivotal path, and preserves the dissent rather than resolving it. The CMO accepts residual risk on PK/PD model generalization, mitigated by in-stream sampling.",
     [
       "Hepatic stopping rules finalized before first patient dosed — hard gate (propagated from safety arm)",
       "DSMB charter includes hepatotoxicity review authority (propagated from safety arm)",
@@ -637,10 +668,10 @@ function buildParentThread(armResults) {
     ["cte_pkpd_output","cte_safety_output","cte_safety_objection","cte_subgroup_output","cte_subgroup_minority","cte_reg_output","evd_phase2_topline"],
     ["clm_go_supported"],
     ["asm_arms_converge"],
-    ["obj_stopping_rules_propagated","obj_subgroup_discipline_propagated"],
+    ["obj_stopping_rules_propagated","obj_subgroup_discipline_propagated","obj_advancement_premature"],
     ["rev_biostat_parent","rev_safety_parent","rev_reg_parent"],
-    ["obj_stopping_rules_propagated","obj_subgroup_discipline_propagated"],
-    ["mnr_parent_biostat_discipline"],
+    ["obj_stopping_rules_propagated","obj_subgroup_discipline_propagated","obj_advancement_premature"],
+    ["mnr_parent_biostat_discipline","mnr_parent_advancement_dissent"],
     "Protocol team finalizes Phase III protocol incorporating all nine conditions from the four arm threads. Stopping rules and DSMB charter are critical path. Target IND amendment: 8 weeks.",
     "par_cmo"
   );
@@ -663,6 +694,30 @@ function buildParentThread(armResults) {
         objectionIds: ["obj_stopping_rules_propagated", "obj_subgroup_discipline_propagated"],
         filedAt: ts(),
         contentHash: "sha256:mnr_parent_biostat_discipline",
+      },
+    },
+  });
+
+  // The DSMB chair's advancement-level dissent, preserved as its own minority
+  // report (issue #79) — distinct from the biostatistician's discipline report,
+  // it records that the go decision was challenged on whether to advance at all.
+  events.push({
+    event_id: eid("minorityreportfiled", "advancement_dissent"),
+    event_type: "MinorityReportFiled",
+    thread_id: TH,
+    actor_id: "par_dsmb_chair",
+    timestamp: ts(),
+    payload: {
+      minorityReport: {
+        id: "mnr_parent_advancement_dissent",
+        object: "minorityReport",
+        threadId: TH,
+        decisionRecordId: "dcr_go_nogo_ltn4481",
+        participantId: "par_dsmb_chair",
+        text: "The independent DSMB chair dissents from the advancement decision as scoped. The program is advancing to Phase III on a single ~500-patient pivotal that will also serve as the labeling safety database for a drug with two serious transaminase elevations in Phase II. ICH E1 expects roughly 1000-1500 exposed for a chronic, non-life-threatening indication, and a live hepatic signal argues for more, not fewer. This report records that the chair recommended an enlarged safety database or a second confirmatory study before committing, that the decision proceeded on the FDA-aligned single-pivotal path notwithstanding, and that this dissent is on whether to advance — not merely on the conditions of advancement.",
+        objectionIds: ["obj_advancement_premature"],
+        filedAt: ts(),
+        contentHash: "sha256:mnr_parent_advancement_dissent",
       },
     },
   });

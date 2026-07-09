@@ -5,7 +5,7 @@
     {
       "id": "pharma-phase-gate-multithreaded",
       "title": "Pharma Phase II/III Go/No-Go — Multi-Arm (Octopus)",
-      "summary": "A parent go/no-go that imports four arm-level decisions as CrossThreadEvidence. Two objections (safety stopping rules, subgroup discipline) and a biostatistician minority report propagate from the arms and survive the parent approval — traceable two threads deep by hash.",
+      "summary": "A parent go/no-go that imports four arm-level decisions as CrossThreadEvidence. Three dissents survive the parent approval: two objections propagate from the arms (safety stopping rules, subgroup discipline) with the biostatistician minority report traceable two threads deep by hash, and a third originates at the go/no-go itself — the independent DSMB chair objecting that a single ~500-patient pivotal is an inadequate labeling safety database for a known hepatic signal (a dissent on whether to advance, not just how).",
       "domain": "pharma",
       "kind": "multi-thread",
       "entryThreadId": "thd_phase2_to_phase3_go_nogo_ltn4481",
