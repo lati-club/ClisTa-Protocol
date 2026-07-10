@@ -180,7 +180,7 @@ function addDecision(events, threadId, dcrId, drId, summary, rationale, conditio
 // ARM 1: PK/PD MODELING
 // ============================================================
 function buildPkpdArm() {
-  const TH = "thd_arm_pkpd_modeling_ltn4481";
+  const TH = "thd_arm_pkpd_modeling_ltn4481_r2";
   const events = [];
   const parts = [
     { id: "par_clin_pharm", kind: "human", name: "Dr. A. Osei", role: "decision owner" },
@@ -212,7 +212,7 @@ function buildPkpdArm() {
 // ARM 2: SAFETY SIGNAL ASSESSMENT
 // ============================================================
 function buildSafetyArm() {
-  const TH = "thd_arm_safety_assessment_ltn4481";
+  const TH = "thd_arm_safety_assessment_ltn4481_r2";
   const events = [];
   const parts = [
     { id: "par_safety_officer", kind: "human", name: "Dr. T. Nakamura", role: "decision owner" },
@@ -286,7 +286,7 @@ function buildSafetyArm() {
 // ARM 3: SUBGROUP ANALYSIS REVIEW
 // ============================================================
 function buildSubgroupArm() {
-  const TH = "thd_arm_subgroup_review_ltn4481";
+  const TH = "thd_arm_subgroup_review_ltn4481_r2";
   const events = [];
   const parts = [
     { id: "par_biostat", kind: "human", name: "Dr. K. Liang", role: "decision owner" },
@@ -337,7 +337,7 @@ function buildSubgroupArm() {
 // ARM 4: REGULATORY STRATEGY
 // ============================================================
 function buildRegArm() {
-  const TH = "thd_arm_regulatory_strategy_ltn4481";
+  const TH = "thd_arm_regulatory_strategy_ltn4481_r2";
   const events = [];
   const parts = [
     { id: "par_reg_affairs", kind: "human", name: "J. Markova", role: "decision owner" },
@@ -366,7 +366,7 @@ function buildRegArm() {
 // PARENT THREAD: GO/NO-GO DECISION
 // ============================================================
 function buildParentThread(armResults) {
-  const TH = "thd_phase2_to_phase3_go_nogo_ltn4481";
+  const TH = "thd_phase2_to_phase3_go_nogo_ltn4481_r2";
   const events = [];
 
   const participants = [
@@ -465,7 +465,7 @@ function buildParentThread(armResults) {
   const crossThreadItems = [
     {
       id: "cte_pkpd_output",
-      sourceThreadId: "thd_arm_pkpd_modeling_ltn4481",
+      sourceThreadId: "thd_arm_pkpd_modeling_ltn4481_r2",
       sourceDecisionRecordId: "dcr_pkpd_dose_confirmed",
       sourceEventHash: armResults.pkpd.decisionHashById["dcr_pkpd_dose_confirmed"],
       derivation: "decision_output",
@@ -475,7 +475,7 @@ function buildParentThread(armResults) {
     },
     {
       id: "cte_safety_output",
-      sourceThreadId: "thd_arm_safety_assessment_ltn4481",
+      sourceThreadId: "thd_arm_safety_assessment_ltn4481_r2",
       sourceDecisionRecordId: "dcr_safety_acceptable",
       sourceEventHash: armResults.safety.decisionHashById["dcr_safety_acceptable"],
       derivation: "decision_output",
@@ -485,7 +485,7 @@ function buildParentThread(armResults) {
     },
     {
       id: "cte_safety_objection",
-      sourceThreadId: "thd_arm_safety_assessment_ltn4481",
+      sourceThreadId: "thd_arm_safety_assessment_ltn4481_r2",
       sourceDecisionRecordId: "dcr_safety_acceptable",
       sourceEventHash: armResults.safety.decisionHashById["dcr_safety_acceptable"],
       derivation: "preserved_objection",
@@ -495,7 +495,7 @@ function buildParentThread(armResults) {
     },
     {
       id: "cte_subgroup_output",
-      sourceThreadId: "thd_arm_subgroup_review_ltn4481",
+      sourceThreadId: "thd_arm_subgroup_review_ltn4481_r2",
       sourceDecisionRecordId: "dcr_subgroup_exploratory",
       sourceEventHash: armResults.subgroup.decisionHashById["dcr_subgroup_exploratory"],
       derivation: "decision_output",
@@ -505,7 +505,7 @@ function buildParentThread(armResults) {
     },
     {
       id: "cte_subgroup_minority",
-      sourceThreadId: "thd_arm_subgroup_review_ltn4481",
+      sourceThreadId: "thd_arm_subgroup_review_ltn4481_r2",
       sourceDecisionRecordId: "dcr_subgroup_exploratory",
       sourceEventHash: armResults.subgroup.decisionHashById["dcr_subgroup_exploratory"],
       derivation: "minority_report",
@@ -515,7 +515,7 @@ function buildParentThread(armResults) {
     },
     {
       id: "cte_reg_output",
-      sourceThreadId: "thd_arm_regulatory_strategy_ltn4481",
+      sourceThreadId: "thd_arm_regulatory_strategy_ltn4481_r2",
       sourceDecisionRecordId: "dcr_reg_strategy_confirmed",
       sourceEventHash: armResults.reg.decisionHashById["dcr_reg_strategy_confirmed"],
       derivation: "decision_output",
@@ -612,7 +612,7 @@ function buildParentThread(armResults) {
         targetObjectId: "clm_go_supported",
         targetObjectType: "claim",
         assumption: "Arm-level safety conditions will be enforced in the parent decision.",
-        text: "Propagated from safety arm (thd_arm_safety_assessment_ltn4481): hepatic stopping rules must be finalized before first patient dosed. This is a hard gate, not a timeline target. If organizational pressure accelerates enrollment before stopping rules are complete, this decision record documents the safety officer identified it as a non-negotiable precondition.",
+        text: "Propagated from safety arm (thd_arm_safety_assessment_ltn4481_r2): hepatic stopping rules must be finalized before first patient dosed. This is a hard gate, not a timeline target. If organizational pressure accelerates enrollment before stopping rules are complete, this decision record documents the safety officer identified it as a non-negotiable precondition.",
         status: "open",
         raisedAt: ts(),
       },
@@ -634,7 +634,7 @@ function buildParentThread(armResults) {
         targetObjectId: "clm_go_supported",
         targetObjectType: "claim",
         assumption: "The exploratory-only designation for the bio-failure subgroup will hold against organizational pressure.",
-        text: "Propagated from subgroup arm (thd_arm_subgroup_review_ltn4481): any future protocol amendment promoting the bio-failure subgroup from exploratory to confirmatory was flagged as a statistical integrity risk. This objection is recorded at the go/no-go level to ensure the escalation path is documented.",
+        text: "Propagated from subgroup arm (thd_arm_subgroup_review_ltn4481_r2): any future protocol amendment promoting the bio-failure subgroup from exploratory to confirmatory was flagged as a statistical integrity risk. This objection is recorded at the go/no-go level to ensure the escalation path is documented.",
         status: "open",
         raisedAt: ts(),
       },
@@ -690,7 +690,7 @@ function buildParentThread(armResults) {
         threadId: TH,
         decisionRecordId: "dcr_go_nogo_ltn4481",
         participantId: "par_biostat",
-        text: "This minority report propagates and reinforces the arm-level dissent from thd_arm_subgroup_review_ltn4481. At the go/no-go level, the risk is compounded: now that the program has a green light to Phase III, the commercial and timeline pressures to incorporate the bio-failure subgroup finding into the design will intensify. This report documents that the lead biostatistician objects to any protocol amendment that promotes the subgroup from exploratory to confirmatory, and that the stopping-rules hard gate from the safety arm must not be softened under enrollment pressure. Both objections survive the approval and are traceable through cross-thread provenance to the arm-level decisions that originated them.",
+        text: "This minority report propagates and reinforces the arm-level dissent from thd_arm_subgroup_review_ltn4481_r2. At the go/no-go level, the risk is compounded: now that the program has a green light to Phase III, the commercial and timeline pressures to incorporate the bio-failure subgroup finding into the design will intensify. This report documents that the lead biostatistician objects to any protocol amendment that promotes the subgroup from exploratory to confirmatory, and that the stopping-rules hard gate from the safety arm must not be softened under enrollment pressure. Both objections survive the approval and are traceable through cross-thread provenance to the arm-level decisions that originated them.",
         objectionIds: ["obj_stopping_rules_propagated", "obj_subgroup_discipline_propagated"],
         filedAt: ts(),
         contentHash: "sha256:mnr_parent_biostat_discipline",
